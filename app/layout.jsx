@@ -1,6 +1,8 @@
 import './globals.css';
 import ClientEngine from '../components/ClientEngine';
 import { CartProvider } from '../components/CartProvider';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata = {
   title: 'The VA Store | High-End Macramé',
@@ -22,6 +24,8 @@ export default function RootLayout({ children }) {
             {children}
           </ClientEngine>
         </CartProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
