@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createClient } from '../../utils/supabase/server';
+import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
 import AuthPanel from '../../components/AuthPanel';
 import AccountDashboard from '../../components/AccountDashboard';
 
@@ -31,6 +31,46 @@ function readErrorMessage(error) {
 }
 
 export default async function AccountPage() {
+    if (!isSupabaseConfigured()) {
+        return (
+            <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.9fr] gap-10 md:gap-14 items-start">
+                    <section className="border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Client Access / The VA Store</p>
+                            <h1 className="font-serif text-4xl md:text-6xl font-light uppercase tracking-[0.12em] leading-none">Account</h1>
+                        </div>
+
+                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62 max-w-2xl">The local account area needs Supabase public environment variables before it can create the auth client. Production is already fine; your local workspace is missing the values.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {[
+                                ['1', 'Create .env.local', 'Copy .env.example to .env.local in the project root.'],
+                                ['2', 'Add Supabase keys', 'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from Supabase or Vercel.'],
+                                ['3', 'Restart Next.js', 'Stop and restart npm run dev so Next reloads the env values.'],
+                            ].map(([step, title, copy]) => (
+                                <div key={step} className="border border-[#1C1C1C]/10 bg-white/75 rounded-sm p-4 md:p-5">
+                                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Step {step}</p>
+                                    <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.1em] text-[#1C1C1C]">{title}</p>
+                                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4 md:px-5 md:py-5">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">Quick Option</p>
+                            <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">If the Vercel project already has the right variables, run vercel env pull after linking the project locally. Otherwise copy the same two public values from Supabase Dashboard → Project Settings → API.</p>
+                        </div>
+                    </section>
+
+                    <section className="xl:pt-6">
+                        <AuthPanel />
+                    </section>
+                </div>
+            </div>
+        );
+    }
+
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();

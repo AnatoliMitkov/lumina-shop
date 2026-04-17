@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import Lenis from 'lenis';
 import { useCart } from './CartProvider';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,6 +17,7 @@ export default function ClientEngine({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartPersistenceMode } = useCart();
+    const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const drawerNote = cartPersistenceMode === 'supabase'
         ? 'Account sync is active, and the full selection can be archived from the cart page.'
         : 'This selection is being held in this browser while the full atelier archive comes online.';
@@ -53,6 +55,37 @@ export default function ClientEngine({ children }) {
     const preloaderRef = useRef(null);
     const hoverTargetRef = useRef(null);
     const hasPlayedInitialLoadRef = useRef(false);
+    const lenisRef = useRef(null);
+
+    useEffect(() => {
+        const lenis = new Lenis({
+            lerp: 0.08,
+            smoothWheel: true,
+            syncTouch: false,
+            wheelMultiplier: 0.95,
+            touchMultiplier: 0.9,
+            overscroll: false,
+        });
+        const handleTicker = (time) => {
+            lenis.raf(time * 1000);
+        };
+
+        lenisRef.current = lenis;
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add(handleTicker);
+        gsap.ticker.lagSmoothing(0);
+
+        return () => {
+            gsap.ticker.remove(handleTicker);
+            lenis.off('scroll', ScrollTrigger.update);
+            lenis.destroy();
+            lenisRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        lenisRef.current?.scrollTo(0, { immediate: true });
+    }, [pathname]);
 
     useGSAP(() => {
         // --- 1. Advanced Custom Cursor ---
@@ -281,6 +314,7 @@ export default function ClientEngine({ children }) {
     // --- 5. Cart Toggle Animation ---
     useEffect(() => {
         if (isCartOpen) {
+            lenisRef.current?.stop();
             gsap.to('#cart-container', { autoAlpha: 1, duration: 0.01 });
             gsap.to('.cart-overlay', { opacity: 1, duration: 0.4, ease: "power2.out" });
             gsap.to('.cart-panel', { x: '0%', duration: 0.6, ease: "power3.inOut" });
@@ -288,6 +322,7 @@ export default function ClientEngine({ children }) {
             gsap.to('.cart-panel', { x: '100%', duration: 0.5, ease: "power3.in" });
             gsap.to('.cart-overlay', { opacity: 0, duration: 0.4, ease: "power2.in" });
             gsap.to('#cart-container', { autoAlpha: 0, duration: 0.01, delay: 0.5 });
+            lenisRef.current?.start();
         }
     }, [isCartOpen]);
 
@@ -315,14 +350,13 @@ export default function ClientEngine({ children }) {
                 </div>
             </nav>
 
-            {/* Wrap the page content in the sticky footer reveal layout */}
-            <div id="smooth-wrapper" className="w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[70vh] md:mb-[60vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] ${isUtilityRoute ? 'mb-[28rem] md:mb-[19rem] shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'mb-[42vh] md:mb-[36vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 <div id="smooth-content">
                     {children}
                 </div>
             </div>
 
-            <footer className="fixed bottom-0 left-0 w-full h-[70vh] md:h-[60vh] z-0 bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-between pt-24 px-6 md:px-12 pb-8">
+            <footer className={`fixed bottom-0 left-0 w-full ${isUtilityRoute ? 'h-[28rem] md:h-[19rem] pt-14 md:pt-16 pb-8 md:pb-10' : 'h-[42vh] md:h-[36vh] pt-20 md:pt-24 pb-8'} z-0 bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-between px-6 md:px-12`}>
                 <div className="flex flex-col md:flex-row justify-between items-start gap-16 md:gap-0 max-w-[1800px] mx-auto w-full">
                     <div className="flex flex-col gap-4 max-w-sm"><h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest">The VA Store</h3><p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70">Beautiful People Smile More</p><p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50">Elevating traditional craftsmanship into avant-garde fashion.</p></div>
                     <div className="flex gap-16 md:gap-32 text-xs uppercase tracking-[0.15em] font-medium">
@@ -338,7 +372,7 @@ export default function ClientEngine({ children }) {
             <div onClick={() => setIsCartOpen(false)} className="cart-overlay absolute inset-0 bg-[#1C1C1C]/60 backdrop-blur-md opacity-0 cursor-pointer"></div>
                 <div className="cart-panel relative w-full md:w-[30vw] h-full bg-[#EFECE8] translate-x-full flex flex-col shadow-2xl">
                 <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">Cart</h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium">Close</button></div>
-                <div className="flex-1 p-8 md:p-12 flex flex-col gap-8 overflow-y-auto">
+                <div data-lenis-prevent-wheel className="flex-1 p-8 md:p-12 flex flex-col gap-8 overflow-y-auto overscroll-contain">
                     {cartItems.length === 0 ? (
                         <p className="text-sm uppercase tracking-widest text-gray-500">Your cart is empty.</p>
                     ) : (

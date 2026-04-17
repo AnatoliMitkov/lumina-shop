@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../utils/supabase/client';
+import { createClient, isSupabaseConfigured } from '../utils/supabase/client';
 import {
     buildPhoneValue,
     countryPhoneOptions,
@@ -13,8 +13,6 @@ import {
     resolveUserCountry,
     splitStoredPhoneNumber,
 } from '../utils/contact';
-
-const supabase = createClient();
 
 function formatDate(value) {
     if (!value) {
@@ -131,6 +129,7 @@ function OrderPreview({ order }) {
 }
 
 export default function AccountDashboard({ user, profile, orders, inquiries, schemaMessage, profileStorageMode, isAdmin = false }) {
+    const supabase = isSupabaseConfigured() ? createClient() : null;
     const router = useRouter();
     const initialPhoneParts = splitStoredPhoneNumber(profile?.phone || '');
     const initialCountryFromLocation = detectCountryFromLocationText(profile?.location || '');
@@ -216,6 +215,14 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
 
     const handleSignOut = async () => {
         setIsSigningOut(true);
+
+        if (!supabase) {
+            setIsSigningOut(false);
+            router.push('/account');
+            router.refresh();
+            return;
+        }
+
         await supabase.auth.signOut();
         router.push('/account');
         router.refresh();

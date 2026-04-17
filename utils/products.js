@@ -368,3 +368,33 @@ export function buildProductMutationInput(product = {}) {
     sort_order: normalizedProduct.sort_order,
   };
 }
+
+export function buildProductBulkMutationInput(product = {}) {
+  const updates = {};
+
+  if (Object.prototype.hasOwnProperty.call(product, 'status')) {
+    updates.status = normalizeStatus(product.status);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'category')) {
+    updates.category = toText(product.category, PRODUCT_DEFAULTS.category);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'collection')) {
+    updates.collection = toText(product.collection, PRODUCT_DEFAULTS.collection);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'featured')) {
+    updates.featured = toBoolean(product.featured);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'inventory_count')) {
+    updates.inventory_count = Math.max(0, toInteger(product.inventory_count, PRODUCT_DEFAULTS.inventory_count));
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'lead_time_days')) {
+    updates.lead_time_days = Math.max(1, toInteger(product.lead_time_days, PRODUCT_DEFAULTS.lead_time_days));
+  }
+
+  return updates;
+}

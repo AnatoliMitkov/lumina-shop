@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../utils/supabase/client';
-
-const supabase = createClient();
+import { createClient, isSupabaseConfigured } from '../utils/supabase/client';
 
 export default function AuthPanel({ initialMode = 'sign-in' }) {
+    const supabase = isSupabaseConfigured() ? createClient() : null;
     const router = useRouter();
     const [mode, setMode] = useState(initialMode);
     const [fullName, setFullName] = useState('');
@@ -36,6 +35,10 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
         setStatus({ type: 'idle', message: '' });
 
         try {
+            if (!supabase) {
+                throw new Error('Account auth is unavailable locally until Supabase env values are added to .env.local.');
+            }
+
             if (mode === 'sign-in') {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -86,6 +89,13 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
 
     return (
         <div className="border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
+            {!supabase && (
+                <div className="mb-8 rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4">
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Local Setup Needed</p>
+                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server to enable sign-in and account creation.</p>
+                </div>
+            )}
+
             <div className="flex gap-2 mb-8 border border-[#1C1C1C]/10 p-1 rounded-full bg-[#EFECE8]">
                 <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-in' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Login</button>
                 <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-up' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Create Account</button>
@@ -113,7 +123,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                     <p className={`text-xs leading-relaxed ${status.type === 'error' ? 'text-red-600' : 'text-[#1C1C1C]/65'}`}>{status.message}</p>
                 )}
 
-                <button disabled={isSubmitting} className={`mt-2 h-14 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.24em] text-xs font-medium transition-colors hover:bg-black ${isSubmitting ? 'opacity-60' : ''}`}>
+                <button disabled={isSubmitting || !supabase} className={`mt-2 h-14 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.24em] text-xs font-medium transition-colors hover:bg-black ${(isSubmitting || !supabase) ? 'opacity-60' : ''}`}>
                     {isSubmitting ? 'Working...' : mode === 'sign-in' ? 'Enter Account' : 'Create Account'}
                 </button>
             </form>

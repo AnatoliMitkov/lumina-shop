@@ -13,46 +13,54 @@ export default function Home() {
                 }
             `}</style>
 
-            <div className="storefront-screen-hero relative w-full flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 z-0 bg-[#1C1C1C]">
-                    <img
-                        src="https://images.pexels.com/photos/1126993/pexels-photo-1126993.jpeg?auto=compress&cs=tinysrgb&w=2500"
-                        alt="Hero Background"
-                        className="hero-img w-full h-full object-cover opacity-0 scale-125"
-                        onError={(event) => {
-                            event.target.style.display = 'none';
-                        }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
+            <section className="relative w-full flex flex-col overflow-hidden" style={{ minHeight: '100svh', height: '100svh' }}>
+                <div className="relative w-full flex items-center justify-center overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
+                    <div className="absolute inset-0 z-0 bg-[#1C1C1C]">
+                        <video
+                            className="hero-img w-full h-full object-cover opacity-0 scale-125"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="auto"
+                            aria-hidden="true"
+                            onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                            }}
+                        >
+                            <source src="https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4" type="video/mp4" />
+                        </video>
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
+                    </div>
+
+                    <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
+                        <div className="w-full md:w-auto">
+                            <div className="overflow-hidden -mb-[0.5vw]"><h1 className="hero-title storefront-home-display font-serif font-light uppercase translate-y-full">Women</h1></div>
+                            <div className="overflow-hidden"><h1 className="hero-title storefront-home-display storefront-home-shift font-serif font-light uppercase translate-y-full">Elegance</h1></div>
+                        </div>
+                        <div className="w-full md:w-[22rem] pb-4 md:pb-8 flex flex-col gap-4">
+                            <p className="hero-sub text-xs md:text-sm tracking-[0.2em] font-light uppercase opacity-0">Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.</p>
+                            <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
+                            <p className="hero-sub text-xs tracking-widest uppercase opacity-0 hover-target cursor-pointer w-max">Scroll to explore ↓</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
-                    <div className="w-full md:w-auto">
-                        <div className="overflow-hidden -mb-[0.5vw]"><h1 className="hero-title storefront-home-display font-serif font-light uppercase translate-y-full">Women</h1></div>
-                        <div className="overflow-hidden"><h1 className="hero-title storefront-home-display storefront-home-shift font-serif font-light uppercase translate-y-full">Elegance</h1></div>
+                <div className="w-full py-6 overflow-hidden flex whitespace-nowrap bg-[#1C1C1C] text-[#EFECE8] border-b border-white/10 hover-target" data-cursor-text="Scroll">
+                    <div className="flex animate-marquee items-center">
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Wearable Architecture</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Uncompromising Craft</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Editorial Spotlight</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Victoria Built</span><span className="text-xl px-4 opacity-50">✦</span>
                     </div>
-                    <div className="w-full md:w-[22rem] pb-4 md:pb-8 flex flex-col gap-4">
-                        <p className="hero-sub text-xs md:text-sm tracking-[0.2em] font-light uppercase opacity-0">Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.</p>
-                        <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
-                        <p className="hero-sub text-xs tracking-widest uppercase opacity-0 hover-target cursor-pointer w-max">Scroll to explore ↓</p>
+                    <div className="flex animate-marquee items-center" aria-hidden="true">
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Wearable Architecture</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Uncompromising Craft</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Editorial Spotlight</span><span className="text-xl px-4 opacity-50">✦</span>
+                        <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Victoria Built</span><span className="text-xl px-4 opacity-50">✦</span>
                     </div>
                 </div>
-            </div>
-
-            <div className="w-full py-6 overflow-hidden flex whitespace-nowrap bg-[#1C1C1C] text-[#EFECE8] border-b border-white/10 hover-target" data-cursor-text="Scroll">
-                <div className="flex animate-marquee items-center">
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Wearable Architecture</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Uncompromising Craft</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Editorial Spotlight</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Victoria Built</span><span className="text-xl px-4 opacity-50">✦</span>
-                </div>
-                <div className="flex animate-marquee items-center" aria-hidden="true">
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Wearable Architecture</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Uncompromising Craft</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Editorial Spotlight</span><span className="text-xl px-4 opacity-50">✦</span>
-                    <span className="text-3xl md:text-5xl font-serif font-light uppercase tracking-widest px-8">Victoria Built</span><span className="text-xl px-4 opacity-50">✦</span>
-                </div>
-            </div>
+            </section>
 
             <div className="w-full py-24 md:py-32 px-6 md:px-12 max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-12 md:gap-14">
                 <div className="w-full md:w-1/2 flex flex-col gap-8">

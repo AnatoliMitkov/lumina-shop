@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '../../../../utils/supabase/server';
-import { buildProductMutationInput, normalizeProductRecord, sortProducts } from '../../../../utils/products';
+import { buildProductBulkMutationInput, buildProductMutationInput, normalizeProductRecord, sortProducts } from '../../../../utils/products';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +27,16 @@ function toErrorResponse(error) {
     }
 
     return NextResponse.json({ error: error?.message || 'Unable to complete this admin request.' }, { status: 500 });
+}
+
+function normalizeProductIds(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return [...new Set(value
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean))];
 }
 
 async function getAdminContext() {
@@ -169,6 +179,93 @@ export async function PUT(request) {
     }
 }
 
+export async function PATCH(request) {
+    const context = await getAdminContext();
+
+    if (context.errorResponse) {
+        return context.errorResponse;
+    }
+
+    try {
+        const payload = await request.json();
+
+        if (Array.isArray(payload?.products)) {
+            const productEntries = payload.products
+                .map((entry) => {
+                    const productId = typeof entry?.id === 'string' ? entry.id.trim() : '';
+
+                    if (!productId) {
+                        return null;
+                    }
+
+                    return {
+                        id: productId,
+                        input: buildProductMutationInput(entry),
+                    };
+                })
+                .filter(Boolean);
+
+            if (productEntries.length === 0) {
+                return NextResponse.json({ error: 'At least one product row is required for grid updates.' }, { status: 400 });
+            }
+
+            const updatedProducts = await Promise.all(productEntries.map(async ({ id, input }) => {
+                if (!input.name) {
+                    throw new Error('Product name is required for grid updates.');
+                }
+
+                if (!input.image_main) {
+                    throw new Error('A main image is required for grid updates.');
+                }
+
+                const { data, error } = await context.supabase
+                    .from('products')
+                    .update(input)
+                    .eq('id', id)
+                    .select('*')
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                return normalizeProductRecord(data);
+            }));
+
+            return NextResponse.json({
+                products: sortProducts(updatedProducts),
+            });
+        }
+
+        const productIds = normalizeProductIds(payload?.ids);
+        const updates = buildProductBulkMutationInput(payload?.updates);
+
+        if (productIds.length === 0) {
+            return NextResponse.json({ error: 'At least one product id is required for bulk updates.' }, { status: 400 });
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ error: 'Choose at least one field to update.' }, { status: 400 });
+        }
+
+        const { data, error } = await context.supabase
+            .from('products')
+            .update(updates)
+            .in('id', productIds)
+            .select('*');
+
+        if (error) {
+            throw error;
+        }
+
+        return NextResponse.json({
+            products: sortProducts((data ?? []).map((product) => normalizeProductRecord(product))),
+        });
+    } catch (error) {
+        return toErrorResponse(error);
+    }
+}
+
 export async function DELETE(request) {
     const context = await getAdminContext();
 
@@ -178,22 +275,24 @@ export async function DELETE(request) {
 
     try {
         const requestUrl = new URL(request.url);
-        const productId = requestUrl.searchParams.get('id') || '';
+        const singleProductId = requestUrl.searchParams.get('id') || '';
+        const payload = singleProductId ? null : await request.json().catch(() => null);
+        const productIds = singleProductId ? [singleProductId] : normalizeProductIds(payload?.ids);
 
-        if (!productId) {
+        if (productIds.length === 0) {
             return NextResponse.json({ error: 'A product id is required for deletion.' }, { status: 400 });
         }
 
         const { error } = await context.supabase
             .from('products')
             .delete()
-            .eq('id', productId);
+            .in('id', productIds);
 
         if (error) {
             throw error;
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, deletedIds: productIds });
     } catch (error) {
         return toErrorResponse(error);
     }

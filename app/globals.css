@@ -5,6 +5,19 @@
   --font-serif: 'Cormorant Garamond', serif;
 }
 
+html.lenis,
+html.lenis body {
+    height: auto;
+}
+
+.lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+    overflow: hidden;
+}
+
 /* Hide default scrollbar for a seamless editorial feel */
 ::-webkit-scrollbar {
     display: none;
@@ -329,10 +342,6 @@ button,
 }
 
 .storefront-banner-stage {
-    min-height: 100svh;
-}
-
-.storefront-screen-hero {
     min-height: 100svh;
 }
 
