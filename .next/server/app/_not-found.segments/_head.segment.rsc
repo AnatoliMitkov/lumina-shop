@@ -1,5 +1,0 @@
-1:"$Sreact.fragment"
-2:I[97367,["/_next/static/chunks/0_e3ixowu-pvy.js","/_next/static/chunks/137o4s.8_t-z0.js","/_next/static/chunks/0dbhjjzl8qfwv.js"],"ViewportBoundary"]
-3:I[97367,["/_next/static/chunks/0_e3ixowu-pvy.js","/_next/static/chunks/137o4s.8_t-z0.js","/_next/static/chunks/0dbhjjzl8qfwv.js"],"MetadataBoundary"]
-4:"$Sreact.suspense"
-0:{"rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"The VA Store | High-End Macramé"}],["$","meta","1",{"name":"description","content":"Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria."}]]}]}]}],null]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"QqNdnvsQZJvatlUPs1avE"}
