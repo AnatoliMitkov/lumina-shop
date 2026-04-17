@@ -7,6 +7,15 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 export const metadata = {
   title: 'The VA Store | High-End Macramé',
   description: 'Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.',
+  icons: {
+    icon: [
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: ['/favicon-32x32.png'],
+  },
+  manifest: '/site.webmanifest',
 };
 
 export default function RootLayout({ children }) {
