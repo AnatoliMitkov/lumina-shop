@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Setup Custom Fonts for Tailwind v4 */
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
+}
+
+/* 
+  Custom Cursor Hover State 
+  Using raw CSS is better here for complex mix-blend-mode transitions
+*/
+#cursor.hovered {
+    width: 60px;
+    height: 60px;
+    background-color: transparent;
+    border: 1px solid #1a1a1a;
+    mix-blend-mode: difference;
+}

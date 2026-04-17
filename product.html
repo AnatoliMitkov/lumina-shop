@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura Vest | The VA Store</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Prevent Flash of Unstyled Content (FOUC) during page transitions */
+      html { background-color: #1C1C1C; }
+      #preloader { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #1C1C1C; z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    </style>
+  </head>
+  <body class="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-hidden cursor-none selection:bg-[#1C1C1C] selection:text-[#EFECE8]">
+    
+    <!-- Reused Cursor & Preloader -->
+    <div id="cursor" class="hidden md:flex fixed top-0 left-0 w-3 h-3 bg-[#1C1C1C] rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 transition-[width,height,background-color] duration-300 ease-out justify-center items-center text-white text-[10px] uppercase tracking-widest font-medium text-opacity-0"></div>
+
+    <div id="preloader" class="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center">
+        <div class="overflow-hidden">
+            <h1 class="loader-text font-serif text-5xl md:text-7xl font-light tracking-widest uppercase translate-y-full">Aura Vest</h1>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="nav" class="fixed w-full flex justify-between items-center px-6 md:px-12 py-8 z-50 opacity-0 mix-blend-difference text-white">
+        <a href="/" class="hover-target transition-link font-serif text-xl md:text-2xl font-medium tracking-widest uppercase">The VA Store</a>
+        <div class="hidden md:flex gap-12 text-xs uppercase tracking-[0.2em] font-medium">
+            <a href="/collections.html" class="hover-target transition-link">Collections</a>
+            <span class="hover-target">Bespoke</span>
+            <span class="hover-target cart-open cursor-pointer">Cart (1) €</span>
+        </div>
+    </nav>
+
+    <!-- Smooth Scroll Wrapper -->
+    <div id="smooth-wrapper" class="w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[70vh] md:mb-[60vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+        <div id="smooth-content" class="pt-32 md:pt-48 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+            
+            <!-- Split Sticky Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-16 md:gap-24 relative">
+                
+                <!-- Left: Scrolling Editorial Images -->
+                <div class="md:col-span-7 flex flex-col gap-8 md:gap-16">
+                    <div class="w-full aspect-[3/4] overflow-hidden rounded-sm view-img group hover-target" data-cursor-text="Zoom">
+                        <img class="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105" src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1500&auto=format&fit=crop" alt="Aura Vest Main">
+                    </div>
+                    <div class="w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target" data-cursor-text="Zoom">
+                        <img class="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-105" src="https://images.unsplash.com/photo-1581044777550-4cfa60707c03?q=80&w=1500&auto=format&fit=crop" alt="Aura Vest Detail">
+                    </div>
+                </div>
+
+                <!-- Right: Sticky Product Info -->
+                <div class="md:col-span-5 relative">
+                    <div class="sticky top-40 flex flex-col gap-10">
+                        
+                        <div class="flex flex-col gap-4">
+                            <div class="overflow-hidden"><p class="hero-title text-[10px] uppercase tracking-widest text-gray-500 translate-y-full">Collections / Fall Winter</p></div>
+                            <div class="overflow-hidden pb-2"><h1 class="hero-title font-serif text-5xl md:text-7xl font-light uppercase tracking-widest translate-y-full">Aura Vest</h1></div>
+                            <p class="hero-sub text-lg md:text-xl font-medium tracking-wide opacity-0">€450</p>
+                        </div>
+
+                        <div class="w-full h-[1px] bg-[#1C1C1C]/10 hero-sub opacity-0"></div>
+
+                        <p class="hero-sub text-sm font-light tracking-wide text-gray-600 leading-relaxed opacity-0">
+                            The Aura Vest represents the pinnacle of structural macramé. Hand-knotted in our Sofia atelier using 100% sustainable organic cotton cord, this piece effortlessly bridges the gap between heritage craft and contemporary avant-garde silhouette.
+                        </p>
+
+                        <button class="hero-sub opacity-0 w-full py-6 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover-target transition-colors hover:bg-black cart-open">Add to Cart</button>
+
+                        <!-- Details Accordion (Interactive) -->
+                        <div class="hero-sub opacity-0 flex flex-col mt-8 text-xs uppercase tracking-widest">
+                            
+                            <div class="accordion-item border-t border-[#1C1C1C]/10">
+                                <div class="accordion-header py-6 flex justify-between items-center group cursor-pointer hover-target">
+                                    <span class="font-medium text-[#1C1C1C]">Material & Care</span>
+                                    <span class="accordion-icon text-lg font-light transition-transform duration-300">+</span>
+                                </div>
+                                <div class="accordion-content h-0 overflow-hidden opacity-0">
+                                    <p class="pb-6 text-sm font-light tracking-wide text-gray-600 leading-relaxed normal-case">Crafted from 100% organic, sustainably sourced cotton cord. Spot clean only with a damp, light-colored cloth. Do not machine wash, bleach, or tumble dry. Store flat to maintain structural integrity.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item border-t border-b border-[#1C1C1C]/10">
+                                <div class="accordion-header py-6 flex justify-between items-center group cursor-pointer hover-target">
+                                    <span class="font-medium text-[#1C1C1C]">Shipping & Returns</span>
+                                    <span class="accordion-icon text-lg font-light transition-transform duration-300">+</span>
+                                </div>
+                                <div class="accordion-content h-0 overflow-hidden opacity-0">
+                                    <p class="pb-6 text-sm font-light tracking-wide text-gray-600 leading-relaxed normal-case">Complimentary worldwide shipping on all orders over €300. As each piece is hand-knotted to order, please allow 10-14 business days for dispatch. Returns are accepted within 14 days of delivery.</p>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Sticky Reveal Footer -->
+    <footer class="fixed bottom-0 left-0 w-full h-[70vh] md:h-[60vh] z-0 bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-between pt-24 px-6 md:px-12 pb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start gap-16 md:gap-0 max-w-[1800px] mx-auto w-full">
+            <div class="flex flex-col gap-6">
+                <h3 class="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest">The VA Store</h3>
+                <p class="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50 max-w-sm">Elevating traditional craftsmanship into avant-garde fashion.</p>
+            </div>
+            <div class="flex gap-16 md:gap-32 text-xs uppercase tracking-[0.15em] font-medium">
+                <div class="flex flex-col gap-6">
+                    <span class="text-white/30 mb-2">Explore</span>
+                    <a href="/" class="hover-target transition-link hover:text-white/70 transition-colors">Home</a>
+                    <a href="/collections.html" class="hover-target transition-link hover:text-white/70 transition-colors">Collections</a>
+                    <a href="#" class="hover-target hover:text-white/70 transition-colors">Bespoke</a>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <span class="text-white/30 mb-2">Connect</span>
+                    <a href="#" class="hover-target hover:text-white/70 transition-colors">Instagram</a>
+                    <a href="#" class="hover-target hover:text-white/70 transition-colors">Pinterest</a>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-center border-t border-white/10 pt-8 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 max-w-[1800px] mx-auto w-full">
+            <p>&copy; 2026 The VA Store.</p>
+            <p class="mt-4 md:mt-0 hover-target">Crafted in Sofia, BG</p>
+        </div>
+    </footer>
+
+    <!-- Shopping Cart Sidebar -->
+    <div id="cart-container" class="fixed inset-0 z-[200] invisible flex justify-end">
+        <div class="cart-overlay absolute inset-0 bg-[#1C1C1C]/60 backdrop-blur-md opacity-0 cursor-pointer"></div>
+        <div class="cart-panel relative w-full md:w-[30vw] h-full bg-[#EFECE8] translate-x-full flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10">
+                <h2 class="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">Cart</h2>
+                <button class="cart-close hover-target text-xs uppercase tracking-widest font-medium">Close</button>
+            </div>
+            <div class="flex-1 p-8 md:p-12 flex flex-col gap-8 overflow-y-auto">
+                <!-- Cart Item -->
+                <div class="flex gap-6 items-center group">
+                    <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=300&auto=format&fit=crop" class="w-20 h-28 object-cover rounded-sm" alt="Aura Vest">
+                    <div class="flex flex-col flex-1 gap-2">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-sans text-xs uppercase tracking-widest font-medium">Aura Vest</h3>
+                            <button class="text-[10px] uppercase tracking-widest text-gray-400 hover:text-[#1C1C1C] transition-colors">Remove</button>
+                        </div>
+                        <p class="font-sans text-sm font-medium">€450</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-8 md:p-12 border-t border-[#1C1C1C]/10 bg-[#EFECE8]">
+                <div class="flex justify-between items-center mb-8 font-medium uppercase tracking-widest text-xs">
+                    <span>Total</span>
+                    <span class="text-sm">€450</span>
+                </div>
+                <button class="w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover-target transition-colors hover:bg-black">Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

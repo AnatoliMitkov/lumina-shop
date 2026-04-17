@@ -1,0 +1,28 @@
+{
+  "name": "lumina-shop",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.1",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.5",
+    "libphonenumber-js": "^1.12.41",
+    "next": "latest",
+    "nodemailer": "^8.0.5",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest"
+  }
+}

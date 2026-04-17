@@ -1,0 +1,19 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/account/page": "app/account/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/account/profile/route": "app/api/account/profile/route.js",
+  "/api/admin/products/route": "app/api/admin/products/route.js",
+  "/api/cart/checkout/route": "app/api/cart/checkout/route.js",
+  "/api/cart/route": "app/api/cart/route.js",
+  "/api/contact/captcha/route": "app/api/contact/captcha/route.js",
+  "/api/contact/route": "app/api/contact/route.js",
+  "/bespoke/page": "app/bespoke/page.js",
+  "/cart/page": "app/cart/page.js",
+  "/collections/page": "app/collections/page.js",
+  "/contact/page": "app/contact/page.js",
+  "/page": "app/page.js",
+  "/product/[id]/page": "app/product/[id]/page.js",
+  "/spotlight/page": "app/spotlight/page.js"
+}

@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
+}
+
+/* Hide default scrollbar for a seamless editorial feel */
+::-webkit-scrollbar {
+    display: none;
+}
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Base Hover State (Nav, Text) */
+#cursor.hovered {
+    width: 60px;
+    height: 60px;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    mix-blend-mode: difference;
+}
+
+/* View Mode Hover State (Images) */
+#cursor.view-mode {
+    width: 90px;
+    height: 90px;
+    background-color: #EFECE8;
+    color: #1C1C1C;
+    border: none;
+    mix-blend-mode: normal;
+    opacity: 1;
+}
+
+/* High-End Image Hover Distortion & Color Shift */
+.view-img img {
+    transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    filter: grayscale(15%) contrast(1.05) brightness(0.95);
+}
+.view-img:hover img {
+    transform: scale(1.06) rotate(1.5deg) !important;
+    filter: grayscale(0%) contrast(1) brightness(1.05);
+}
+
+/* Marquee infinite scroll via CSS for 0% CPU footprint */
+.marquee-container {
+    animation: marquee 20s linear infinite;
+}
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
