@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,6 +18,7 @@ export default function ClientEngine({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartPersistenceMode } = useCart();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const drawerNote = cartPersistenceMode === 'supabase'
         ? 'Account sync is active, and the full selection can be archived from the cart page.'
@@ -87,6 +88,34 @@ export default function ClientEngine({ children }) {
     useEffect(() => {
         lenisRef.current?.scrollTo(0, { immediate: true });
     }, [pathname]);
+
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        if (!isMobileMenuOpen) {
+            return undefined;
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setIsMobileMenuOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMobileMenuOpen]);
+
+    const toggleMobileMenu = () => {
+        if (!isMobileMenuOpen) {
+            setIsCartOpen(false);
+        }
+
+        setIsMobileMenuOpen((currentValue) => !currentValue);
+    };
 
     useGSAP(() => {
         // --- 1. Advanced Custom Cursor ---
@@ -328,7 +357,6 @@ export default function ClientEngine({ children }) {
     // --- 5. Cart Toggle Animation ---
     useEffect(() => {
         if (isCartOpen) {
-            lenisRef.current?.stop();
             gsap.to('#cart-container', { autoAlpha: 1, duration: 0.01 });
             gsap.to('.cart-overlay', { opacity: 1, duration: 0.4, ease: "power2.out" });
             gsap.to('.cart-panel', { x: '0%', duration: 0.6, ease: "power3.inOut" });
@@ -336,9 +364,14 @@ export default function ClientEngine({ children }) {
             gsap.to('.cart-panel', { x: '100%', duration: 0.5, ease: "power3.in" });
             gsap.to('.cart-overlay', { opacity: 0, duration: 0.4, ease: "power2.in" });
             gsap.to('#cart-container', { autoAlpha: 0, duration: 0.01, delay: 0.5 });
+        }
+
+        if (isCartOpen || isMobileMenuOpen) {
+            lenisRef.current?.stop();
+        } else {
             lenisRef.current?.start();
         }
-    }, [isCartOpen]);
+    }, [isCartOpen, isMobileMenuOpen]);
 
     return (
         <>
@@ -355,6 +388,21 @@ export default function ClientEngine({ children }) {
 
             <nav id="nav" className="fixed w-full flex justify-between items-center px-6 md:px-12 py-8 z-50 opacity-0 mix-blend-difference text-white">
                 <a href="/" className="hover-target transition-link font-serif text-2xl md:text-3xl font-medium tracking-widest uppercase">The VA Store</a>
+                <div className="flex md:hidden items-center gap-3">
+                    <button
+                        type="button"
+                        aria-expanded={isMobileMenuOpen}
+                        aria-controls="mobile-nav-panel"
+                        aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                        onClick={toggleMobileMenu}
+                        className="hover-target relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/18 bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white/16"
+                    >
+                        <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-[6px]'}`}></span>
+                        <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+                        <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-[6px]'}`}></span>
+                        {cartItems.length > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1.5 text-[9px] font-medium tracking-normal text-[#111111]">{cartItems.length}</span>}
+                    </button>
+                </div>
                 <div className="hidden md:flex gap-10 text-sm md:text-base uppercase tracking-[0.2em] font-medium">
                     <a href="/collections" className="hover-target transition-link">Collections</a>
                     <a href="/spotlight" className="hover-target transition-link">Spotlight</a>
@@ -363,6 +411,27 @@ export default function ClientEngine({ children }) {
                     <a href="/cart" className="hover-target transition-link">Cart ({cartItems.length})</a>
                 </div>
             </nav>
+
+            <div className={`fixed inset-0 z-[120] md:hidden transition-all duration-300 ${isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                <div onClick={() => setIsMobileMenuOpen(false)} className={`absolute inset-0 bg-[#1C1C1C]/42 backdrop-blur-xl transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}></div>
+                <div id="mobile-nav-panel" className={`absolute inset-x-4 top-[5.75rem] overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.72)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
+                    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Navigation</p>
+                            <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em]">The VA Store</p>
+                        </div>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36">Mobile</p>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-1 gap-3 text-[11px] uppercase tracking-[0.24em] font-medium">
+                        <a href="/collections" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '80ms' : '0ms' }}><span>Collections</span><span className="text-white/26">01</span></a>
+                        <a href="/spotlight" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span>Spotlight</span><span className="text-white/26">02</span></a>
+                        <a href="/account" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span>Account</span><span className="text-white/26">03</span></a>
+                        <a href="/contact" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span>Contact</span><span className="text-white/26">04</span></a>
+                        <a href="/cart" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span>Cart</span><span className="text-white/26">{String(cartItems.length).padStart(2, '0')}</span></a>
+                    </div>
+                </div>
+            </div>
 
             <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[30rem] md:mb-[18rem] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 <div id="smooth-content">
