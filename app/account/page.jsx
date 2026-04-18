@@ -112,7 +112,7 @@ export default async function AccountPage() {
 
     const [profileResult, ordersResult, inquiriesResult] = await Promise.all([
         supabase.from('profiles').select('full_name, phone, location, notes, is_admin').eq('id', user.id).maybeSingle(),
-        supabase.from('orders').select('id, status, total, item_count, items, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('contact_inquiries').select('id, query_type, message, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
     ]);
 
@@ -134,7 +134,7 @@ export default async function AccountPage() {
                         <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Client Room / The VA Store</p>
                         <div className="overflow-hidden"><h1 className="hero-title storefront-section-display font-serif font-light uppercase translate-y-full">Account</h1></div>
                     </div>
-                    <p className="hero-sub opacity-0 text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed">Signed in as {user.email}. Keep your profile sharp, save atelier-ready details faster, and review requests and archived selections without the oversized empty intro.</p>
+                    <p className="hero-sub opacity-0 text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed">Signed in as {user.email}. Keep your profile sharp, save atelier-ready details faster, and review orders and requests without the oversized empty intro.</p>
                     <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">
                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full">Verified account</span>
                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full">{profileStorageMode === 'metadata' ? 'Metadata-backed profile' : 'Supabase profile table'}</span>
@@ -144,7 +144,7 @@ export default async function AccountPage() {
 
                 <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
                     {[
-                        ['Orders', String(ordersResult.data?.length || 0).padStart(2, '0'), 'Archived selections in your account.'],
+                        ['Orders', String(ordersResult.data?.length || 0).padStart(2, '0'), 'Submitted orders stored in your account.'],
                         ['Requests', String(inquiriesResult.data?.length || 0).padStart(2, '0'), 'Recent atelier conversations.'],
                         ['Profile', profile.full_name ? 'Ready' : 'Open', profile.full_name ? 'Details are available for faster support.' : 'Add your details for smoother follow-up.'],
                     ].map(([label, value, copy]) => (

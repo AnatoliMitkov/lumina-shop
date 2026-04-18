@@ -15,6 +15,29 @@ function toText(value, fallback = '') {
   return typeof value === 'string' ? value : fallback;
 }
 
+function toMeasurementValue(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  return '';
+}
+
+function toMeasurementMap(value) {
+  const measurementInput = value && typeof value === 'object' ? value : {};
+
+  return {
+    bust: toMeasurementValue(measurementInput.bust),
+    waist: toMeasurementValue(measurementInput.waist),
+    hips: toMeasurementValue(measurementInput.hips),
+    back: toMeasurementValue(measurementInput.back),
+  };
+}
+
 function toPrice(value) {
   const parsedPrice = Number.parseFloat(String(value ?? 0));
 
@@ -43,7 +66,26 @@ export function normalizeCartItem(product = {}) {
     description: toText(product?.description),
     selected_size: toText(product?.selected_size),
     selected_tone: toText(product?.selected_tone),
+    selected_size_unit: toText(product?.selected_size_unit),
+    custom_measurements: toMeasurementMap(product?.custom_measurements),
   };
+}
+
+export function formatCustomMeasurementSummary(item = {}) {
+  const measurements = toMeasurementMap(item?.custom_measurements);
+  const summaryParts = [
+    measurements.bust ? `Bust ${measurements.bust}` : '',
+    measurements.waist ? `Waist ${measurements.waist}` : '',
+    measurements.hips ? `Hips ${measurements.hips}` : '',
+    measurements.back ? `Back ${measurements.back}` : '',
+  ].filter(Boolean);
+
+  if (summaryParts.length === 0) {
+    return '';
+  }
+
+  const unitLabel = toText(item?.selected_size_unit).toUpperCase();
+  return `${summaryParts.join(' · ')}${unitLabel ? ` ${unitLabel}` : ''}`;
 }
 
 export function sanitizeCartItems(items = []) {

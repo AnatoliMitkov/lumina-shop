@@ -109,6 +109,20 @@ export default function ProductGallery({ productName, collection, category, gall
         setIsLightboxOpen(true);
     };
 
+    const handleLightboxPointerMove = (event) => {
+        const frameBounds = event.currentTarget.getBoundingClientRect();
+        const originX = ((event.clientX - frameBounds.left) / frameBounds.width) * 100;
+        const originY = ((event.clientY - frameBounds.top) / frameBounds.height) * 100;
+
+        event.currentTarget.style.setProperty('--product-lightbox-origin-x', `${Math.min(100, Math.max(0, originX)).toFixed(2)}%`);
+        event.currentTarget.style.setProperty('--product-lightbox-origin-y', `${Math.min(100, Math.max(0, originY)).toFixed(2)}%`);
+    };
+
+    const handleLightboxPointerLeave = (event) => {
+        event.currentTarget.style.setProperty('--product-lightbox-origin-x', '50%');
+        event.currentTarget.style.setProperty('--product-lightbox-origin-y', '50%');
+    };
+
     return (
         <>
             <section className="flex flex-col gap-4 md:gap-5">
@@ -195,14 +209,14 @@ export default function ProductGallery({ productName, collection, category, gall
                     role="dialog"
                     aria-modal="true"
                     aria-label={`${productName} fullscreen gallery`}
-                    className="product-lightbox-backdrop fixed inset-0 z-[260] overflow-y-auto bg-[rgba(10,10,10,0.84)]"
+                    className="product-lightbox-backdrop fixed inset-0 z-[260] overflow-hidden bg-[rgba(10,10,10,0.84)]"
                     onClick={(event) => {
                         if (event.target === event.currentTarget) {
                             handleCloseLightbox();
                         }
                     }}
                 >
-                    <div className="product-lightbox-panel mx-auto flex min-h-full w-full max-w-[1820px] flex-col gap-5 px-4 pb-5 pt-24 md:px-8 md:pb-8 md:pt-28 xl:px-12 xl:pb-10 xl:pt-32">
+                    <div className="product-lightbox-panel mx-auto flex h-[100dvh] w-full max-w-[1820px] flex-col gap-4 overflow-hidden px-4 pb-4 pt-24 md:px-8 md:pb-6 md:pt-28 xl:px-12 xl:pb-8 xl:pt-32">
                         <div className="relative z-20 flex items-center justify-between gap-4 px-1 text-white md:px-2">
                             <div className="flex flex-col gap-2">
                                 <p className="text-[10px] uppercase tracking-[0.32em] text-white/45">Fullscreen Gallery</p>
@@ -224,8 +238,8 @@ export default function ProductGallery({ productName, collection, category, gall
                             </button>
                         </div>
 
-                        <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_18rem] gap-5 items-stretch pt-1 md:pt-2">
-                            <div className="product-lightbox-stage relative min-h-[60vh] overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080808]/88">
+                        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden pt-1 md:pt-2 xl:grid-cols-[minmax(0,1fr)_18rem] xl:grid-rows-1 xl:gap-5">
+                            <div className="product-lightbox-stage relative min-h-0 overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080808]/88">
                                 {hasMultipleImages && (
                                     <>
                                         <button type="button" onClick={() => handleStep(-1)} className="hover-target absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-black/28 text-base text-white/78 transition-colors hover:bg-white hover:text-[#121211]">
@@ -237,13 +251,19 @@ export default function ProductGallery({ productName, collection, category, gall
                                     </>
                                 )}
 
-                                <div className="flex h-full items-center justify-center px-4 py-6 md:px-8 md:py-8 xl:px-12 xl:py-10">
-                                    <img key={`lightbox-${activeImage}`} src={activeImage} alt={`${productName} fullscreen ${activeIndex + 1}`} className="product-lightbox-frame max-h-[calc(100vh-13rem)] w-auto max-w-full object-contain" />
+                                <div
+                                    className="product-lightbox-media flex h-full items-center justify-center px-4 py-4 md:px-8 md:py-6 xl:px-12 xl:py-8"
+                                    onMouseMove={handleLightboxPointerMove}
+                                    onMouseLeave={handleLightboxPointerLeave}
+                                >
+                                    <div className="product-lightbox-frame-shell flex h-full w-full items-center justify-center">
+                                        <img key={`lightbox-${activeImage}`} src={activeImage} alt={`${productName} fullscreen ${activeIndex + 1}`} className="product-lightbox-frame h-auto max-h-full w-auto max-w-full object-contain" />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex min-h-0 flex-col gap-4">
-                                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.05] px-5 py-5 text-white">
+                            <div className="flex min-h-0 max-h-[18rem] flex-col gap-4 overflow-hidden xl:max-h-none">
+                                <div className="shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.05] px-5 py-5 text-white">
                                     <p className="text-[10px] uppercase tracking-[0.3em] text-white/45 mb-3">Frame Notes</p>
                                     <div className="flex flex-col gap-2 text-sm leading-relaxed text-white/72">
                                         <p>{collection} / {category}</p>
@@ -252,12 +272,12 @@ export default function ProductGallery({ productName, collection, category, gall
                                 </div>
 
                                 {hasMultipleImages && (
-                                    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 min-h-0" data-lenis-prevent-wheel>
+                                    <div className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 overflow-hidden" data-lenis-prevent-wheel>
                                         <div className="mb-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.28em] text-white/42">
                                             <span>Frames</span>
                                             <span>{formatIndex(images.length)}</span>
                                         </div>
-                                        <div className="flex xl:flex-col gap-3 overflow-auto pb-1 xl:pr-1">
+                                        <div className="flex min-h-0 gap-3 overflow-auto pb-1 xl:flex-1 xl:flex-col xl:pr-1">
                                             {images.map((image, index) => {
                                                 const isActive = index === activeIndex;
 

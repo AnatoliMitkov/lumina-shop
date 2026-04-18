@@ -168,7 +168,7 @@ export function CartProvider({ children }) {
         setCartItems((prev) => prev.filter((_, i) => i !== indexToRemove));
     };
 
-    const checkoutCart = async () => {
+    const checkoutCart = async (checkoutDetails = null) => {
         const snapshot = buildCartSnapshot(cartItems);
 
         if (snapshot.itemCount === 0 || checkoutStatus === 'submitting' || cartPersistenceMode !== 'supabase') {
@@ -184,25 +184,25 @@ export function CartProvider({ children }) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ items: snapshot.items }),
+                body: JSON.stringify({ items: snapshot.items, checkout: checkoutDetails }),
             });
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                throw new Error(data.error || 'Unable to archive the selection right now.');
+                throw new Error(data.error || 'Unable to submit the order right now.');
             }
 
             skipNextSyncRef.current = true;
             setCartItems([]);
             setCartStatus('ready');
             setCheckoutStatus('success');
-            setCartMessage(data.message || 'Selection archived in your client account.');
+            setCartMessage(data.message || 'Your order is now waiting for atelier review.');
 
             return data.order || null;
         } catch (error) {
             setCartStatus('error');
             setCheckoutStatus('error');
-            setCartMessage(error.message || 'Unable to archive the selection right now.');
+            setCartMessage(error.message || 'Unable to submit the order right now.');
 
             return null;
         }

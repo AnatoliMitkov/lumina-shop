@@ -5,6 +5,11 @@
   --font-serif: 'Cormorant Garamond', serif;
 }
 
+:root {
+        /* Adjust this number to tune fullscreen hover zoom strength. 3 = 300%. */
+        --product-lightbox-hover-zoom: 5;
+}
+
 html.lenis,
 html.lenis body {
     height: auto;
@@ -446,10 +451,30 @@ button,
 
 .product-lightbox-stage {
     box-shadow: 0 34px 110px rgba(0, 0, 0, 0.34);
+    min-height: 0;
+}
+
+.product-lightbox-media {
+    --product-lightbox-origin-x: 50%;
+    --product-lightbox-origin-y: 50%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.product-lightbox-frame-shell {
+    animation: product-lightbox-image-in 0.82s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .product-lightbox-frame {
-    animation: product-lightbox-image-in 0.82s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: var(--product-lightbox-origin-x) var(--product-lightbox-origin-y);
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), filter 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+.product-lightbox-media:hover .product-lightbox-frame {
+    transform: scale(var(--product-lightbox-hover-zoom));
+    filter: saturate(1.03) contrast(1.02);
 }
 
 @keyframes home-orb-drift {

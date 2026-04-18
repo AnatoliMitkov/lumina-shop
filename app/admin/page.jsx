@@ -74,7 +74,7 @@ export default async function AdminPage() {
 
     const [productsResult, ordersResult, inquiriesResult] = await Promise.all([
         supabase.from('products').select('*').order('featured', { ascending: false }).order('sort_order', { ascending: true }).order('updated_at', { ascending: false }),
-        supabase.from('orders').select('id, status, total, item_count, items, created_at').order('created_at', { ascending: false }).limit(6),
+        supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(24),
         supabase.from('contact_inquiries').select('id, full_name, email, query_type, message, status, created_at').order('created_at', { ascending: false }).limit(6),
     ]);
 

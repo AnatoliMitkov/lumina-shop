@@ -7,6 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import Lenis from 'lenis';
 import { useCart } from './CartProvider';
+import { formatCustomMeasurementSummary } from '../utils/cart';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
@@ -422,7 +423,10 @@ export default function ClientEngine({ children }) {
                     {cartItems.length === 0 ? (
                         <p className="text-sm uppercase tracking-widest text-gray-500">Your cart is empty.</p>
                     ) : (
-                        cartItems.map((item, i) => (
+                        cartItems.map((item, i) => {
+                            const customMeasurementSummary = formatCustomMeasurementSummary(item);
+
+                            return (
                             <div key={i} className="flex gap-6 items-center group">
                                 <img src={item.image_main} className="w-20 h-28 object-cover rounded-sm" alt={item.name} />
                                 <div className="flex flex-col flex-1 gap-2">
@@ -437,9 +441,13 @@ export default function ClientEngine({ children }) {
                                             {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">Tone {item.selected_tone}</span>}
                                         </div>
                                     )}
+                                    {customMeasurementSummary && (
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Custom {customMeasurementSummary}</p>
+                                    )}
                                 </div>
                             </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
                 <div className="p-8 md:p-12 border-t border-[#1C1C1C]/10 bg-[#EFECE8]">

@@ -21,27 +21,27 @@ const defaultColorCopy = 'Tone is kept intentionally restrained so the knot stru
 const defaultProductNotesCopy = 'Each piece is finished in small runs, so slight hand-finished variation is part of the character rather than a defect.';
 const SIZE_MEASUREMENTS = [
     {
-        label: 'Junior',
+        label: 'XS',
         inch: { bust: '24 - 32', waist: '22 - 30', hips: '26 - 34', back: '11 - 13' },
         cm: { bust: '61 - 81', waist: '56 - 76', hips: '66 - 86', back: '28 - 33' },
     },
     {
-        label: 'Petite',
+        label: 'S',
         inch: { bust: '28 - 34', waist: '23 - 31', hips: '30 - 38', back: '14 - 16' },
         cm: { bust: '71 - 86', waist: '58 - 79', hips: '76 - 97', back: '34 - 39' },
     },
     {
-        label: 'Small',
+        label: 'M',
         inch: { bust: '33 - 41', waist: '24 - 32', hips: '34 - 42', back: '15 - 17' },
         cm: { bust: '84 - 104', waist: '61 - 81', hips: '86 - 107', back: '38 - 43' },
     },
     {
-        label: 'Medium',
+        label: 'L',
         inch: { bust: '39 - 47', waist: '29 - 37', hips: '40 - 48', back: '15 - 17' },
         cm: { bust: '99 - 119', waist: '74 - 94', hips: '102 - 122', back: '38 - 43' },
     },
     {
-        label: 'Full Figure',
+        label: 'XL',
         inch: { bust: '45 - 53', waist: '38 - 46', hips: '47 - 55', back: '16 - 18' },
         cm: { bust: '114 - 135', waist: '97 - 117', hips: '119 - 140', back: '41 - 46' },
     },
@@ -161,7 +161,7 @@ export default async function ProductPage({ params }) {
     const productStory = product.story || product.description;
     const materialsCopy = [product.materials, product.care].filter(Boolean).join(' ');
     const paletteLabel = buildPaletteLabel(product);
-    const sizeOptions = SIZE_MEASUREMENTS.map((entry) => entry.label);
+    const sizeOptions = [...SIZE_MEASUREMENTS.map((entry) => entry.label), 'Custom'];
     const accordionSections = [
         {
             title: 'Product Notes',
@@ -174,7 +174,7 @@ export default async function ProductPage({ params }) {
         },
         {
             title: 'Size & Measurements',
-            copy: 'Use the chart below as the closest starting point before ordering. If you need a more exact fit, contact the atelier before checkout.',
+            copy: 'Use the standard XS to XL chart below as the closest starting point before ordering. If you need a made-for-you fit, choose Custom in the purchase panel and enter your body measurements there.',
             table: SIZE_MEASUREMENTS,
         },
         {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from '../../components/CartProvider';
+import { formatCustomMeasurementSummary } from '../../utils/cart';
 
 function CartImage({ item }) {
     if (!item.image_main) {
@@ -20,34 +21,29 @@ export default function CartPage() {
         removeFromCart,
         cartTotal,
         cartStatus,
-        checkoutStatus,
         cartMessage,
         cartPersistenceMode,
         hasLoadedCart,
-        checkoutCart,
     } = useCart();
 
     const isSupabaseMode = cartPersistenceMode === 'supabase';
-    const isArchiving = checkoutStatus === 'submitting';
-    const cartFeedback = isArchiving
-        ? 'Archiving your selection into the client account...'
-        : cartStatus === 'saving' && isSupabaseMode
-            ? 'Syncing your selection quietly in the background...'
-            : cartMessage;
-    const feedbackTone = checkoutStatus === 'error' || cartStatus === 'error'
+    const cartFeedback = cartStatus === 'saving' && isSupabaseMode
+        ? 'Syncing your selection quietly in the background...'
+        : cartMessage;
+    const feedbackTone = cartStatus === 'error'
         ? 'border-red-200 bg-red-50 text-red-700'
-        : checkoutStatus === 'success'
+        : cartMessage
             ? 'border-[#1C1C1C]/10 bg-white/70 text-[#1C1C1C]/75'
             : 'border-[#1C1C1C]/10 bg-white/40 text-[#1C1C1C]/60';
     const storageLabel = isSupabaseMode ? 'Account-Linked' : 'Browser-Held';
     const storageCopy = isSupabaseMode
-        ? 'The selection can be archived into the client account when you are ready.'
+        ? 'This selection is ready to move into structured checkout with customer and delivery details.'
         : 'For now, the selection stays in this browser, so the experience feels polished even before the account archive is switched on.';
-    const primaryHref = cartItems.length === 0 ? '/collections' : '/contact';
+    const primaryHref = cartItems.length === 0 ? '/collections' : isSupabaseMode ? '/checkout' : '/contact';
     const primaryLabel = cartItems.length === 0
         ? 'Explore Collections'
         : isSupabaseMode
-            ? (isArchiving ? 'Archiving...' : 'Archive Selection')
+            ? 'Continue To Checkout'
             : 'Request Through Atelier';
 
     return (
@@ -59,7 +55,7 @@ export default function CartPage() {
                 </div>
 
                 <p className="hero-sub storefront-copy-measure opacity-0 text-sm md:text-base max-w-xl text-[#1C1C1C]/60 leading-relaxed">
-                    This is a selection room rather than a rushed payment screen. Keep editing the pieces, remove what no longer feels right, and send the atelier forward only when the mix feels finished.
+                    Review the pieces here first, then move into a quieter checkout flow where the atelier gets your customer and delivery details with the order itself.
                 </p>
             </div>
 
@@ -80,7 +76,10 @@ export default function CartPage() {
                             </div>
                         </div>
                     ) : (
-                        cartItems.map((item, index) => (
+                        cartItems.map((item, index) => {
+                            const customMeasurementSummary = formatCustomMeasurementSummary(item);
+
+                            return (
                             <article key={`${item.id}-${index}`} className="reveal-text opacity-0 translate-y-8 grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-6 md:gap-8 border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-5 md:p-6 items-start">
                                 <div className="overflow-hidden rounded-sm bg-[#E4DED5]">
                                     <CartImage item={item} />
@@ -106,12 +105,17 @@ export default function CartPage() {
                                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/55 rounded-full">Hand-picked for review</span>
                                     </div>
 
+                                    {customMeasurementSummary && (
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Custom {customMeasurementSummary}</p>
+                                    )}
+
                                     <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62 max-w-2xl">
                                         {item.description || 'This piece is now part of your current atelier selection and will stay here while you compare silhouettes, materials, and timing.'}
                                     </p>
                                 </div>
                             </article>
-                        ))
+                            );
+                        })
                     )}
                 </section>
 
@@ -146,10 +150,6 @@ export default function CartPage() {
                                 <a href="/collections" className="hover-target transition-link w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center transition-colors hover:bg-black">
                                     Explore Collections
                                 </a>
-                            ) : isSupabaseMode ? (
-                                <button onClick={() => checkoutCart()} disabled={isArchiving} className={`hover-target w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${isArchiving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black'}`}>
-                                    {primaryLabel}
-                                </button>
                             ) : (
                                 <a href={primaryHref} className="hover-target transition-link w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center transition-colors hover:bg-black">
                                     {primaryLabel}
@@ -162,7 +162,7 @@ export default function CartPage() {
 
                     <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-6 md:p-8">
                         <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Atelier Note</p>
-                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">The cart is intentionally editorial rather than transactional. It helps shape a selection before payment, fittings, and final confirmation are handled in a more personal way.</p>
+                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">The next step is a structured checkout rather than instant payment. That keeps the order elegant while giving the atelier your shipping preferences, delivery details, and any codes tied to the request.</p>
                     </div>
                 </aside>
             </div>

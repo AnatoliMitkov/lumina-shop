@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useState } from 'react';
 import { createClient } from '../utils/supabase/client';
+import AdminOrdersPanel from './AdminOrdersPanel';
 import {
     PRODUCT_DEFAULTS,
     PRODUCT_CATEGORY_OPTIONS,
@@ -1582,38 +1583,7 @@ export default function AdminDashboard({
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-                <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-6 md:p-8 flex flex-col gap-5">
-                    <div className="flex items-end justify-between gap-4">
-                        <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Recent Orders</p>
-                            <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.12em]">Atelier Archive</h3>
-                        </div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{recentOrders.length} visible</p>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                        {recentOrders.length === 0 ? (
-                            <p className="text-sm text-[#1C1C1C]/58">No recent orders yet.</p>
-                        ) : (
-                            recentOrders.map((order) => (
-                                <div key={order.id} className="border border-[#1C1C1C]/10 bg-white/75 rounded-sm p-4 md:p-5 flex flex-col gap-3">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">#{String(order.id).slice(0, 8).toUpperCase()}</p>
-                                            <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{formatProductCurrency(order.total || 0)}</p>
-                                        </div>
-                                        <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${getStatusClasses(order.status || 'draft')}`}>{order.status || 'pending'}</span>
-                                    </div>
-                                    <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{buildOrderSummary(order)}</p>
-                                    <div className="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                                        <span>{order.item_count || 0} piece{order.item_count === 1 ? '' : 's'}</span>
-                                        <span>{formatDate(order.created_at)}</span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                <AdminOrdersPanel recentOrders={recentOrders} />
 
                 <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5">
                     <div className="flex items-end justify-between gap-4">

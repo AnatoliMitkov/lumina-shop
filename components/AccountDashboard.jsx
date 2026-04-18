@@ -13,6 +13,12 @@ import {
     resolveUserCountry,
     splitStoredPhoneNumber,
 } from '../utils/contact';
+import {
+    buildOrderAddressSummary,
+    buildOrderDeliverySummary,
+    buildOrderDiscountSummary,
+    buildOrderReference,
+} from '../utils/checkout';
 
 function formatDate(value) {
     if (!value) {
@@ -348,7 +354,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                 <div className="flex flex-col gap-3 mb-8">
                     <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Order Tracking</p>
                     <h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">Your Orders</h2>
-                    <p className="text-sm leading-relaxed text-[#1C1C1C]/58">Every archived selection sits here with its status, pieces, and a quick visual memory of what moved through your account.</p>
+                    <p className="text-sm leading-relaxed text-[#1C1C1C]/58">Each submitted order stays here with its current status, delivery structure, and the same piece context the atelier is reviewing.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-6">
@@ -364,13 +370,13 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
 
                 <div className="flex flex-col gap-4">
                     {orders.length === 0 ? (
-                        <p className="text-sm text-[#1C1C1C]/60 leading-relaxed">Your orders will appear here once you check out while signed in to your account.</p>
+                        <p className="text-sm text-[#1C1C1C]/60 leading-relaxed">Your orders will appear here once you submit checkout while signed in to your account.</p>
                     ) : (
                         orders.map((order) => (
                             <div key={order.id} className="account-order-card border border-[#1C1C1C]/10 p-4 md:p-5 rounded-sm bg-white/72">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
                                     <div className="flex flex-col gap-2 min-w-0">
-                                        <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/38">#{order.id.slice(0, 8).toUpperCase()}</span>
+                                        <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/38">{buildOrderReference(order)}</span>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className={`account-status-pill px-3 py-2 rounded-full border text-[10px] uppercase tracking-[0.22em] ${getOrderStatusMeta(order.status).className}`}>{getOrderStatusMeta(order.status).label}</span>
                                             <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{formatDate(order.created_at)}</span>
@@ -387,7 +393,11 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                                     <div className="min-w-0 flex flex-col gap-3">
                                         <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{getOrderStatusMeta(order.status).description}</p>
                                         <p className="font-serif text-xl md:text-2xl font-light leading-tight text-[#1C1C1C] break-words">{getOrderNameSummary(order.items)}</p>
-                                        <p className="text-sm leading-relaxed text-[#1C1C1C]/58">Stored in your private account archive so the atelier can keep the same context when the conversation continues.</p>
+                                        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">
+                                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDeliverySummary(order)}</span>
+                                            {buildOrderDiscountSummary(order) && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDiscountSummary(order)}</span>}
+                                        </div>
+                                        <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{buildOrderAddressSummary(order)}</p>
                                     </div>
                                 </div>
                             </div>
