@@ -1,10 +1,17 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import AdminDashboard from '../../components/AdminDashboard';
+import { isPromotionSetupError } from '../../utils/promotions';
 import { createClient } from '../../utils/supabase/server';
 import { sortProducts } from '../../utils/products';
 
 export const dynamic = 'force-dynamic';
+
+const ADMIN_ORDER_SELECT = 'id, order_code, status, total, subtotal, discount_amount, shipping_amount, item_count, created_at, customer_email, customer_name, customer_phone, customer_location, customer_notes, discount_code, affiliate_code, affiliate_commission_type, affiliate_commission_value, shipping_scope, delivery_method, shipping_country, shipping_city, shipping_region, shipping_postal_code, shipping_address_line1, shipping_address_line2, shipping_office_code, shipping_office_label, delivery_snapshot, pricing_snapshot, items';
+const ADMIN_INQUIRY_SELECT = 'id, full_name, email, phone, location, query_type, message, status, created_at';
+const ADMIN_DISCOUNT_SELECT = 'id, code, label, description, discount_type, discount_value, shipping_benefit, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
+const ADMIN_AFFILIATE_SELECT = 'id, code, partner_name, notes, customer_discount_type, customer_discount_value, commission_type, commission_value, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
+const ADMIN_ACTIVITY_LIMIT = 500;
 
 function isCatalogSetupError(error) {
     const message = typeof error?.message === 'string' ? error.message : '';
@@ -72,10 +79,12 @@ export default async function AdminPage() {
         );
     }
 
-    const [productsResult, ordersResult, inquiriesResult] = await Promise.all([
+    const [productsResult, ordersResult, inquiriesResult, discountsResult, affiliatesResult] = await Promise.all([
         supabase.from('products').select('*').order('featured', { ascending: false }).order('sort_order', { ascending: true }).order('updated_at', { ascending: false }),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(24),
-        supabase.from('contact_inquiries').select('id, full_name, email, query_type, message, status, created_at').order('created_at', { ascending: false }).limit(6),
+        supabase.from('orders').select(ADMIN_ORDER_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
+        supabase.from('contact_inquiries').select(ADMIN_INQUIRY_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
+        supabase.from('discount_codes').select(ADMIN_DISCOUNT_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
+        supabase.from('affiliate_codes').select(ADMIN_AFFILIATE_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
     ]);
 
     if (productsResult.error && isCatalogSetupError(productsResult.error)) {
@@ -91,6 +100,11 @@ export default async function AdminPage() {
     const maintenanceMessage = ordersResult.error || inquiriesResult.error
         ? 'Orders or inquiries could not be loaded. Re-run supabase/cart-orders.sql if those sections stay empty.'
         : '';
+    const promotionMessage = isPromotionSetupError(discountsResult.error) || isPromotionSetupError(affiliatesResult.error)
+        ? 'Discount and affiliate tables are not ready yet. Run supabase/cart-orders.sql again to enable live promotion management.'
+        : discountsResult.error || affiliatesResult.error
+            ? 'Discount or affiliate codes could not be loaded right now.'
+            : '';
 
     return (
         <div className="pt-32 md:pt-40 pb-28 md:pb-36 px-6 md:px-12 max-w-[1800px] mx-auto">
@@ -123,7 +137,10 @@ export default async function AdminPage() {
                 initialProducts={sortProducts(productsResult.data ?? [])}
                 recentOrders={ordersResult.data ?? []}
                 recentInquiries={inquiriesResult.data ?? []}
+                discountCodes={discountsResult.data ?? []}
+                affiliateCodes={affiliatesResult.data ?? []}
                 maintenanceMessage={maintenanceMessage}
+                promotionMessage={promotionMessage}
             />
         </div>
     );

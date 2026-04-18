@@ -96,6 +96,40 @@ export const locationSuggestions = Array.from(
     new Set([...featuredLocations, ...countryPhoneOptions.map((option) => option.label)])
 );
 
+const featuredLocationRecords = featuredLocations.map((location) => {
+    const [city = '', country = ''] = location.split(',').map((part) => part.trim());
+
+    return {
+        city,
+        country,
+        location,
+    };
+});
+
+function normalizeCountryLabel(country) {
+    const normalizedCountry = typeof country === 'string' ? country.trim() : '';
+
+    if (!normalizedCountry) {
+        return '';
+    }
+
+    if (countrySet.has(normalizedCountry.toUpperCase())) {
+        return getCountryLabel(normalizedCountry.toUpperCase());
+    }
+
+    return normalizedCountry;
+}
+
+export function getLocationSuggestionsForCountry(country = '') {
+    const normalizedCountry = normalizeCountryLabel(country).toLowerCase();
+    const matchingLocations = normalizedCountry
+        ? featuredLocationRecords.filter((record) => record.country.toLowerCase() === normalizedCountry)
+        : featuredLocationRecords;
+    const sourceLocations = matchingLocations.length > 0 ? matchingLocations : featuredLocationRecords;
+
+    return Array.from(new Set(sourceLocations.map((record) => record.city).filter(Boolean)));
+}
+
 export function detectCountryFromLocale(locale) {
     if (!locale) {
         return '';

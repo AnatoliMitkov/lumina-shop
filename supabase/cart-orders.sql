@@ -141,14 +141,61 @@ create table if not exists public.contact_inquiries (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.discount_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  label text,
+  description text,
+  discount_type text not null default 'percentage' check (discount_type in ('percentage', 'fixed_amount')),
+  discount_value numeric(10, 2) not null default 0,
+  shipping_benefit text not null default 'none' check (shipping_benefit in ('none', 'sender_covers', 'receiver_covers')),
+  minimum_subtotal numeric(10, 2) not null default 0,
+  usage_limit integer,
+  usage_count integer not null default 0,
+  is_active boolean not null default true,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.affiliate_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  partner_name text,
+  notes text,
+  customer_discount_type text not null default 'none' check (customer_discount_type in ('none', 'percentage', 'fixed_amount')),
+  customer_discount_value numeric(10, 2) not null default 0,
+  commission_type text not null default 'percentage' check (commission_type in ('percentage', 'fixed_amount')),
+  commission_value numeric(10, 2) not null default 0,
+  minimum_subtotal numeric(10, 2) not null default 0,
+  usage_limit integer,
+  usage_count integer not null default 0,
+  is_active boolean not null default true,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists contact_inquiries_user_id_idx on public.contact_inquiries (user_id);
 create index if not exists contact_inquiries_created_at_idx on public.contact_inquiries (created_at desc);
+alter table public.discount_codes add column if not exists shipping_benefit text not null default 'none' check (shipping_benefit in ('none', 'sender_covers', 'receiver_covers'));
+create index if not exists discount_codes_code_idx on public.discount_codes (code);
+create index if not exists discount_codes_active_idx on public.discount_codes (is_active, starts_at, ends_at);
+create index if not exists affiliate_codes_code_idx on public.affiliate_codes (code);
+create index if not exists affiliate_codes_active_idx on public.affiliate_codes (is_active, starts_at, ends_at);
 
 drop trigger if exists carts_set_updated_at on public.carts;
 drop trigger if exists profiles_set_updated_at on public.profiles;
 drop trigger if exists contact_inquiries_set_updated_at on public.contact_inquiries;
+drop trigger if exists discount_codes_set_updated_at on public.discount_codes;
+drop trigger if exists affiliate_codes_set_updated_at on public.affiliate_codes;
 
+
+update public.discount_codes
+set shipping_benefit = case when shipping_benefit in ('sender_covers', 'receiver_covers') then shipping_benefit else 'none' end;
 create trigger carts_set_updated_at
 before update on public.carts
 for each row
@@ -164,10 +211,22 @@ before update on public.contact_inquiries
 for each row
 execute function public.set_updated_at();
 
+create trigger discount_codes_set_updated_at
+before update on public.discount_codes
+for each row
+execute function public.set_updated_at();
+
+create trigger affiliate_codes_set_updated_at
+before update on public.affiliate_codes
+for each row
+execute function public.set_updated_at();
+
 alter table public.carts enable row level security;
 alter table public.orders enable row level security;
 alter table public.profiles enable row level security;
 alter table public.contact_inquiries enable row level security;
+alter table public.discount_codes enable row level security;
+alter table public.affiliate_codes enable row level security;
 
 alter table public.profiles add column if not exists is_admin boolean not null default false;
 
@@ -179,6 +238,14 @@ drop policy if exists "Admins can view all orders" on public.orders;
 drop policy if exists "Admins can update all orders" on public.orders;
 drop policy if exists "Users can view own contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can view all contact inquiries" on public.contact_inquiries;
+drop policy if exists "Admins can view all discount codes" on public.discount_codes;
+drop policy if exists "Admins can insert all discount codes" on public.discount_codes;
+drop policy if exists "Admins can update all discount codes" on public.discount_codes;
+drop policy if exists "Admins can delete all discount codes" on public.discount_codes;
+drop policy if exists "Admins can view all affiliate codes" on public.affiliate_codes;
+drop policy if exists "Admins can insert all affiliate codes" on public.affiliate_codes;
+drop policy if exists "Admins can update all affiliate codes" on public.affiliate_codes;
+drop policy if exists "Admins can delete all affiliate codes" on public.affiliate_codes;
 
 create policy "Users can view own profile"
 on public.profiles
@@ -248,6 +315,126 @@ using ((select auth.uid()) = user_id);
 create policy "Admins can view all contact inquiries"
 on public.contact_inquiries
 for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can view all discount codes"
+on public.discount_codes
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can insert all discount codes"
+on public.discount_codes
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can update all discount codes"
+on public.discount_codes
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can delete all discount codes"
+on public.discount_codes
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can view all affiliate codes"
+on public.affiliate_codes
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can insert all affiliate codes"
+on public.affiliate_codes
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can update all affiliate codes"
+on public.affiliate_codes
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can delete all affiliate codes"
+on public.affiliate_codes
+for delete
 to authenticated
 using (
   exists (

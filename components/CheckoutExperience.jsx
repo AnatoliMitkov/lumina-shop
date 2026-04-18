@@ -10,6 +10,7 @@ import {
     defaultContactCountry,
     detectCountryFromLocationText,
     getCountryPhoneOption,
+    getLocationSuggestionsForCountry,
     locationSuggestions,
     resolveUserCountry,
     splitStoredPhoneNumber,
@@ -19,6 +20,7 @@ import {
     normalizeDeliveryMethod,
     shippingScopeOptions,
 } from '../utils/checkout';
+import { createBaseCheckoutPricing, formatPromotionCurrency } from '../utils/promotions';
 
 function formatCurrency(value) {
     return `€${Number(value ?? 0).toFixed(2)}`;
@@ -74,6 +76,19 @@ function ScopeButton({ label, copy, active, onClick }) {
     );
 }
 
+function PricingValidationCard({ label, message, status }) {
+    const shellClassName = status === 'invalid'
+        ? 'border-red-200 bg-red-50 text-red-700'
+        : 'border-[#1C1C1C]/10 bg-white/72 text-[#1C1C1C]/62';
+
+    return (
+        <div className={`rounded-sm border px-4 py-4 text-sm leading-relaxed ${shellClassName}`}>
+            <p className="text-[10px] uppercase tracking-[0.22em] mb-2 opacity-60">{label}</p>
+            <p>{message}</p>
+        </div>
+    );
+}
+
 export default function CheckoutExperience({ initialProfile, isSignedIn = false, schemaMessage = '' }) {
     const router = useRouter();
     const {
@@ -86,10 +101,14 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         cartMessage,
     } = useCart();
     const locationListId = useId();
+    const shippingCityListId = useId();
     const initialPhoneParts = splitStoredPhoneNumber(initialProfile?.phone || '');
     const initialCountryFromLocation = detectCountryFromLocationText(initialProfile?.location || '');
     const initialCountry = initialPhoneParts.country || initialCountryFromLocation || defaultContactCountry;
     const initialShippingScope = initialCountry === 'BG' ? 'domestic_bg' : 'worldwide';
+    const initialShippingCountry = initialShippingScope === 'domestic_bg'
+        ? 'Bulgaria'
+        : getCountryPhoneOption(initialCountry)?.label || '';
     const [fullName, setFullName] = useState(initialProfile?.fullName || '');
     const [email, setEmail] = useState(initialProfile?.email || '');
     const [selectedCountry, setSelectedCountry] = useState(initialCountry);
@@ -98,7 +117,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const [customerNotes, setCustomerNotes] = useState(initialProfile?.notes || '');
     const [shippingScope, setShippingScope] = useState(initialShippingScope);
     const [deliveryMethod, setDeliveryMethod] = useState(() => normalizeDeliveryMethod(initialShippingScope));
-    const [shippingCountry, setShippingCountry] = useState(initialShippingScope === 'domestic_bg' ? 'Bulgaria' : '');
+    const [shippingCountry, setShippingCountry] = useState(initialShippingCountry);
     const [shippingCity, setShippingCity] = useState('');
     const [shippingRegion, setShippingRegion] = useState('');
     const [shippingPostalCode, setShippingPostalCode] = useState('');
@@ -106,9 +125,24 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const [shippingAddressLine2, setShippingAddressLine2] = useState('');
     const [shippingOfficeCode, setShippingOfficeCode] = useState('');
     const [shippingOfficeLabel, setShippingOfficeLabel] = useState('');
+    const [shippingMapUrl, setShippingMapUrl] = useState('');
     const [discountCode, setDiscountCode] = useState('');
     const [affiliateCode, setAffiliateCode] = useState('');
     const [submittedOrder, setSubmittedOrder] = useState(null);
+    const [pricingPreview, setPricingPreview] = useState(() => createBaseCheckoutPricing({
+        subtotal: Number(cartTotal || 0),
+        shippingInput: {
+            shippingScope: initialShippingScope,
+            deliveryMethod: normalizeDeliveryMethod(initialShippingScope),
+            shippingCountry: initialShippingCountry,
+            shippingCity: '',
+            shippingAddressLine1: '',
+            shippingOfficeLabel: '',
+            shippingOfficeCode: '',
+        },
+    }));
+    const [pricingStatus, setPricingStatus] = useState('idle');
+    const [pricingMessage, setPricingMessage] = useState('');
 
     useEffect(() => {
         if (initialPhoneParts.country || initialCountryFromLocation) {
@@ -125,7 +159,11 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         if (detectedCountry === 'BG') {
             setShippingScope('domestic_bg');
             setShippingCountry('Bulgaria');
+            return;
         }
+
+        setShippingScope('worldwide');
+        setShippingCountry(getCountryPhoneOption(detectedCountry)?.label || '');
     }, [initialCountryFromLocation, initialPhoneParts.country]);
 
     useEffect(() => {
@@ -137,18 +175,106 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
         if (shippingScope === 'domestic_bg') {
             setShippingCountry('Bulgaria');
+            setShippingMapUrl('');
+            return;
         }
-    }, [deliveryMethod, shippingScope]);
+
+        const suggestedShippingCountry = getCountryPhoneOption(selectedCountry)?.label || '';
+
+        if (!shippingCountry || shippingCountry === 'Bulgaria') {
+            setShippingCountry(suggestedShippingCountry);
+        }
+    }, [deliveryMethod, selectedCountry, shippingCountry, shippingScope]);
 
     const selectedCountryOption = getCountryPhoneOption(selectedCountry) || getCountryPhoneOption(defaultContactCountry);
     const deliveryMethodOptions = getDeliveryMethodOptions(shippingScope);
     const requiresOfficeDetails = deliveryMethod.endsWith('_office');
     const requiresAddressDetails = deliveryMethod.endsWith('_address');
+    const needsCustomAddress = requiresAddressDetails || shippingScope === 'worldwide';
     const structuredCheckoutReady = cartPersistenceMode === 'supabase';
     const orderSubtotal = Number(cartTotal || 0);
-    const shippingAmount = 0;
-    const discountAmount = 0;
-    const orderTotal = Number((orderSubtotal - discountAmount + shippingAmount).toFixed(2));
+    const shippingInput = {
+        shippingScope,
+        deliveryMethod,
+        shippingCountry,
+        shippingCity,
+        shippingAddressLine1,
+        shippingOfficeLabel,
+        shippingOfficeCode,
+    };
+    const shippingAmount = pricingPreview.shippingAmount;
+    const discountAmount = pricingPreview.discountAmount;
+    const orderTotal = pricingPreview.total;
+    const shippingDisplayValue = shippingAmount > 0 ? formatCurrency(shippingAmount) : pricingPreview.shipping.label;
+    const shippingCitySuggestions = getLocationSuggestionsForCountry(shippingScope === 'domestic_bg' ? 'Bulgaria' : shippingCountry);
+    const hasPricingBlocker = (Boolean(discountCode) && pricingPreview.discount.status === 'invalid')
+        || (Boolean(affiliateCode) && pricingPreview.affiliate.status === 'invalid')
+        || ((discountCode || affiliateCode) && pricingPreview.pricingReady === false);
+
+    useEffect(() => {
+        const basePricing = createBaseCheckoutPricing({ subtotal: orderSubtotal, shippingInput });
+
+        if (!structuredCheckoutReady || (!discountCode && !affiliateCode)) {
+            setPricingPreview(basePricing);
+            setPricingStatus('ready');
+            setPricingMessage('');
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(async () => {
+            setPricingStatus('loading');
+
+            try {
+                const response = await fetch('/api/cart/pricing', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ subtotal: orderSubtotal, discountCode, affiliateCode, ...shippingInput }),
+                    signal: controller.signal,
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to validate the promotion codes right now.');
+                }
+
+                if (controller.signal.aborted) {
+                    return;
+                }
+
+                setPricingPreview(data.pricing || basePricing);
+                setPricingStatus('ready');
+                setPricingMessage(data.pricing?.message || '');
+            } catch (error) {
+                if (controller.signal.aborted) {
+                    return;
+                }
+
+                setPricingPreview(basePricing);
+                setPricingStatus('error');
+                setPricingMessage(error.message || 'Unable to validate the promotion codes right now.');
+            }
+        }, 250);
+
+        return () => {
+            controller.abort();
+            window.clearTimeout(timer);
+        };
+    }, [
+        affiliateCode,
+        deliveryMethod,
+        discountCode,
+        orderSubtotal,
+        shippingAddressLine1,
+        shippingCity,
+        shippingCountry,
+        shippingOfficeCode,
+        shippingOfficeLabel,
+        shippingScope,
+        structuredCheckoutReady,
+    ]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -169,12 +295,15 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
             shippingAddressLine2,
             shippingOfficeCode,
             shippingOfficeLabel,
+            shippingMapUrl,
             subtotal: orderSubtotal,
             shippingAmount,
             discountAmount,
             total: orderTotal,
             discountCode,
             affiliateCode,
+            affiliateCommissionType: pricingPreview.affiliate.commissionType,
+            affiliateCommissionValue: pricingPreview.affiliate.commissionValue,
         });
 
         if (order) {
@@ -340,14 +469,30 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             Country
-                            <input value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required readOnly={shippingScope === 'domestic_bg'} className={`h-14 border border-[#1C1C1C]/12 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C] ${shippingScope === 'domestic_bg' ? 'bg-[#EFECE8]' : 'bg-white'}`} />
+                            {shippingScope === 'domestic_bg' ? (
+                                <input value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required readOnly className="h-14 border border-[#1C1C1C]/12 bg-[#EFECE8] px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            ) : (
+                                <select value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                                    <option value="">Select country</option>
+                                    {countryPhoneOptions.map((option) => (
+                                        <option key={option.country} value={option.label}>{option.label}</option>
+                                    ))}
+                                </select>
+                            )}
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             City
-                            <input value={shippingCity} onChange={(event) => setShippingCity(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <>
+                                <input value={shippingCity} onChange={(event) => setShippingCity(event.target.value)} list={shippingCityListId} autoComplete="address-level2" required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <datalist id={shippingCityListId}>
+                                    {shippingCitySuggestions.map((option) => (
+                                        <option key={option} value={option} />
+                                    ))}
+                                </datalist>
+                            </>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Region
+                            State / Province / Region
                             <input value={shippingRegion} onChange={(event) => setShippingRegion(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
@@ -355,14 +500,14 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             <input value={shippingPostalCode} onChange={(event) => setShippingPostalCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
 
-                        {requiresAddressDetails && (
+                        {needsCustomAddress && (
                             <>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    Address Line 1
+                                    {shippingScope === 'worldwide' ? 'Custom Address' : 'Address Line 1'}
                                     <input value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    Address Line 2
+                                    {shippingScope === 'worldwide' ? 'Address Details' : 'Address Line 2'}
                                     <input value={shippingAddressLine2} onChange={(event) => setShippingAddressLine2(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                             </>
@@ -379,9 +524,17 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                     <input value={shippingOfficeCode} onChange={(event) => setShippingOfficeCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                                 <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62 md:col-span-1">
-                                    Speedy and ECONT office-map integration will plug into these fields later, so the structure is ready without forcing the carrier APIs into this pass.
+                                    Speedy and ECONT office-map integration will plug into these fields once the carrier credentials and verified office endpoints are ready, so the checkout stays stable instead of guessing against undocumented APIs.
                                 </div>
                             </>
+                        )}
+
+                        {shippingScope === 'worldwide' && (
+                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
+                                Google Maps Pin Link
+                                <input value={shippingMapUrl} onChange={(event) => setShippingMapUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <span className="text-xs leading-relaxed text-[#1C1C1C]/55 normal-case tracking-normal">Optional, but useful for villas, gated buildings, ateliers, or destinations that are easier to confirm with a dropped pin than a typed address alone.</span>
+                            </label>
                         )}
                     </div>
                 </section>
@@ -395,17 +548,51 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             Discount Code
-                            <input value={discountCode} onChange={(event) => setDiscountCode(event.target.value.toUpperCase())} placeholder="PROMO" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input value={discountCode} onChange={(event) => setDiscountCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder="PROMO" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             Affiliate Code
-                            <input value={affiliateCode} onChange={(event) => setAffiliateCode(event.target.value.toUpperCase())} placeholder="PARTNER" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input value={affiliateCode} onChange={(event) => setAffiliateCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder="PARTNER" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                     </div>
 
+                    {(discountCode || affiliateCode) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {discountCode && (
+                                <PricingValidationCard
+                                    label="Discount Result"
+                                    status={pricingPreview.discount.status}
+                                    message={pricingPreview.discount.status === 'applied'
+                                        ? `${pricingPreview.discount.code} saves ${formatPromotionCurrency(pricingPreview.discount.appliedAmount)}.`
+                                        : pricingPreview.discount.message || 'The discount will be checked before submission.'}
+                                />
+                            )}
+
+                            {affiliateCode && (
+                                <PricingValidationCard
+                                    label="Affiliate Result"
+                                    status={pricingPreview.affiliate.status}
+                                    message={pricingPreview.affiliate.status === 'applied'
+                                        ? `${pricingPreview.affiliate.code} saves ${formatPromotionCurrency(pricingPreview.affiliate.customerDiscountAmount)} and tracks the partner attribution.`
+                                        : pricingPreview.affiliate.status === 'tracked'
+                                            ? `${pricingPreview.affiliate.code} tracks the partner attribution with no shopper discount.`
+                                            : pricingPreview.affiliate.message || 'The affiliate code will be checked before submission.'}
+                                />
+                            )}
+                        </div>
+                    )}
+
                     <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                        Codes are captured with the order structure now, even though discount validation and affiliate compensation logic will be introduced in the next phase.
+                        Codes are validated against the live studio settings. Shopper savings update immediately, domestic shipping follows the current studio rules, and worldwide routing still stays manual until confirmed.
                     </div>
+
+                    {pricingMessage && (
+                        <PricingValidationCard
+                            label="Promotion Notice"
+                            status={pricingPreview.pricingReady === false || pricingStatus === 'error' ? 'invalid' : 'ready'}
+                            message={pricingMessage}
+                        />
+                    )}
                 </section>
 
                 {(cartMessage || checkoutStatus === 'error') && (
@@ -416,8 +603,8 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     {structuredCheckoutReady ? (
-                        <button disabled={checkoutStatus === 'submitting'} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' ? 'opacity-60' : 'hover:bg-black'}`}>
-                            {checkoutStatus === 'submitting' ? 'Submitting Order...' : 'Submit Order Request'}
+                        <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker ? 'opacity-60' : 'hover:bg-black'}`}>
+                            {checkoutStatus === 'submitting' ? 'Submitting Order...' : pricingStatus === 'loading' ? 'Validating Codes...' : 'Submit Order Request'}
                         </button>
                     ) : (
                         <a href="/contact" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">Request Through Atelier</a>
@@ -439,12 +626,12 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{cartItems.length}</p>
                         </div>
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Discount</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Savings</p>
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(discountAmount)}</p>
                         </div>
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                             <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Shipping</p>
-                            <p className="font-serif text-2xl font-light text-[#1C1C1C]">Quote</p>
+                            <p className="font-serif text-xl font-light leading-tight text-[#1C1C1C]">{shippingDisplayValue}</p>
                         </div>
                     </div>
 
@@ -463,8 +650,10 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                     <div className="flex flex-col gap-3 text-sm md:text-base leading-relaxed text-white/72">
                         <div className="flex items-center justify-between gap-4"><span>Subtotal</span><span>{formatCurrency(orderSubtotal)}</span></div>
-                        <div className="flex items-center justify-between gap-4"><span>Discount</span><span>{discountCode ? `${discountCode} / Quote Pending` : formatCurrency(discountAmount)}</span></div>
-                        <div className="flex items-center justify-between gap-4"><span>Shipping</span><span>Quote Pending</span></div>
+                        {discountCode && <div className="flex items-center justify-between gap-4"><span>Discount Code</span><span>{pricingPreview.discount.status === 'applied' ? `-${formatCurrency(pricingPreview.discount.appliedAmount)}` : pricingPreview.discount.message || discountCode}</span></div>}
+                        {affiliateCode && <div className="flex items-center justify-between gap-4"><span>Affiliate</span><span>{pricingPreview.affiliate.status === 'applied' ? `-${formatCurrency(pricingPreview.affiliate.customerDiscountAmount)}` : pricingPreview.affiliate.status === 'tracked' ? 'Tracked' : pricingPreview.affiliate.message || affiliateCode}</span></div>}
+                        <div className="flex items-center justify-between gap-4"><span>Total Savings</span><span>{formatCurrency(discountAmount)}</span></div>
+                        <div className="flex items-center justify-between gap-4"><span>Shipping</span><span>{shippingDisplayValue}</span></div>
                     </div>
 
                     <div className="border-t border-white/10 pt-4 flex items-center justify-between gap-4">
@@ -473,7 +662,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     </div>
 
                     <p className="text-sm leading-relaxed text-white/62">
-                        This structure stores the codes and delivery preference now, while the atelier confirms final discounts, shipping, and any Bulgaria-specific carrier routing after review.
+                        {pricingPreview.shipping.message || 'Live codes now affect the checkout total immediately, while worldwide shipping remains manual until the atelier confirms the route.'}
                     </p>
                 </section>
             </aside>

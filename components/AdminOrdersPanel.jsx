@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { formatCustomMeasurementSummary } from '../utils/cart';
 import {
     buildOrderAddressSummary,
     buildOrderCustomerLabel,
     buildOrderDeliverySummary,
     buildOrderDiscountSummary,
+    buildOrderMapUrl,
     buildOrderReference,
+    buildOrderShippingMessage,
+    buildOrderShippingSummary,
     orderStatusOptions,
 } from '../utils/checkout';
 
@@ -38,6 +41,25 @@ function getStatusClasses(status) {
         default:
             return 'border-[#D9C08A] bg-[#FFF8E8] text-[#8A6A2F]';
     }
+}
+
+function sortOrders(orders, sortMode) {
+    const sortedOrders = [...orders];
+
+    sortedOrders.sort((leftOrder, rightOrder) => {
+        switch (sortMode) {
+            case 'oldest':
+                return new Date(leftOrder.created_at || 0).getTime() - new Date(rightOrder.created_at || 0).getTime();
+            case 'highest_total':
+                return Number(rightOrder.total || 0) - Number(leftOrder.total || 0);
+            case 'lowest_total':
+                return Number(leftOrder.total || 0) - Number(rightOrder.total || 0);
+            default:
+                return new Date(rightOrder.created_at || 0).getTime() - new Date(leftOrder.created_at || 0).getTime();
+        }
+    });
+
+    return sortedOrders;
 }
 
 function OrderItemRow({ item, index }) {
@@ -73,18 +95,53 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
     const [statusValue, setStatusValue] = useState(recentOrders[0]?.status || 'pending');
     const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const [isSaving, setIsSaving] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [sortMode, setSortMode] = useState('newest');
+    const deferredSearchQuery = useDeferredValue(searchQuery);
 
     useEffect(() => {
         setOrders(recentOrders);
     }, [recentOrders]);
 
-    useEffect(() => {
-        if (!orders.some((order) => order.id === selectedOrderId)) {
-            setSelectedOrderId(orders[0]?.id || '');
-        }
-    }, [orders, selectedOrderId]);
+    const filteredOrders = useMemo(() => {
+        const normalizedSearchQuery = deferredSearchQuery.trim().toLowerCase();
+        const matchingOrders = orders.filter((order) => {
+            if (statusFilter !== 'all' && String(order.status || 'pending').toLowerCase() !== statusFilter) {
+                return false;
+            }
 
-    const selectedOrder = useMemo(() => orders.find((order) => order.id === selectedOrderId) || orders[0] || null, [orders, selectedOrderId]);
+            if (!normalizedSearchQuery) {
+                return true;
+            }
+
+            const searchHaystack = [
+                order.order_code,
+                order.customer_name,
+                order.customer_email,
+                order.customer_phone,
+                order.customer_location,
+                order.delivery_method,
+                order.shipping_city,
+                order.shipping_country,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            return searchHaystack.includes(normalizedSearchQuery);
+        });
+
+        return sortOrders(matchingOrders, sortMode);
+    }, [deferredSearchQuery, orders, sortMode, statusFilter]);
+
+    useEffect(() => {
+        if (!filteredOrders.some((order) => order.id === selectedOrderId)) {
+            setSelectedOrderId(filteredOrders[0]?.id || '');
+        }
+    }, [filteredOrders, selectedOrderId]);
+
+    const selectedOrder = useMemo(() => filteredOrders.find((order) => order.id === selectedOrderId) || filteredOrders[0] || null, [filteredOrders, selectedOrderId]);
 
     useEffect(() => {
         setStatusValue(selectedOrder?.status || 'pending');
@@ -122,7 +179,10 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
         }
     };
 
-    const quickStatusActions = orderStatusOptions.filter((option) => option.value !== selectedOrder?.status);
+    const quickStatusActions = selectedOrder ? orderStatusOptions.filter((option) => option.value !== selectedOrder.status) : [];
+    const visibleLabel = filteredOrders.length === orders.length
+        ? `${orders.length} visible`
+        : `${filteredOrders.length} of ${orders.length} visible`;
 
     return (
         <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-6 md:p-8 flex flex-col gap-5">
@@ -131,19 +191,54 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                     <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Order Review</p>
                     <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.12em]">Atelier Orders</h3>
                 </div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{orders.length} visible</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{visibleLabel}</p>
             </div>
 
             <p className="text-sm leading-relaxed text-[#1C1C1C]/58">
-                Select an order, review the customer and delivery details, then move it through the atelier flow by setting it to <span className="font-medium text-[#1C1C1C]">Paid</span>, <span className="font-medium text-[#1C1C1C]">Fulfilled</span>, or <span className="font-medium text-[#1C1C1C]">Cancelled</span>.
+                Search, filter, and sort the order list without letting the page grow endlessly. The order rail stays inside a contained scroll area while the review detail remains visible below it.
             </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_11rem_11rem] gap-3">
+                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                    Search
+                    <input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Order code, client, email"
+                        className="h-12 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors placeholder:text-[#1C1C1C]/28 focus:border-[#1C1C1C]"
+                    />
+                </label>
+
+                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                    Status
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-12 border border-[#1C1C1C]/12 bg-white px-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                        <option value="all">All Statuses</option>
+                        {orderStatusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                </label>
+
+                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                    Sort
+                    <select value={sortMode} onChange={(event) => setSortMode(event.target.value)} className="h-12 border border-[#1C1C1C]/12 bg-white px-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="highest_total">Highest Total</option>
+                        <option value="lowest_total">Lowest Total</option>
+                    </select>
+                </label>
+            </div>
 
             {orders.length === 0 ? (
                 <p className="text-sm text-[#1C1C1C]/58">No recent orders yet.</p>
             ) : (
                 <>
-                    <div className="flex flex-col gap-3">
-                        {orders.map((order) => (
+                    <div className="max-h-[34rem] overflow-auto pr-1">
+                        <div className="flex flex-col gap-3">
+                        {filteredOrders.length === 0 ? (
+                            <p className="text-sm text-[#1C1C1C]/58">No orders match the current filters.</p>
+                        ) : filteredOrders.map((order) => (
                             <button
                                 key={order.id}
                                 type="button"
@@ -164,6 +259,7 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                 </div>
                             </button>
                         ))}
+                        </div>
                     </div>
 
                     {selectedOrder && (
@@ -212,7 +308,10 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 flex flex-col gap-2">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">Delivery</p>
                                     <p className="font-serif text-2xl font-light leading-tight text-[#1C1C1C]">{buildOrderDeliverySummary(selectedOrder)}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">{buildOrderShippingSummary(selectedOrder)}</p>
+                                    {buildOrderShippingMessage(selectedOrder) && <p className="text-xs leading-relaxed text-[#1C1C1C]/46">{buildOrderShippingMessage(selectedOrder)}</p>}
                                     <p className="text-sm text-[#1C1C1C]/62">{buildOrderAddressSummary(selectedOrder)}</p>
+                                    {buildOrderMapUrl(selectedOrder) && <a href={buildOrderMapUrl(selectedOrder)} target="_blank" rel="noreferrer" className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/46 underline underline-offset-4">Open pinned map</a>}
                                     {buildOrderDiscountSummary(selectedOrder) && <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">{buildOrderDiscountSummary(selectedOrder)}</p>}
                                 </div>
                             </div>
@@ -224,14 +323,19 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Subtotal</p>
                                     <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(selectedOrder.subtotal ?? selectedOrder.total ?? 0)}</p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
+                                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Savings</p>
+                                    <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(selectedOrder.discount_amount ?? selectedOrder.pricing_snapshot?.discount_amount ?? 0)}</p>
+                                </div>
+                                <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Shipping</p>
-                                    <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(selectedOrder.shipping_amount ?? 0)}</p>
+                                    <p className="font-serif text-xl font-light leading-tight text-[#1C1C1C]">{buildOrderShippingSummary(selectedOrder)}</p>
+                                    {buildOrderShippingMessage(selectedOrder) && <p className="mt-2 text-xs leading-relaxed text-[#1C1C1C]/46">{buildOrderShippingMessage(selectedOrder)}</p>}
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Total</p>
@@ -239,7 +343,7 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-3 max-h-[24rem] overflow-auto pr-1">
                                 {(selectedOrder.items || []).map((item, index) => (
                                     <OrderItemRow key={`${selectedOrder.id}-${item.id || index}-${index}`} item={item} index={index} />
                                 ))}

@@ -2,14 +2,22 @@ export const shippingScopeOptions = [
     {
         value: 'domestic_bg',
         label: 'Domestic Bulgaria',
-        copy: 'For deliveries inside Bulgaria, including future Speedy and ECONT routing.',
+        copy: 'For deliveries inside Bulgaria, with automatic shipping coverage rules until the carrier APIs are connected.',
     },
     {
         value: 'worldwide',
         label: 'Worldwide',
-        copy: 'For clients outside Bulgaria while shipping quotes and routing are confirmed manually.',
+        copy: 'For clients outside Bulgaria while the atelier reviews the route, destination, and final shipping quote manually.',
     },
 ];
+
+export const shippingBenefitOptions = [
+    { value: 'none', label: 'No Shipping Override' },
+    { value: 'sender_covers', label: 'Covered by Sender' },
+    { value: 'receiver_covers', label: 'Covered by Receiver' },
+];
+
+const FREE_DOMESTIC_SHIPPING_THRESHOLD = 150;
 
 export const orderStatusOptions = [
     { value: 'pending', label: 'Pending' },
@@ -45,10 +53,15 @@ const deliveryMethodOptionsByScope = {
         {
             value: 'worldwide_quote',
             label: 'Worldwide Shipping Quote',
-            copy: 'The atelier confirms the best carrier and final shipping total after review.',
+            copy: 'The atelier reviews the typed address, pinned map, and route before confirming the final worldwide shipping quote.',
         },
     ],
 };
+
+const shippingBenefitLabelMap = shippingBenefitOptions.reduce((labelMap, option) => {
+    labelMap[option.value] = option.label;
+    return labelMap;
+}, {});
 
 const deliveryMethodLabelMap = Object.values(deliveryMethodOptionsByScope)
     .flat()
@@ -79,6 +92,14 @@ export function normalizeShippingScope(value) {
     return value === 'domestic_bg' ? 'domestic_bg' : 'worldwide';
 }
 
+export function normalizeShippingBenefit(value) {
+    return shippingBenefitOptions.some((option) => option.value === value) ? value : 'none';
+}
+
+export function buildShippingBenefitLabel(value = '') {
+    return shippingBenefitLabelMap[normalizeShippingBenefit(value)] || shippingBenefitLabelMap.none;
+}
+
 export function getDeliveryMethodOptions(shippingScope = 'worldwide') {
     return deliveryMethodOptionsByScope[normalizeShippingScope(shippingScope)] || deliveryMethodOptionsByScope.worldwide;
 }
@@ -88,6 +109,133 @@ export function normalizeDeliveryMethod(shippingScope, value) {
     const matchingOption = options.find((option) => option.value === value);
 
     return matchingOption?.value || options[0]?.value || 'worldwide_quote';
+}
+
+function hasOfficeDeliveryDetails({ shippingCity = '', shippingOfficeLabel = '', shippingOfficeCode = '' } = {}) {
+    return Boolean(toText(shippingCity, 120) && (toText(shippingOfficeLabel, 160) || toText(shippingOfficeCode, 80)));
+}
+
+function hasAddressDeliveryDetails({ shippingCountry = '', shippingCity = '', shippingAddressLine1 = '' } = {}) {
+    return Boolean(toText(shippingCountry, 120) && toText(shippingCity, 120) && toText(shippingAddressLine1, 160));
+}
+
+export function hasCheckoutDeliveryDestination({
+    shippingScope = 'worldwide',
+    deliveryMethod = '',
+    shippingCountry = '',
+    shippingCity = '',
+    shippingAddressLine1 = '',
+    shippingOfficeLabel = '',
+    shippingOfficeCode = '',
+} = {}) {
+    const normalizedScope = normalizeShippingScope(shippingScope);
+    const normalizedMethod = normalizeDeliveryMethod(normalizedScope, deliveryMethod);
+
+    if (normalizedScope === 'worldwide') {
+        return hasAddressDeliveryDetails({ shippingCountry, shippingCity, shippingAddressLine1 });
+    }
+
+    if (normalizedMethod.endsWith('_office')) {
+        return hasOfficeDeliveryDetails({ shippingCity, shippingOfficeLabel, shippingOfficeCode });
+    }
+
+    if (normalizedMethod.endsWith('_address')) {
+        return hasAddressDeliveryDetails({ shippingCountry: 'Bulgaria', shippingCity, shippingAddressLine1 });
+    }
+
+    return Boolean(toText(shippingCity, 120));
+}
+
+export function evaluateCheckoutShipping({
+    subtotal = 0,
+    shippingScope = 'worldwide',
+    deliveryMethod = '',
+    shippingCountry = '',
+    shippingCity = '',
+    shippingAddressLine1 = '',
+    shippingOfficeLabel = '',
+    shippingOfficeCode = '',
+    shippingBenefit = 'none',
+} = {}) {
+    const normalizedSubtotal = toAmount(subtotal);
+    const normalizedScope = normalizeShippingScope(shippingScope);
+    const normalizedMethod = normalizeDeliveryMethod(normalizedScope, deliveryMethod);
+    const normalizedBenefit = normalizeShippingBenefit(shippingBenefit);
+    const destinationReady = hasCheckoutDeliveryDestination({
+        shippingScope: normalizedScope,
+        deliveryMethod: normalizedMethod,
+        shippingCountry,
+        shippingCity,
+        shippingAddressLine1,
+        shippingOfficeLabel,
+        shippingOfficeCode,
+    });
+
+    if (normalizedScope === 'worldwide') {
+        return {
+            amount: 0,
+            status: 'pending_quote',
+            label: 'Quote pending',
+            message: destinationReady
+                ? 'Worldwide shipping is still confirmed manually after the atelier reviews the address and route.'
+                : 'Add the country, city, and custom address so the atelier can prepare the worldwide shipping quote.',
+            payer: 'pending',
+            source: 'worldwide',
+        };
+    }
+
+    if (!destinationReady) {
+        return {
+            amount: 0,
+            status: 'details_required',
+            label: 'Add delivery details',
+            message: 'Enter the Bulgarian city and exact address or pickup office to determine the shipping coverage.',
+            payer: 'pending',
+            source: 'details',
+        };
+    }
+
+    if (normalizedBenefit === 'sender_covers') {
+        return {
+            amount: 0,
+            status: 'sender_covers',
+            label: 'Covered by sender',
+            message: 'This code marks the domestic shipping as atelier-covered.',
+            payer: 'sender',
+            source: 'discount_code',
+        };
+    }
+
+    if (normalizedBenefit === 'receiver_covers') {
+        return {
+            amount: 0,
+            status: 'receiver_covers',
+            label: 'Covered by receiver',
+            message: 'Domestic shipping is payable by the receiver on delivery or pickup.',
+            payer: 'receiver',
+            source: 'discount_code',
+        };
+    }
+
+    if (normalizedSubtotal >= FREE_DOMESTIC_SHIPPING_THRESHOLD) {
+        return {
+            amount: 0,
+            status: 'sender_covers',
+            label: 'Free shipping',
+            message: `Domestic orders above €${FREE_DOMESTIC_SHIPPING_THRESHOLD.toFixed(2)} qualify for atelier-covered shipping.`,
+            payer: 'sender',
+            source: 'threshold',
+        };
+    }
+
+    return {
+        amount: 0,
+        status: 'receiver_covers',
+        label: 'Covered by receiver',
+        message: 'Domestic shipping is payable by the receiver once the route is confirmed.',
+        payer: 'receiver',
+        source: 'default',
+    };
 }
 
 function hashOrderSeed(value = '') {
@@ -139,6 +287,7 @@ export function normalizeCheckoutPayload(payload = {}) {
             shippingAddressLine2: toText(payload?.shippingAddressLine2, 160),
             shippingOfficeCode: toText(payload?.shippingOfficeCode, 80),
             shippingOfficeLabel: toText(payload?.shippingOfficeLabel, 160),
+            shippingMapUrl: toText(payload?.shippingMapUrl, 500),
         },
         pricing: {
             subtotal: toAmount(payload?.subtotal),
@@ -208,21 +357,56 @@ export function buildOrderAddressSummary(order = {}) {
         return officeParts.join(' / ');
     }
 
+    if (buildOrderMapUrl(order)) {
+        return 'Pinned map location shared by the client.';
+    }
+
     return 'Delivery destination will be confirmed by the atelier.';
 }
 
 export function buildOrderDiscountSummary(order = {}) {
-    const discountCode = toText(order?.discount_code, 64);
-    const affiliateCode = toText(order?.affiliate_code, 64);
+    const discountCode = toText(order?.discount_code || order?.pricing_snapshot?.discount_code, 64);
+    const discountLabel = toText(order?.pricing_snapshot?.discount_label, 120);
+    const affiliateCode = toText(order?.affiliate_code || order?.pricing_snapshot?.affiliate_code, 64);
+    const affiliatePartnerName = toText(order?.pricing_snapshot?.affiliate_partner_name, 120);
+    const totalSavings = toAmount(order?.discount_amount ?? order?.pricing_snapshot?.discount_amount ?? 0);
     const segments = [];
 
     if (discountCode) {
-        segments.push(`Discount ${discountCode}`);
+        segments.push(discountLabel ? `Discount ${discountCode} (${discountLabel})` : `Discount ${discountCode}`);
     }
 
     if (affiliateCode) {
-        segments.push(`Affiliate ${affiliateCode}`);
+        segments.push(affiliatePartnerName ? `Affiliate ${affiliateCode} (${affiliatePartnerName})` : `Affiliate ${affiliateCode}`);
+    }
+
+    if (totalSavings > 0) {
+        segments.push(`Saved €${totalSavings.toFixed(2)}`);
     }
 
     return segments.join(' / ');
+}
+
+export function buildOrderShippingSummary(order = {}) {
+    const shippingLabel = toText(order?.pricing_snapshot?.shipping_label, 120);
+
+    if (shippingLabel) {
+        return shippingLabel;
+    }
+
+    const shippingAmount = toAmount(order?.shipping_amount ?? order?.pricing_snapshot?.shipping_amount ?? 0);
+
+    if (shippingAmount > 0) {
+        return `€${shippingAmount.toFixed(2)}`;
+    }
+
+    return 'Quote pending';
+}
+
+export function buildOrderShippingMessage(order = {}) {
+    return toText(order?.pricing_snapshot?.shipping_message, 240);
+}
+
+export function buildOrderMapUrl(order = {}) {
+    return toText(order?.delivery_snapshot?.shipping_map_url, 500);
 }

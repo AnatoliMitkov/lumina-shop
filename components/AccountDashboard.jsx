@@ -17,7 +17,10 @@ import {
     buildOrderAddressSummary,
     buildOrderDeliverySummary,
     buildOrderDiscountSummary,
+    buildOrderMapUrl,
     buildOrderReference,
+    buildOrderShippingMessage,
+    buildOrderShippingSummary,
 } from '../utils/checkout';
 
 function formatDate(value) {
@@ -395,9 +398,12 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                                         <p className="font-serif text-xl md:text-2xl font-light leading-tight text-[#1C1C1C] break-words">{getOrderNameSummary(order.items)}</p>
                                         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">
                                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDeliverySummary(order)}</span>
+                                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderShippingSummary(order)}</span>
                                             {buildOrderDiscountSummary(order) && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDiscountSummary(order)}</span>}
                                         </div>
                                         <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{buildOrderAddressSummary(order)}</p>
+                                        {buildOrderShippingMessage(order) && <p className="text-xs leading-relaxed text-[#1C1C1C]/46">{buildOrderShippingMessage(order)}</p>}
+                                        {buildOrderMapUrl(order) && <a href={buildOrderMapUrl(order)} target="_blank" rel="noreferrer" className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/46 underline underline-offset-4">Open pinned map</a>}
                                     </div>
                                 </div>
                             </div>

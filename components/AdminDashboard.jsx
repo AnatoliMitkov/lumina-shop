@@ -2,6 +2,9 @@
 
 import { useDeferredValue, useEffect, useState } from 'react';
 import { createClient } from '../utils/supabase/client';
+import AdminAffiliateCodesPanel from './AdminAffiliateCodesPanel';
+import AdminInquiriesPanel from './AdminInquiriesPanel';
+import AdminDiscountCodesPanel from './AdminDiscountCodesPanel';
 import AdminOrdersPanel from './AdminOrdersPanel';
 import {
     PRODUCT_DEFAULTS,
@@ -694,7 +697,10 @@ export default function AdminDashboard({
     initialProducts,
     recentOrders,
     recentInquiries,
+    discountCodes,
+    affiliateCodes,
     maintenanceMessage,
+    promotionMessage,
 }) {
     const sortedInitialProducts = sortProducts(initialProducts ?? []);
     const [products, setProducts] = useState(sortedInitialProducts);
@@ -1582,41 +1588,14 @@ export default function AdminDashboard({
                 </div>
             </section>
 
-            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
                 <AdminOrdersPanel recentOrders={recentOrders} />
+                <AdminInquiriesPanel recentInquiries={recentInquiries} />
+            </section>
 
-                <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5">
-                    <div className="flex items-end justify-between gap-4">
-                        <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 mb-3">Recent Inquiries</p>
-                            <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.12em]">Atelier Inbox</h3>
-                        </div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/35">{recentInquiries.length} visible</p>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                        {recentInquiries.length === 0 ? (
-                            <p className="text-sm text-white/60">No recent inquiries yet.</p>
-                        ) : (
-                            recentInquiries.map((inquiry) => (
-                                <div key={inquiry.id} className="border border-white/10 bg-white/[0.04] rounded-sm p-4 md:p-5 flex flex-col gap-3">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 mb-2">{inquiry.query_type || 'Other'}</p>
-                                            <p className="font-serif text-2xl font-light leading-none text-white">{inquiry.full_name || inquiry.email}</p>
-                                        </div>
-                                        <span className="text-[10px] uppercase tracking-[0.22em] text-white/38">{formatDate(inquiry.created_at)}</span>
-                                    </div>
-                                    <p className="text-sm leading-relaxed text-white/68">{buildInquiryPreview(inquiry.message)}</p>
-                                    <div className="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.22em] text-white/40">
-                                        <span>{inquiry.email}</span>
-                                        <span>{inquiry.status || 'new'}</span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
+                <AdminDiscountCodesPanel initialDiscounts={discountCodes} setupMessage={promotionMessage} />
+                <AdminAffiliateCodesPanel initialAffiliates={affiliateCodes} setupMessage={promotionMessage} />
             </section>
 
             <ConfirmDialog
