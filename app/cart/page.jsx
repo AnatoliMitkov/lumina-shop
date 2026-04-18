@@ -101,6 +101,8 @@ export default function CartPage() {
 
                                     <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
                                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/55 rounded-full">{item.category || 'Atelier Piece'}</span>
+                                        {item.selected_size && <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/55 rounded-full">Size {item.selected_size}</span>}
+                                        {item.selected_tone && <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/55 rounded-full">Tone {item.selected_tone}</span>}
                                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/55 rounded-full">Hand-picked for review</span>
                                     </div>
 

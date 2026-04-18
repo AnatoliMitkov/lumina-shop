@@ -246,7 +246,20 @@ export default function ClientEngine({ children }) {
           .to('.hero-img', { opacity: 1, scale: 1, duration: transitionTimings.heroDuration, ease: "power3.out" }, "-=0.45")
           .to('.hero-title', { y: '0%', duration: transitionTimings.heroTitleDuration, stagger: transitionTimings.heroTitleStagger, ease: "power4.out" }, "-=0.72")
           .to('.hero-sub', { opacity: 1, duration: transitionTimings.heroSubDuration, stagger: 0.1, ease: "power3.out" }, "-=0.52")
-          .to('#nav', { opacity: 1, duration: transitionTimings.navDuration }, "-=0.5");
+          .to(
+              '#nav',
+              {
+                  opacity: 1,
+                  duration: transitionTimings.navDuration,
+                  onComplete: () => {
+                      if (typeof window !== 'undefined') {
+                          window.__luminaLastRevealPathname = pathname;
+                          window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
+                      }
+                  },
+              },
+              "-=0.5"
+          );
 
         hasPlayedInitialLoadRef.current = true;
 
@@ -350,22 +363,55 @@ export default function ClientEngine({ children }) {
                 </div>
             </nav>
 
-            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] ${isUtilityRoute ? 'mb-[28rem] md:mb-[19rem] shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'mb-[42vh] md:mb-[36vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
+            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[30rem] md:mb-[18rem] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 <div id="smooth-content">
                     {children}
                 </div>
             </div>
 
-            <footer className={`fixed bottom-0 left-0 w-full ${isUtilityRoute ? 'h-[28rem] md:h-[19rem] pt-14 md:pt-16 pb-8 md:pb-10' : 'h-[42vh] md:h-[36vh] pt-20 md:pt-24 pb-8'} z-0 bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-between px-6 md:px-12`}>
-                <div className="flex flex-col md:flex-row justify-between items-start gap-16 md:gap-0 max-w-[1800px] mx-auto w-full">
-                    <div className="flex flex-col gap-4 max-w-sm"><h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest">The VA Store</h3><p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70">Beautiful People Smile More</p><p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50">Elevating traditional craftsmanship into avant-garde fashion.</p></div>
-                    <div className="flex gap-16 md:gap-32 text-xs uppercase tracking-[0.15em] font-medium">
-                        <div className="flex flex-col gap-6"><span className="text-white/30 mb-2">Explore</span><a href="/" className="hover-target transition-link hover:text-white/70 transition-colors">Home</a><a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors">Collections</a><a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors">Spotlight</a></div>
-                        <div className="flex flex-col gap-6"><span className="text-white/30 mb-2">Client</span><a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors">Account</a><a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors">Cart</a><a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors">Contact Form</a><a href="mailto:sales@stylingbyva.com" className="hover-target hover:text-white/70 transition-colors normal-case tracking-normal text-sm">sales@stylingbyva.com</a></div>
-                        <div className="flex flex-col gap-6"><span className="text-white/30 mb-2">Atelier</span><p className="text-white/70 normal-case tracking-normal text-sm">Ruse, Bulgaria</p><p className="text-white/40 normal-case tracking-normal text-sm">Styling by VA Atelier</p><p className="text-white/40 normal-case tracking-normal text-sm">Editorial spotlight and personal support for signature pieces</p></div>
+            <footer className="fixed bottom-0 left-0 w-full h-[30rem] md:h-[18rem] z-0 bg-[#1C1C1C] text-[#EFECE8] px-6 md:px-8 xl:px-10 py-5">
+                <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-5 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8 md:gap-x-16 md:gap-y-8 text-xs uppercase tracking-[0.15em] font-medium">
+                        <div className="flex flex-col gap-4 max-w-sm">
+                            <h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest">The VA Store</h3>
+                            <p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70">Beautiful People Smile More</p>
+                            <p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50">Elevating traditional craftsmanship into avant-garde fashion.</p>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <span className="mb-4 text-white/30">Explore</span>
+                            <div className="flex flex-col gap-4">
+                                <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors">Home</a>
+                                <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors">Collections</a>
+                                <a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors">Spotlight</a>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <span className="mb-4 text-white/30">Client</span>
+                            <div className="flex flex-col gap-4">
+                                <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors">Account</a>
+                                <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors">Cart</a>
+                                <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors">Contact Form</a>
+                                <a href="mailto:sales@stylingbyva.com" className="hover-target hover:text-white/70 transition-colors normal-case tracking-normal text-sm">sales@stylingbyva.com</a>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <span className="mb-4 text-white/30">Atelier</span>
+                            <div className="flex flex-col gap-4 normal-case tracking-normal text-sm font-normal text-white/55">
+                                <p className="text-white/70">Ruse, Bulgaria</p>
+                                <p>Styling by VA Atelier</p>
+                                <p>Editorial spotlight and personal support for signature pieces</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-3 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40">
+                        <p>&copy; 2026 The VA Store.</p>
+                        <p className="hover-target">Crafted by Victoria</p>
                     </div>
                 </div>
-                <div className="flex flex-col md:flex-row justify-between items-center border-t border-white/10 pt-8 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 max-w-[1800px] mx-auto w-full"><p>&copy; 2026 The VA Store.</p><p className="mt-4 md:mt-0 hover-target">Crafted by Victoria</p></div>
             </footer>
 
             <div id="cart-container" className="fixed inset-0 z-[200] invisible flex justify-end">
@@ -385,6 +431,12 @@ export default function ClientEngine({ children }) {
                                         <button onClick={() => removeFromCart(i)} className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-[#1C1C1C] transition-colors">Remove</button>
                                     </div>
                                     <p className="font-sans text-sm font-medium">€{Number(item.price).toFixed(2)}</p>
+                                    {(item.selected_size || item.selected_tone) && (
+                                        <div className="flex flex-wrap gap-2 pt-1 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
+                                            {item.selected_size && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">Size {item.selected_size}</span>}
+                                            {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">Tone {item.selected_tone}</span>}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))

@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useDeferredValue, useEffect, useState } from 'react';
+import { gsap } from 'gsap';
+import { startTransition, useDeferredValue, useEffect, useRef, useState } from 'react';
 import {
     buildProductHref,
     formatProductCurrency,
@@ -36,30 +37,168 @@ function FilterButton({ label, isActive, onClick }) {
     );
 }
 
-function StatCard({ label, value, copy }) {
+function StatCard({ label, value, copy, delayMs = 0 }) {
+    const cardRef = useRef(null);
+    const animationFrameRef = useRef(null);
+    const startTimeoutRef = useRef(null);
+    const fallbackReadyTimeoutRef = useRef(null);
+    const hasAnimatedRef = useRef(false);
+    const hasIntersectedRef = useRef(false);
+    const isPageRevealCompleteRef = useRef(false);
+    const [displayValue, setDisplayValue] = useState(0);
+
+    useEffect(() => {
+        const card = cardRef.current;
+
+        if (!card) {
+            return undefined;
+        }
+
+        const targetValue = Math.max(0, Number(value) || 0);
+        const pathname = window.location.pathname;
+
+        const markPageRevealComplete = () => {
+            isPageRevealCompleteRef.current = true;
+
+            if (fallbackReadyTimeoutRef.current) {
+                window.clearTimeout(fallbackReadyTimeoutRef.current);
+                fallbackReadyTimeoutRef.current = null;
+            }
+
+            maybeStartCountUp();
+        };
+
+        const maybeStartCountUp = () => {
+            if (!hasIntersectedRef.current || !isPageRevealCompleteRef.current || hasAnimatedRef.current) {
+                return;
+            }
+
+            startTimeoutRef.current = window.setTimeout(startCountUp, 220 + delayMs);
+        };
+
+        const startCountUp = () => {
+            if (hasAnimatedRef.current) {
+                return;
+            }
+
+            hasAnimatedRef.current = true;
+            const animationDuration = 2100;
+            const animationStart = performance.now();
+
+            const tick = (currentTime) => {
+                const progress = Math.min((currentTime - animationStart) / animationDuration, 1);
+                const easedProgress = 1 - ((1 - progress) ** 2.6);
+                const nextValue = progress >= 1 ? targetValue : Math.floor(targetValue * easedProgress);
+
+                setDisplayValue(nextValue);
+
+                if (progress < 1) {
+                    animationFrameRef.current = window.requestAnimationFrame(tick);
+                }
+            };
+
+            animationFrameRef.current = window.requestAnimationFrame(tick);
+        };
+
+        const handlePageRevealComplete = (event) => {
+            if (event.detail?.pathname !== pathname) {
+                return;
+            }
+
+            markPageRevealComplete();
+        };
+
+        if (window.__luminaLastRevealPathname === pathname) {
+            markPageRevealComplete();
+        } else {
+            fallbackReadyTimeoutRef.current = window.setTimeout(markPageRevealComplete, 1900);
+        }
+
+        window.addEventListener('lumina:page-reveal-complete', handlePageRevealComplete);
+
+        if (card.getBoundingClientRect().top < window.innerHeight * 0.92) {
+            hasIntersectedRef.current = true;
+            maybeStartCountUp();
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    hasIntersectedRef.current = true;
+                    maybeStartCountUp();
+                    observer.disconnect();
+                }
+            },
+            {
+                threshold: 0.2,
+            }
+        );
+
+        if (!hasIntersectedRef.current) {
+            observer.observe(card);
+        }
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('lumina:page-reveal-complete', handlePageRevealComplete);
+
+            if (animationFrameRef.current) {
+                window.cancelAnimationFrame(animationFrameRef.current);
+            }
+
+            if (startTimeoutRef.current) {
+                window.clearTimeout(startTimeoutRef.current);
+            }
+
+            if (fallbackReadyTimeoutRef.current) {
+                window.clearTimeout(fallbackReadyTimeoutRef.current);
+            }
+        };
+    }, [delayMs, value]);
+
     return (
-        <div className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-4 md:p-5 flex flex-col gap-2.5">
+        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-4 md:p-5 flex flex-col gap-2.5">
             <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{label}</p>
-            <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{value}</p>
+            <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
             <p className="text-xs md:text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
         </div>
     );
 }
 
-function ProductCard({ product }) {
+function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd }) {
     const href = buildProductHref(product);
     const image = resolveProductGallery(product)[0] || product.image_main;
+    const cardStyle = isFocused
+        ? { transform: 'translateY(-10px) scale(1.035)' }
+        : isDimmed
+            ? { opacity: 0.35, filter: 'grayscale(1)', transform: 'scale(0.985)' }
+            : undefined;
+    const glowStyle = isFocused
+        ? { opacity: 1, transform: 'scale(1)' }
+        : { opacity: 0, transform: 'scale(0.9)' };
+    const mediaStyle = isFocused
+        ? { boxShadow: '0 34px 80px rgba(28, 28, 28, 0.24)' }
+        : undefined;
 
     return (
-        <article className="flex flex-col gap-4 md:gap-5">
-            <a href={href} className="transition-link w-full aspect-[3/4] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C]" data-cursor-text="Inspect">
-                <img className="w-full h-full object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-[1.04]" src={image} alt={product.name} />
+        <article
+            className="collection-product-card group relative flex flex-col gap-4 md:gap-5 opacity-100 transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={cardStyle}
+            onMouseEnter={onHoverStart}
+            onMouseLeave={onHoverEnd}
+            onFocusCapture={onHoverStart}
+            onBlurCapture={onHoverEnd}
+        >
+            <div className="pointer-events-none absolute inset-x-5 top-6 bottom-24 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
+
+            <a href={href} className="transition-link w-full aspect-[3/4] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text="Inspect">
+                <img className={`w-full h-full object-cover transition-transform duration-[1.8s] ease-out ${isFocused ? 'scale-[1.08]' : 'group-hover:scale-[1.04]'}`} src={image} alt={product.name} />
             </a>
 
-            <div className="reveal-text opacity-0 translate-y-8 flex flex-col gap-3">
+            <div className="collection-card-copy flex flex-col gap-3 transition-[transform,opacity] duration-500 ease-out">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2">{product.collection}</span>
-                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2">{product.category}</span>
+                    <span className={`rounded-full border px-3 py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.collection}</span>
+                    <span className={`rounded-full border px-3 py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.category}</span>
                 </div>
 
                 <div className="flex items-end justify-between gap-4">
@@ -163,12 +302,15 @@ function FeaturedCarousel({ products, activeIndex, onDotSelect, onStep }) {
 }
 
 export default function CollectionsArchive({ products = [] }) {
+    const archiveRef = useRef(null);
+    const hoverIntentTimeoutRef = useRef(null);
     const normalizedProducts = sortProducts(products)
         .map((product) => normalizeProductRecord(product))
         .filter((product) => product.status !== 'archived');
     const [activeCollection, setActiveCollection] = useState('All');
     const [searchValue, setSearchValue] = useState('');
     const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
+    const [focusedProductId, setFocusedProductId] = useState(null);
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
 
     const collectionOptions = ['All', ...Array.from(new Set(normalizedProducts.map((product) => product.collection).filter(Boolean)))];
@@ -203,6 +345,68 @@ export default function CollectionsArchive({ products = [] }) {
         return () => window.clearInterval(intervalId);
     }, [featuredProducts.length]);
 
+    useEffect(() => {
+        if (!filteredProducts.some((product) => (product.id || product.slug) === focusedProductId)) {
+            setFocusedProductId(null);
+        }
+    }, [filteredProducts, focusedProductId]);
+
+    useEffect(() => {
+        const archive = archiveRef.current;
+
+        if (!archive) {
+            return undefined;
+        }
+
+        const ctx = gsap.context(() => {
+            const cards = gsap.utils.toArray('.collection-product-card');
+            const copies = gsap.utils.toArray('.collection-card-copy');
+
+            if (cards.length === 0) {
+                return;
+            }
+
+            gsap.fromTo(
+                cards,
+                { autoAlpha: 0, y: 22 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: 0.72,
+                    stagger: 0.055,
+                    ease: 'power3.out',
+                    clearProps: 'opacity,transform',
+                }
+            );
+
+            gsap.fromTo(
+                copies,
+                { autoAlpha: 0, y: 24 },
+                {
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: 0.82,
+                    stagger: 0.05,
+                    ease: 'power3.out',
+                    clearProps: 'opacity,transform',
+                    delay: 0.08,
+                }
+            );
+        }, archive);
+
+        return () => {
+            ctx.revert();
+        };
+    }, [activeCollection, deferredSearch, filteredProducts.length]);
+
+    useEffect(() => {
+        return () => {
+            if (hoverIntentTimeoutRef.current) {
+                window.clearTimeout(hoverIntentTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleFeaturedStep = (direction) => {
         if (featuredProducts.length <= 1) {
             return;
@@ -232,35 +436,43 @@ export default function CollectionsArchive({ products = [] }) {
         setSearchValue('');
     };
 
+    const handleProductHoverStart = (productId) => {
+        if (hoverIntentTimeoutRef.current) {
+            window.clearTimeout(hoverIntentTimeoutRef.current);
+        }
+
+        hoverIntentTimeoutRef.current = window.setTimeout(() => {
+            setFocusedProductId(productId);
+        }, 220);
+    };
+
+    const handleProductHoverEnd = () => {
+        if (hoverIntentTimeoutRef.current) {
+            window.clearTimeout(hoverIntentTimeoutRef.current);
+        }
+
+        setFocusedProductId(null);
+    };
+
     return (
-        <>
+        <div ref={archiveRef}>
             {featuredProducts.length > 0 && <FeaturedCarousel products={featuredProducts} activeIndex={activeFeaturedIndex} onDotSelect={handleFeaturedSelect} onStep={handleFeaturedStep} />}
 
-            <section className="mb-12 md:mb-16 grid grid-cols-1 xl:grid-cols-[1.02fr_0.98fr] gap-6 md:gap-8 items-start">
-                <div className="flex flex-col gap-4 md:gap-5 border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-5 md:p-6">
-                    <div>
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Archive Direction</p>
-                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]">A sharper archive built for styling, fittings, and private commissions.</h2>
-                    </div>
-
-                    <p className="reveal-text storefront-copy-measure opacity-0 translate-y-8 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">Collections should feel curated rather than crowded. The archive now separates editorial statements, resort layers, and quieter private-client pieces while staying easy to search and maintain.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
-                    <StatCard label="Pieces" value={String(normalizedProducts.length).padStart(2, '0')} copy="Active and draft catalog entries ready for merchandising." />
-                    <StatCard label="Featured" value={String(featuredProducts.length).padStart(2, '0')} copy="Lead pieces pushing the strongest brand signal in the archive." />
-                    <StatCard label="Collections" value={String(Math.max(collectionOptions.length - 1, 1)).padStart(2, '0')} copy="Distinct storylines to keep the catalog easier to browse and sell." />
-                </div>
+            <section className="mb-12 md:mb-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+                <StatCard label="Pieces" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." />
+                <StatCard label="Featured" value={featuredProducts.length} delayMs={160} copy="Lead pieces carrying the strongest seasonal direction right now." />
+                <StatCard label="Collections" value={Math.max(collectionOptions.length - 1, 1)} delayMs={320} copy="Distinct storylines shaping the archive into easier visual paths." />
             </section>
 
-            <section className="mb-10 md:mb-12 flex flex-col gap-6 border-b border-[#1C1C1C]/10 pb-8 md:pb-10">
+            <section className="mb-10 md:mb-12 flex flex-col gap-6 border-y border-[#1C1C1C]/10 py-8 md:py-10">
                 <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-                    <div>
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4">Browse The Collection</p>
-                        <h3 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]">Browse By Storyline</h3>
+                    <div className="max-w-2xl">
+                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4">Filter The Archive</p>
+                        <div className="overflow-hidden"><h3 className="hero-title storefront-section-display font-serif font-light uppercase tracking-[0.1em] translate-y-full">Find A Signature</h3></div>
+                        <div className="overflow-hidden"><h3 className="hero-title storefront-section-display storefront-hero-shift font-serif font-light uppercase tracking-[0.1em] translate-y-full">Piece</h3></div>
                     </div>
 
-                    <label className="reveal-text opacity-0 translate-y-8 flex w-full max-w-xl flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
+                    <label className="hero-sub opacity-0 flex w-full max-w-xl flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
                         Search Pieces
                         <input
                             value={searchValue}
@@ -296,10 +508,17 @@ export default function CollectionsArchive({ products = [] }) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-12 md:gap-y-14">
                     {filteredProducts.map((product) => (
-                        <ProductCard key={product.id || product.slug} product={product} />
+                        <ProductCard
+                            key={product.id || product.slug}
+                            product={product}
+                            isFocused={focusedProductId === (product.id || product.slug)}
+                            isDimmed={Boolean(focusedProductId) && focusedProductId !== (product.id || product.slug)}
+                            onHoverStart={() => handleProductHoverStart(product.id || product.slug)}
+                            onHoverEnd={handleProductHoverEnd}
+                        />
                     ))}
                 </div>
             )}
-        </>
+        </div>
     );
 }

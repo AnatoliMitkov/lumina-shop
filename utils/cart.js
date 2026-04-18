@@ -41,6 +41,8 @@ export function normalizeCartItem(product = {}) {
     image_main: toText(product?.image_main),
     category: toText(product?.category),
     description: toText(product?.description),
+    selected_size: toText(product?.selected_size),
+    selected_tone: toText(product?.selected_tone),
   };
 }
 
