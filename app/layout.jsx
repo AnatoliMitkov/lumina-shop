@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
       </head>
       
-      <body suppressHydrationWarning className="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-x-hidden cursor-none selection:bg-[#1C1C1C] selection:text-[#EFECE8]">
+      <body suppressHydrationWarning className="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-x-hidden selection:bg-[#1C1C1C] selection:text-[#EFECE8]">
         <CartProvider>
           <ClientEngine>
             {children}

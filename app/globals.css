@@ -15,6 +15,13 @@ html.lenis body {
     height: auto;
 }
 
+html,
+body {
+    max-width: 100%;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+}
+
 .lenis.lenis-smooth {
     scroll-behavior: auto !important;
 }
@@ -32,15 +39,30 @@ body {
     scrollbar-width: none;
 }
 
-body,
-a,
-button,
-[role="button"],
-.hover-target,
-.hover-target *,
-.transition-link,
-.cursor-pointer {
-    cursor: none !important;
+@media (hover: hover) and (pointer: fine) {
+    body,
+    a,
+    button,
+    [role="button"],
+    .hover-target,
+    .hover-target *,
+    .transition-link,
+    .cursor-pointer {
+        cursor: none !important;
+    }
+}
+
+@media (hover: none), (pointer: coarse) {
+    body,
+    a,
+    button,
+    [role="button"],
+    .hover-target,
+    .hover-target *,
+    .transition-link,
+    .cursor-pointer {
+        cursor: auto !important;
+    }
 }
 
 #cursor {
@@ -59,12 +81,23 @@ button,
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
     mix-blend-mode: difference;
     will-change: transform, width, height;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    #cursor {
+        display: flex !important;
+    }
+}
+
+@media (hover: none), (pointer: coarse) {
+    #cursor {
+        display: none !important;
+    }
 }
 
 #cursor .cursor-shell {
@@ -348,6 +381,43 @@ button,
 
 .storefront-banner-stage {
     min-height: 100svh;
+}
+
+@media (max-width: 767px) {
+    .storefront-hero-display {
+        font-size: clamp(2.85rem, 14vw, 4.6rem);
+        line-height: 0.92;
+        letter-spacing: -0.03em;
+    }
+
+    .storefront-hero-shift {
+        margin-left: 0;
+    }
+
+    .storefront-section-display {
+        font-size: clamp(1.95rem, 9.2vw, 3.1rem);
+        line-height: 0.98;
+        letter-spacing: -0.02em;
+    }
+
+    .storefront-panel-display {
+        font-size: clamp(1.75rem, 8.4vw, 2.9rem);
+        line-height: 0.98;
+        letter-spacing: -0.02em;
+    }
+
+    .storefront-media-stage {
+        min-height: clamp(18rem, 56svh, 28rem);
+        max-height: none;
+    }
+
+    .spotlight-lead-stage {
+        min-height: clamp(24rem, 68svh, 34rem);
+    }
+
+    .spotlight-lead-image {
+        object-position: 50% 64%;
+    }
 }
 
 .home-ambient {

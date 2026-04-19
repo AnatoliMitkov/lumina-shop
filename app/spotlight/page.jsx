@@ -72,35 +72,35 @@ export default async function SpotlightPage() {
     const highlightList = leadProduct.highlights?.length > 0 ? leadProduct.highlights.slice(0, 3) : fallbackEditorialPiece.highlights;
 
     return (
-        <div className="pt-28 md:pt-36 pb-24 md:pb-28">
-            <section className="px-6 md:px-12 max-w-[1800px] mx-auto mb-12 md:mb-16">
-                <div className="grid grid-cols-1 xl:grid-cols-[1.02fr_0.98fr] gap-6 md:gap-8 items-end border-b border-[#1C1C1C]/10 pb-8 md:pb-10">
-                    <div>
+        <div className="pt-36 sm:pt-40 md:pt-36 pb-24 md:pb-28">
+            <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto mb-12 md:mb-16">
+                <div className="grid grid-cols-1 xl:grid-cols-[1.02fr_0.98fr] gap-5 md:gap-8 items-start xl:items-end border-b border-[#1C1C1C]/10 pb-7 md:pb-10">
+                    <div className="min-w-0 max-w-full overflow-hidden">
                         <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-5">Spotlight / Editorial Feature</p>
                         <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full">Editorial</h1></div>
                         <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display storefront-hero-shift font-serif font-light uppercase translate-y-full">Spotlight</h1></div>
                     </div>
 
-                    <div className="flex flex-col gap-4 md:pb-2">
+                    <div className="min-w-0 flex flex-col gap-4 md:pb-2">
                         <p className="hero-sub storefront-copy-measure opacity-0 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">This page is built for the moment when one product deserves more than a card in the archive: the strongest image, the clearest statement, and the product you want people to remember first.</p>
                         <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/42">Controlled in admin by the existing featured toggle and sort order.</p>
                     </div>
                 </div>
             </section>
 
-            <section className="px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
-                <div className="grid grid-cols-1 lg:grid-cols-[0.98fr_0.88fr] gap-6 md:gap-8 items-start">
-                    <div className="storefront-media-stage relative aspect-[5/4] lg:aspect-auto overflow-hidden rounded-sm bg-[#1C1C1C] view-img hover-target" data-cursor-text="Lead Frame">
-                        <img src={galleryFrames[0]} alt={leadProduct.name} className="w-full h-full object-cover" />
+            <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
+                <div className="grid grid-cols-1 lg:grid-cols-[0.98fr_0.88fr] gap-5 md:gap-8 items-start">
+                    <div className="spotlight-lead-stage min-w-0 storefront-media-stage relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-auto overflow-hidden rounded-sm bg-[#1C1C1C] view-img hover-target" data-cursor-text="Lead Frame">
+                        <img src={galleryFrames[0]} alt={leadProduct.name} className="spotlight-lead-image w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"></div>
-                        <div className="absolute inset-x-0 bottom-0 p-6 md:p-8 text-[#EFECE8] flex flex-col gap-4">
+                        <div className="absolute inset-x-0 bottom-0 min-w-0 max-w-full overflow-hidden p-5 sm:p-6 md:p-8 text-[#EFECE8] flex flex-col gap-3 md:gap-4">
                             <p className="text-[10px] uppercase tracking-[0.32em] text-white/55">Lead Look / {leadProduct.collection}</p>
-                            <h2 className="storefront-panel-display font-serif font-light uppercase tracking-[0.08em]">{leadProduct.name}</h2>
-                            {leadProduct.subtitle && <p className="max-w-xl text-sm md:text-base leading-relaxed text-white/72">{leadProduct.subtitle}</p>}
+                            <h2 className="storefront-panel-display max-w-[10ch] sm:max-w-[12ch] md:max-w-[14ch] lg:max-w-full font-serif font-light uppercase tracking-[0.03em] md:tracking-[0.08em] leading-[0.94] [overflow-wrap:anywhere]">{leadProduct.name}</h2>
+                            {leadProduct.subtitle && <p className="max-w-[18rem] sm:max-w-xl text-sm md:text-base leading-relaxed text-white/72 [overflow-wrap:anywhere]">{leadProduct.subtitle}</p>}
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-6 md:gap-8">
+                    <div className="min-w-0 flex flex-col gap-5 md:gap-8">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
                             {spotlightMarkers.map(([label, value]) => (
                                 <div key={label} className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-4 md:p-5">
@@ -110,10 +110,10 @@ export default async function SpotlightPage() {
                             ))}
                         </div>
 
-                        <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+                        <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-5 sm:p-6 md:p-8 flex flex-col gap-5 md:gap-6">
                             <div className="flex flex-col gap-4">
                                 <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/42">Current Lead Product</p>
-                                <div className="overflow-hidden"><h3 className="hero-title storefront-section-display font-serif font-light uppercase tracking-[0.08em] translate-y-full">{leadProduct.name}</h3></div>
+                                <div className="overflow-hidden"><h3 className="hero-title storefront-section-display font-serif font-light uppercase tracking-[0.05em] md:tracking-[0.08em] translate-y-full [overflow-wrap:anywhere]">{leadProduct.name}</h3></div>
                                 <div className="hero-sub opacity-0 flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">
                                     <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{formatProductCurrency(leadProduct.price)}</span>
                                     <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{leadProduct.lead_time_days} day lead time</span>
@@ -127,31 +127,31 @@ export default async function SpotlightPage() {
 
                             <div className="hero-sub opacity-0 flex flex-col gap-4 border-t border-b border-[#1C1C1C]/10 py-6">
                                 {highlightList.map((highlight) => (
-                                    <p key={highlight} className="text-xs md:text-sm uppercase tracking-[0.18em] text-[#1C1C1C]/65">{highlight}</p>
+                                    <p key={highlight} className="text-[11px] md:text-sm uppercase tracking-[0.16em] md:tracking-[0.18em] text-[#1C1C1C]/65">{highlight}</p>
                                 ))}
                             </div>
 
-                            <div className="hero-sub opacity-0 flex flex-col sm:flex-row gap-4">
-                                <a href={buildProductHref(leadProduct)} className="transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover-target hover:bg-black transition-colors">View Lead Product</a>
-                                <a href="/contact" className="transition-link inline-flex items-center justify-center px-8 py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover-target hover:bg-white transition-colors">Contact Atelier</a>
+                            <div className="hero-sub opacity-0 flex flex-col sm:flex-row gap-3 md:gap-4">
+                                <a href={buildProductHref(leadProduct)} className="transition-link inline-flex w-full sm:w-auto items-center justify-center px-6 sm:px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center hover-target hover:bg-black transition-colors">View Lead Product</a>
+                                <a href="/contact" className="transition-link inline-flex w-full sm:w-auto items-center justify-center px-6 sm:px-8 py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium text-center hover-target hover:bg-white transition-colors">Contact Atelier</a>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section className="px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
+            <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
                 <div className="grid grid-cols-1 xl:grid-cols-[0.94fr_1.06fr] gap-6 md:gap-8 items-stretch">
-                    <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-8 md:p-10 flex flex-col gap-6 justify-between">
+                    <div className="min-w-0 border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-10 flex flex-col gap-5 md:gap-6 justify-between">
                         <div className="flex flex-col gap-6">
                             <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/42">Campaign Voice</p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]">A spotlight page should feel like the moment after the audience stops talking.</h2>
+                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.06em] md:tracking-[0.1em] [overflow-wrap:anywhere]">A spotlight page should feel like the moment after the audience stops talking.</h2>
                             <p className="reveal-text opacity-0 translate-y-8 text-sm md:text-base leading-relaxed text-white/70">{storyCopy}</p>
                         </div>
-                        <p className="reveal-text opacity-0 translate-y-8 text-xl md:text-2xl font-serif font-light leading-relaxed text-white/82">"{quoteCopy}"</p>
+                        <p className="reveal-text opacity-0 translate-y-8 text-lg sm:text-xl md:text-2xl font-serif font-light leading-relaxed text-white/82 break-words">"{quoteCopy}"</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                    <div className="min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                         {galleryFrames.slice(1, 5).map((image, index) => (
                             <div key={`${image}-${index}`} className={`reveal-text opacity-0 translate-y-8 overflow-hidden rounded-sm bg-[#1C1C1C] view-img hover-target ${index === 0 ? 'sm:col-span-2 aspect-[16/10]' : 'aspect-[4/5]'}`} data-cursor-text="Frame">
                                 <img src={image} alt={`${leadProduct.name} frame ${index + 2}`} className="w-full h-full object-cover" />
@@ -161,10 +161,10 @@ export default async function SpotlightPage() {
                 </div>
             </section>
 
-            <section className="px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
+            <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
                     {filmstripProducts.map((product, index) => (
-                        <a key={product.id || product.slug || index} href={buildProductHref(product)} className={`transition-link reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 rounded-sm overflow-hidden bg-white/50 hover-target ${index === 0 ? 'md:col-span-2' : ''}`}>
+                        <a key={product.id || product.slug || index} href={buildProductHref(product)} className={`transition-link reveal-text opacity-0 translate-y-8 min-w-0 border border-[#1C1C1C]/10 rounded-sm overflow-hidden bg-white/50 hover-target ${index === 0 ? 'md:col-span-2' : ''}`}>
                             <div className={`overflow-hidden bg-[#1C1C1C] ${index === 0 ? 'aspect-[16/10]' : 'aspect-[4/5]'}`}>
                                 <img src={resolveProductGallery(product)[0] || product.image_main} alt={product.name} className="w-full h-full object-cover" />
                             </div>
@@ -173,7 +173,7 @@ export default async function SpotlightPage() {
                                     <span>{index === 0 ? 'Lead Frame' : `Frame ${String(index + 1).padStart(2, '0')}`}</span>
                                     <span>{product.collection}</span>
                                 </div>
-                                <p className="font-serif text-3xl md:text-4xl font-light leading-none uppercase tracking-[0.08em] text-[#1C1C1C]">{product.name}</p>
+                                <p className="font-serif text-2xl sm:text-3xl md:text-4xl font-light leading-[0.96] uppercase tracking-[0.05em] md:tracking-[0.08em] text-[#1C1C1C] [overflow-wrap:anywhere]">{product.name}</p>
                                 {product.subtitle && <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{product.subtitle}</p>}
                             </div>
                         </a>
@@ -182,11 +182,11 @@ export default async function SpotlightPage() {
             </section>
 
             {supportingProducts.length > 0 && (
-                <section className="px-6 md:px-12 max-w-[1800px] mx-auto">
-                    <div className="mb-12 md:mb-16 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#1C1C1C]/10 pb-8">
+                <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto">
+                    <div className="mb-12 md:mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#1C1C1C]/10 pb-8">
                         <div>
                             <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45 mb-4">Also Featured</p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]">The Supporting Edit</h2>
+                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.06em] md:tracking-[0.1em] [overflow-wrap:anywhere]">The Supporting Edit</h2>
                         </div>
                         <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium">View Full Archive</a>
                     </div>
@@ -198,7 +198,7 @@ export default async function SpotlightPage() {
                                     <img src={resolveProductGallery(product)[0] || product.image_main} alt={product.name} className="w-full h-full object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-[1.04]" />
                                 </a>
                                 <div className="reveal-text opacity-0 translate-y-8 flex flex-col gap-3">
-                                    <div className="flex justify-between items-center text-sm uppercase tracking-widest font-medium">
+                                    <div className="flex flex-col gap-2 text-sm uppercase tracking-widest font-medium sm:flex-row sm:items-center sm:justify-between">
                                         <span>{product.name}</span>
                                         <span>{formatProductCurrency(product.price)}</span>
                                     </div>

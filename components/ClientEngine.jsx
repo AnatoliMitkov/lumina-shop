@@ -120,6 +120,12 @@ export default function ClientEngine({ children }) {
     useGSAP(() => {
         // --- 1. Advanced Custom Cursor ---
         const cursor = cursorRef.current;
+
+        if (!cursor || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            hoverTargetRef.current = null;
+            return undefined;
+        }
+
         const setCursorX = gsap.quickTo(cursor, 'x', { duration: 0.2, ease: 'power2.out' });
         const setCursorY = gsap.quickTo(cursor, 'y', { duration: 0.2, ease: 'power2.out' });
 
@@ -386,8 +392,8 @@ export default function ClientEngine({ children }) {
                 {loaderSub && <div className="overflow-hidden mt-6"><p className="loader-text font-sans text-xs md:text-sm tracking-[0.3em] uppercase opacity-0">{loaderSub}</p></div>}
             </div>
 
-            <nav id="nav" className="fixed w-full flex justify-between items-center px-6 md:px-12 py-8 z-50 opacity-0 mix-blend-difference text-white">
-                <a href="/" className="hover-target transition-link font-serif text-2xl md:text-3xl font-medium tracking-widest uppercase">The VA Store</a>
+            <nav id="nav" className="fixed w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 z-50 opacity-0 mix-blend-difference text-white">
+                <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap">The VA Store</a>
                 <div className="flex md:hidden items-center gap-3">
                     <button
                         type="button"
@@ -395,7 +401,7 @@ export default function ClientEngine({ children }) {
                         aria-controls="mobile-nav-panel"
                         aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                         onClick={toggleMobileMenu}
-                        className="hover-target relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/18 bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white/16"
+                        className="hover-target relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/18 bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white/16"
                     >
                         <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-[6px]'}`}></span>
                         <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
@@ -484,7 +490,7 @@ export default function ClientEngine({ children }) {
                 </div>
             </footer>
 
-            <div id="cart-container" className="fixed inset-0 z-[200] invisible flex justify-end">
+            <div id="cart-container" className="fixed inset-0 z-[200] invisible flex justify-end overflow-hidden">
             <div onClick={() => setIsCartOpen(false)} className="cart-overlay absolute inset-0 bg-[#1C1C1C]/60 backdrop-blur-md opacity-0 cursor-pointer"></div>
                 <div className="cart-panel relative w-full md:w-[30vw] h-full bg-[#EFECE8] translate-x-full flex flex-col shadow-2xl">
                 <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">Cart</h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium">Close</button></div>
