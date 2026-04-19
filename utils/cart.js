@@ -48,6 +48,16 @@ function toPrice(value) {
   return Number(parsedPrice.toFixed(2));
 }
 
+function toInteger(value, fallback = 0) {
+  const parsedValue = Number.parseInt(String(value ?? fallback), 10);
+
+  if (!Number.isFinite(parsedValue)) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
 export function createCartSessionId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -68,6 +78,8 @@ export function normalizeCartItem(product = {}) {
     selected_tone: toText(product?.selected_tone),
     selected_size_unit: toText(product?.selected_size_unit),
     custom_measurements: toMeasurementMap(product?.custom_measurements),
+    inventory_count: product?.inventory_count == null ? null : Math.max(0, toInteger(product?.inventory_count, 0)),
+    lead_time_days: product?.lead_time_days == null ? null : Math.max(1, toInteger(product?.lead_time_days, 14)),
   };
 }
 

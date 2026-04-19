@@ -13,6 +13,7 @@ import {
     buildOrderShippingSummary,
     orderStatusOptions,
 } from '../utils/checkout';
+import { buildOrderPaymentSummary, getPaymentStatusMeta } from '../utils/payments';
 
 function formatDate(value) {
     if (!value) {
@@ -121,6 +122,8 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                 order.customer_email,
                 order.customer_phone,
                 order.customer_location,
+                order.payment_status,
+                order.payment_provider,
                 order.delivery_method,
                 order.shipping_city,
                 order.shipping_country,
@@ -253,6 +256,7 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                     <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${selectedOrder?.id === order.id ? 'border-white/12 bg-white/10 text-white/78' : getStatusClasses(order.status)}`}>{order.status || 'pending'}</span>
                                 </div>
                                 <p className={`mt-3 text-sm leading-relaxed ${selectedOrder?.id === order.id ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}>{buildOrderCustomerLabel(order)}</p>
+                                <p className={`mt-2 text-[10px] uppercase tracking-[0.22em] ${selectedOrder?.id === order.id ? 'text-[#EFECE8]/48' : 'text-[#1C1C1C]/40'}`}>{buildOrderPaymentSummary(order)}</p>
                                 <div className={`mt-3 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.22em] ${selectedOrder?.id === order.id ? 'text-[#EFECE8]/48' : 'text-[#1C1C1C]/42'}`}>
                                     <span>{order.item_count || 0} piece{order.item_count === 1 ? '' : 's'}</span>
                                     <span>{formatDate(order.created_at)}</span>
@@ -264,11 +268,16 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
 
                     {selectedOrder && (
                         <div className="border border-[#1C1C1C]/10 bg-[#EFECE8]/78 rounded-sm p-5 md:p-6 flex flex-col gap-5">
+                            {(() => {
+                                const paymentStatusMeta = getPaymentStatusMeta(selectedOrder.payment_status, selectedOrder.checkout_mode);
+
+                                return (
                             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 mb-2">Order Detail</p>
                                     <h4 className="font-serif text-3xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">{buildOrderReference(selectedOrder)}</h4>
                                     <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/58">Current status: <span className="font-medium text-[#1C1C1C]">{selectedOrder.status || 'pending'}</span>. Update it when the atelier has confirmed payment, completed the piece, or closed the request.</p>
+                                    <p className="mt-2 text-sm leading-relaxed text-[#1C1C1C]/58">Payment state: <span className="font-medium text-[#1C1C1C]">{paymentStatusMeta.label}</span>. {paymentStatusMeta.description}</p>
                                 </div>
 
                                 <div className="flex flex-col gap-3 xl:items-end">
@@ -282,6 +291,8 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                     </button>
                                 </div>
                             </div>
+                                );
+                            })()}
 
                             <div className="flex flex-wrap gap-2">
                                 {quickStatusActions.map((option) => (
@@ -296,7 +307,7 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 flex flex-col gap-2">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">Customer</p>
                                     <p className="font-serif text-2xl font-light leading-tight text-[#1C1C1C]">{buildOrderCustomerLabel(selectedOrder)}</p>
@@ -313,6 +324,14 @@ export default function AdminOrdersPanel({ recentOrders = [] }) {
                                     <p className="text-sm text-[#1C1C1C]/62">{buildOrderAddressSummary(selectedOrder)}</p>
                                     {buildOrderMapUrl(selectedOrder) && <a href={buildOrderMapUrl(selectedOrder)} target="_blank" rel="noreferrer" className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/46 underline underline-offset-4">Open pinned map</a>}
                                     {buildOrderDiscountSummary(selectedOrder) && <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">{buildOrderDiscountSummary(selectedOrder)}</p>}
+                                </div>
+
+                                <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 flex flex-col gap-2">
+                                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">Payment</p>
+                                    <p className="font-serif text-2xl font-light leading-tight text-[#1C1C1C]">{buildOrderPaymentSummary(selectedOrder)}</p>
+                                    <p className="text-sm text-[#1C1C1C]/62">Checkout route: {selectedOrder.checkout_mode === 'stripe_checkout' ? 'Stripe Checkout' : 'Atelier review'}</p>
+                                    {selectedOrder.payment_reference && <p className="text-xs break-all text-[#1C1C1C]/52">Reference: {selectedOrder.payment_reference}</p>}
+                                    {selectedOrder.paid_at && <p className="text-xs text-[#1C1C1C]/52">Paid on {formatDate(selectedOrder.paid_at)}</p>}
                                 </div>
                             </div>
 

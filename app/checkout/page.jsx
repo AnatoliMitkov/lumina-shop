@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
 import CheckoutExperience from '../../components/CheckoutExperience';
+import { isStripeConfigured } from '../../utils/stripe/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,7 @@ export default async function CheckoutPage() {
     };
     let isSignedIn = false;
     let schemaMessage = '';
+    const stripeReady = isStripeConfigured();
 
     if (isSupabaseConfigured()) {
         const cookieStore = await cookies();
@@ -74,7 +76,7 @@ export default async function CheckoutPage() {
                 </p>
             </div>
 
-            <CheckoutExperience initialProfile={initialProfile} isSignedIn={isSignedIn} schemaMessage={schemaMessage} />
+            <CheckoutExperience initialProfile={initialProfile} isSignedIn={isSignedIn} schemaMessage={schemaMessage} stripeReady={stripeReady} />
         </div>
     );
 }

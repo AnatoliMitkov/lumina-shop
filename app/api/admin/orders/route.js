@@ -15,6 +15,7 @@ function isOrderSetupError(error) {
         || message.toLowerCase().includes('orders')
         || message.toLowerCase().includes('order_code')
         || message.toLowerCase().includes('shipping_scope')
+        || message.toLowerCase().includes('payment_status')
         || message.toLowerCase().includes('is_admin')
         || message.toLowerCase().includes('schema cache');
 }
@@ -71,6 +72,7 @@ export async function PATCH(request) {
         const orderId = typeof payload?.id === 'string' ? payload.id.trim() : '';
         const status = typeof payload?.status === 'string' ? payload.status.trim() : '';
         const validStatuses = new Set(orderStatusOptions.map((option) => option.value));
+        const updatePayload = { status };
 
         if (!orderId) {
             return NextResponse.json({ error: 'An order id is required.' }, { status: 400 });
@@ -80,9 +82,18 @@ export async function PATCH(request) {
             return NextResponse.json({ error: 'Choose a valid order status.' }, { status: 400 });
         }
 
+        if (status === 'paid') {
+            updatePayload.payment_status = 'paid';
+            updatePayload.paid_at = new Date().toISOString();
+        }
+
+        if (status === 'cancelled') {
+            updatePayload.payment_status = 'cancelled';
+        }
+
         const { data, error } = await context.supabase
             .from('orders')
-            .update({ status })
+            .update(updatePayload)
             .eq('id', orderId)
             .select('*')
             .single();

@@ -22,6 +22,7 @@ import {
     buildOrderShippingMessage,
     buildOrderShippingSummary,
 } from '../utils/checkout';
+import { buildOrderPaymentSummary, getPaymentStatusMeta } from '../utils/payments';
 
 function formatDate(value) {
     if (!value) {
@@ -375,13 +376,18 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                     {orders.length === 0 ? (
                         <p className="text-sm text-[#1C1C1C]/60 leading-relaxed">Your orders will appear here once you submit checkout while signed in to your account.</p>
                     ) : (
-                        orders.map((order) => (
+                        orders.map((order) => {
+                            const orderStatusMeta = getOrderStatusMeta(order.status);
+                            const paymentStatusMeta = getPaymentStatusMeta(order.payment_status, order.checkout_mode);
+
+                            return (
                             <div key={order.id} className="account-order-card border border-[#1C1C1C]/10 p-4 md:p-5 rounded-sm bg-white/72">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
                                     <div className="flex flex-col gap-2 min-w-0">
                                         <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/38">{buildOrderReference(order)}</span>
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className={`account-status-pill px-3 py-2 rounded-full border text-[10px] uppercase tracking-[0.22em] ${getOrderStatusMeta(order.status).className}`}>{getOrderStatusMeta(order.status).label}</span>
+                                            <span className={`account-status-pill px-3 py-2 rounded-full border text-[10px] uppercase tracking-[0.22em] ${orderStatusMeta.className}`}>{orderStatusMeta.label}</span>
+                                            <span className={`account-status-pill px-3 py-2 rounded-full border text-[10px] uppercase tracking-[0.22em] ${paymentStatusMeta.className}`}>{paymentStatusMeta.label}</span>
                                             <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{formatDate(order.created_at)}</span>
                                         </div>
                                     </div>
@@ -394,11 +400,13 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                                 <div className="grid grid-cols-1 sm:grid-cols-[116px_minmax(0,1fr)] gap-4 md:gap-5 items-start">
                                     <OrderPreview order={order} />
                                     <div className="min-w-0 flex flex-col gap-3">
-                                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{getOrderStatusMeta(order.status).description}</p>
+                                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{orderStatusMeta.description}</p>
+                                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40">{paymentStatusMeta.description}</p>
                                         <p className="font-serif text-xl md:text-2xl font-light leading-tight text-[#1C1C1C] break-words">{getOrderNameSummary(order.items)}</p>
                                         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">
                                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDeliverySummary(order)}</span>
                                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderShippingSummary(order)}</span>
+                                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderPaymentSummary(order)}</span>
                                             {buildOrderDiscountSummary(order) && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildOrderDiscountSummary(order)}</span>}
                                         </div>
                                         <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{buildOrderAddressSummary(order)}</p>
@@ -407,7 +415,8 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                                     </div>
                                 </div>
                             </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </section>

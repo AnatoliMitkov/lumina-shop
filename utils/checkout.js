@@ -17,6 +17,8 @@ export const shippingBenefitOptions = [
     { value: 'receiver_covers', label: 'Covered by Receiver' },
 ];
 
+import { normalizeCheckoutMode } from './payments';
+
 const FREE_DOMESTIC_SHIPPING_THRESHOLD = 150;
 
 export const orderStatusOptions = [
@@ -298,6 +300,9 @@ export function normalizeCheckoutPayload(payload = {}) {
             affiliateCode: toText(payload?.affiliateCode, 64).toUpperCase(),
             affiliateCommissionType: toText(payload?.affiliateCommissionType, 32),
             affiliateCommissionValue: toAmount(payload?.affiliateCommissionValue),
+        },
+        payment: {
+            checkoutMode: normalizeCheckoutMode(payload?.checkoutMode),
         },
     };
 }

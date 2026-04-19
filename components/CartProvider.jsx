@@ -52,6 +52,10 @@ export function CartProvider({ children }) {
                         return currentItems;
                     }
 
+                    if (!incomingItems.length && currentItems.length) {
+                        return currentItems;
+                    }
+
                     return incomingItems;
                 });
 
@@ -168,6 +172,15 @@ export function CartProvider({ children }) {
         setCartItems((prev) => prev.filter((_, i) => i !== indexToRemove));
     };
 
+    const clearCart = () => {
+        setIsCartOpen(false);
+        setCartItems([]);
+        setCartStatus('ready');
+        setCheckoutStatus('idle');
+        setCartMessage('');
+        writeBrowserCartItems([]);
+    };
+
     const checkoutCart = async (checkoutDetails = null) => {
         const snapshot = buildCartSnapshot(cartItems);
 
@@ -192,13 +205,29 @@ export function CartProvider({ children }) {
                 throw new Error(data.error || 'Unable to submit the order right now.');
             }
 
+            if (data.redirectUrl) {
+                setCartStatus('ready');
+                setCheckoutStatus('redirecting');
+                setCartMessage(data.message || 'Redirecting to secure payment...');
+
+                return {
+                    order: data.order || null,
+                    redirectUrl: data.redirectUrl,
+                    mode: data.mode || 'stripe_checkout',
+                };
+            }
+
             skipNextSyncRef.current = true;
             setCartItems([]);
+            setIsCartOpen(false);
             setCartStatus('ready');
             setCheckoutStatus('success');
             setCartMessage(data.message || 'Your order is now waiting for atelier review.');
 
-            return data.order || null;
+            return {
+                order: data.order || null,
+                mode: data.mode || 'manual_review',
+            };
         } catch (error) {
             setCartStatus('error');
             setCheckoutStatus('error');
@@ -211,7 +240,7 @@ export function CartProvider({ children }) {
     const cartTotal = buildCartSnapshot(cartItems).total;
 
     return (
-        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartStatus, checkoutStatus, cartMessage, cartPersistenceMode, hasLoadedCart, checkoutCart }}>
+        <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, cartTotal, isCartOpen, setIsCartOpen, cartStatus, checkoutStatus, cartMessage, cartPersistenceMode, hasLoadedCart, checkoutCart }}>
             {children}
         </CartContext.Provider>
     );

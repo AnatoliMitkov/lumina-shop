@@ -8,6 +8,11 @@ import {
 } from '../../../../utils/cart';
 import { buildOrderCode, normalizeCheckoutPayload } from '../../../../utils/checkout';
 import {
+  buildTrustedCartSnapshot,
+  evaluateCheckoutMode,
+  fetchCheckoutProductRecords,
+} from '../../../../utils/checkout-server';
+import {
   createBaseCheckoutPricing,
   createCheckoutPricingPreview,
   fetchPromotionRecords,
@@ -16,6 +21,12 @@ import {
 } from '../../../../utils/promotions';
 import { createAdminClient, isAdminConfigured } from '../../../../utils/supabase/admin';
 import { createClient as createServerClient } from '../../../../utils/supabase/server';
+import {
+  buildAbsoluteUrl,
+  getStripeClient,
+  isStripeConfigured,
+  toStripeAmount,
+} from '../../../../utils/stripe/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +40,53 @@ function getCartSession(cookieStore) {
   return { sessionId: createCartSessionId(), shouldSetCookie: true };
 }
 
-function withCartSession(response, sessionId, shouldSetCookie) {
-  if (shouldSetCookie) {
-    response.cookies.set(CART_SESSION_COOKIE, sessionId, CART_SESSION_COOKIE_OPTIONS);
-  }
+function withCartSession(response, sessionId) {
+  response.cookies.set(CART_SESSION_COOKIE, sessionId, CART_SESSION_COOKIE_OPTIONS);
 
   return response;
+}
+
+function buildCheckoutMessage({ mode, orderReference, totalSavings = 0 }) {
+  if (mode === 'stripe_checkout') {
+    return totalSavings > 0
+      ? `Order ${orderReference} is ready for secure payment. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
+      : `Order ${orderReference} is ready for secure payment.`;
+  }
+
+  return totalSavings > 0
+    ? `Order ${orderReference} is now waiting for atelier review. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
+    : `Order ${orderReference} is now waiting for atelier review.`;
+}
+
+function buildOrderResponse(order, { fallbackStatus = 'pending', fallbackPaymentStatus = 'manual_review', fallbackTotal = 0, fallbackItemCount = 0, fallbackCreatedAt = null } = {}) {
+  return {
+    id: order?.id || null,
+    orderCode: order?.order_code || 'VA-PENDING',
+    status: order?.status || fallbackStatus,
+    paymentStatus: order?.payment_status || fallbackPaymentStatus,
+    total: Number(order?.total ?? fallbackTotal),
+    itemCount: Number(order?.item_count ?? fallbackItemCount),
+    createdAt: order?.created_at ?? fallbackCreatedAt,
+  };
+}
+
+function buildStripeLineItems(snapshot = {}) {
+  return (Array.isArray(snapshot.items) ? snapshot.items : []).map((item) => {
+    const descriptionParts = [item?.selected_size ? `Size ${item.selected_size}` : '', item?.selected_tone ? `Tone ${item.selected_tone}` : ''].filter(Boolean);
+
+    return {
+      quantity: 1,
+      price_data: {
+        currency: String(snapshot.currency || 'EUR').toLowerCase(),
+        unit_amount: toStripeAmount(item?.price),
+        product_data: {
+          name: item?.name || 'Atelier Piece',
+          ...(descriptionParts.length > 0 ? { description: descriptionParts.join(' / ') } : {}),
+          ...(item?.image_main ? { images: [item.image_main] } : {}),
+        },
+      },
+    };
+  });
 }
 
 function formatCheckoutError(error) {
@@ -57,6 +109,9 @@ function formatCheckoutError(error) {
     || error?.code === 'PGRST204'
     || error?.code === 'PGRST205'
     || normalizedMessage.includes('shipping_scope')
+    || normalizedMessage.includes('checkout_mode')
+    || normalizedMessage.includes('payment_status')
+    || normalizedMessage.includes('payments')
     || normalizedMessage.includes('customer_snapshot')
     || (
       normalizedMessage.includes('column')
@@ -75,7 +130,7 @@ function formatCheckoutError(error) {
 
 export async function POST(request) {
   const cookieStore = await cookies();
-  const { sessionId, shouldSetCookie } = getCartSession(cookieStore);
+  const { sessionId } = getCartSession(cookieStore);
 
   if (!isAdminConfigured()) {
     const response = NextResponse.json(
@@ -85,17 +140,17 @@ export async function POST(request) {
       { status: 503 }
     );
 
-    return withCartSession(response, sessionId, shouldSetCookie);
+    return withCartSession(response, sessionId);
   }
 
   try {
     const payload = await request.json();
-    const snapshot = buildCartSnapshot(payload?.items);
+    const requestedSnapshot = buildCartSnapshot(payload?.items);
     const checkout = normalizeCheckoutPayload(payload?.checkout);
     const authClient = createServerClient(cookieStore);
     const { data: { user } } = await authClient.auth.getUser();
 
-    if (snapshot.itemCount === 0) {
+    if (requestedSnapshot.itemCount === 0) {
       const response = NextResponse.json(
         {
           error: 'Add at least one piece before checking out.',
@@ -103,7 +158,7 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     if (!checkout.customer.fullName || !checkout.customer.email || !checkout.customer.phone) {
@@ -114,7 +169,7 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     if (!checkout.delivery.shippingCountry || !checkout.delivery.shippingCity) {
@@ -125,7 +180,7 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     if (
@@ -140,7 +195,7 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     if (
@@ -154,14 +209,16 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     const supabase = createAdminClient();
+    const productRecords = await fetchCheckoutProductRecords(supabase, payload?.items);
+    const snapshot = buildTrustedCartSnapshot(payload?.items, productRecords);
     let discountRecord = null;
     let affiliateRecord = null;
-    const checkedOutAt = new Date().toISOString();
-    const orderCode = buildOrderCode(`${sessionId}-${checkedOutAt}`);
+    const createdAt = new Date().toISOString();
+    const orderCode = buildOrderCode(`${sessionId}-${createdAt}`);
     const orderSubtotal = snapshot.total;
     const shippingInput = {
       shippingScope: checkout.delivery.shippingScope,
@@ -199,7 +256,7 @@ export async function POST(request) {
           { status: 503 }
         );
 
-        return withCartSession(response, sessionId, shouldSetCookie);
+        return withCartSession(response, sessionId);
       }
 
       if (!isPromotionSetupError(error)) {
@@ -215,7 +272,7 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     if (checkout.pricing.affiliateCode && pricing.affiliate.status === 'invalid') {
@@ -226,22 +283,55 @@ export async function POST(request) {
         { status: 400 }
       );
 
-      return withCartSession(response, sessionId, shouldSetCookie);
+      return withCartSession(response, sessionId);
     }
 
     const orderTotal = pricing.total;
+    const requestedMode = checkout.payment.checkoutMode;
+    const paymentDecision = evaluateCheckoutMode({
+      requestedMode,
+      shippingScope: checkout.delivery.shippingScope,
+      productRecords,
+      total: orderTotal,
+    });
+
+    if (requestedMode === 'stripe_checkout' && !isStripeConfigured()) {
+      const response = NextResponse.json(
+        {
+          error: 'Secure online payment is not configured in this environment yet.',
+        },
+        { status: 503 }
+      );
+
+      return withCartSession(response, sessionId);
+    }
+
+    if (requestedMode === 'stripe_checkout' && !paymentDecision.payNowEligible) {
+      const response = NextResponse.json(
+        {
+          error: paymentDecision.reasons.join(' ') || 'This order is not eligible for online payment right now.',
+        },
+        { status: 409 }
+      );
+
+      return withCartSession(response, sessionId);
+    }
+
+    const resolvedMode = paymentDecision.resolvedMode;
+    const orderStatus = 'pending';
+    const paymentStatus = resolvedMode === 'stripe_checkout' ? 'awaiting_payment' : 'manual_review';
     const { data: cartRecord, error: cartError } = await supabase
       .from('carts')
       .upsert(
         {
           session_id: sessionId,
           user_id: user?.id ?? null,
-          status: 'checked_out',
+          status: resolvedMode === 'stripe_checkout' ? 'active' : 'checked_out',
           currency: snapshot.currency,
           item_count: snapshot.itemCount,
           total: snapshot.total,
           items: snapshot.items,
-          checked_out_at: checkedOutAt,
+          checked_out_at: resolvedMode === 'stripe_checkout' ? null : createdAt,
         },
         { onConflict: 'session_id' }
       )
@@ -264,7 +354,7 @@ export async function POST(request) {
         customer_phone: checkout.customer.phone,
         customer_location: checkout.customer.location,
         customer_notes: checkout.customer.notes,
-        status: 'pending',
+        status: orderStatus,
         currency: snapshot.currency,
         item_count: snapshot.itemCount,
         subtotal: orderSubtotal,
@@ -277,6 +367,10 @@ export async function POST(request) {
         affiliate_commission_value: pricing.affiliate.commissionValue,
         shipping_scope: checkout.delivery.shippingScope,
         delivery_method: checkout.delivery.deliveryMethod,
+        checkout_mode: resolvedMode,
+        payment_status: paymentStatus,
+        payment_provider: resolvedMode === 'stripe_checkout' ? 'stripe' : null,
+        amount_paid: 0,
         shipping_country: checkout.delivery.shippingCountry,
         shipping_city: checkout.delivery.shippingCity,
         shipping_region: checkout.delivery.shippingRegion,
@@ -334,11 +428,90 @@ export async function POST(request) {
           affiliate_commission_amount: pricing.affiliate.commissionAmount,
         },
       })
-      .select('id, order_code, status, total, item_count, created_at')
+      .select('id, order_code, status, payment_status, total, item_count, created_at')
       .single();
 
     if (orderError) {
       throw orderError;
+    }
+
+    const orderReference = order.order_code || orderCode;
+
+    if (resolvedMode === 'stripe_checkout') {
+      const stripe = getStripeClient();
+      const stripeSession = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        locale: 'auto',
+        payment_method_types: ['card'],
+        customer_email: checkout.customer.email || user?.email || undefined,
+        client_reference_id: order.id,
+        line_items: buildStripeLineItems(snapshot),
+        success_url: buildAbsoluteUrl(request, '/checkout/success', {
+          order: order.id,
+          orderCode: orderReference,
+          session_id: '{CHECKOUT_SESSION_ID}',
+        }),
+        cancel_url: buildAbsoluteUrl(request, '/checkout/cancel', {
+          order: order.id,
+          orderCode: orderReference,
+        }),
+        metadata: {
+          order_id: order.id,
+          order_code: orderReference,
+          shipping_scope: checkout.delivery.shippingScope,
+          delivery_method: checkout.delivery.deliveryMethod,
+          customer_email: checkout.customer.email || user?.email || '',
+        },
+      });
+
+      const { error: paymentInsertError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: order.id,
+          provider: 'stripe',
+          mode: 'full',
+          status: 'pending',
+          currency: snapshot.currency,
+          amount: orderTotal,
+          provider_session_id: stripeSession.id,
+          provider_payment_intent_id: typeof stripeSession.payment_intent === 'string' ? stripeSession.payment_intent : null,
+        });
+
+      if (paymentInsertError) {
+        throw paymentInsertError;
+      }
+
+      const { error: orderPaymentError } = await supabase
+        .from('orders')
+        .update({
+          payment_reference: stripeSession.id,
+          payment_provider: 'stripe',
+          payment_intent_id: typeof stripeSession.payment_intent === 'string' ? stripeSession.payment_intent : null,
+        })
+        .eq('id', order.id);
+
+      if (orderPaymentError) {
+        throw orderPaymentError;
+      }
+
+      const response = NextResponse.json({
+        order: buildOrderResponse(order, {
+          fallbackStatus: orderStatus,
+          fallbackPaymentStatus: paymentStatus,
+          fallbackTotal: orderTotal,
+          fallbackItemCount: snapshot.itemCount,
+          fallbackCreatedAt: createdAt,
+        }),
+        mode: resolvedMode,
+        redirectUrl: stripeSession.url,
+        message: buildCheckoutMessage({
+          mode: resolvedMode,
+          orderReference,
+          totalSavings: pricing.totalSavings,
+        }),
+      });
+
+      return withCartSession(response, sessionId);
     }
 
     const usageUpdates = [];
@@ -365,22 +538,23 @@ export async function POST(request) {
       await Promise.allSettled(usageUpdates);
     }
 
-    const orderReference = order.order_code || orderCode;
     const response = NextResponse.json({
-      order: {
-        id: order.id,
-        orderCode: orderReference,
-        status: order.status,
-        total: Number(order.total ?? orderTotal),
-        itemCount: Number(order.item_count ?? snapshot.itemCount),
-        createdAt: order.created_at ?? checkedOutAt,
-      },
-      message: pricing.totalSavings > 0
-        ? `Order ${orderReference} is now waiting for atelier review. ${formatPromotionCurrency(pricing.totalSavings)} saved through live codes.`
-        : `Order ${orderReference} is now waiting for atelier review.`,
+      order: buildOrderResponse(order, {
+        fallbackStatus: orderStatus,
+        fallbackPaymentStatus: paymentStatus,
+        fallbackTotal: orderTotal,
+        fallbackItemCount: snapshot.itemCount,
+        fallbackCreatedAt: createdAt,
+      }),
+      mode: resolvedMode,
+      message: buildCheckoutMessage({
+        mode: resolvedMode,
+        orderReference,
+        totalSavings: pricing.totalSavings,
+      }),
     });
 
-    return withCartSession(response, sessionId, shouldSetCookie);
+    return withCartSession(response, createCartSessionId());
   } catch (error) {
     const response = NextResponse.json(
       {
@@ -389,6 +563,6 @@ export async function POST(request) {
       { status: 503 }
     );
 
-    return withCartSession(response, sessionId, shouldSetCookie);
+    return withCartSession(response, sessionId);
   }
 }

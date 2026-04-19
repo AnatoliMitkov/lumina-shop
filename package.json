@@ -20,7 +20,8 @@
     "next": "latest",
     "nodemailer": "^8.0.5",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "stripe": "^22.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",

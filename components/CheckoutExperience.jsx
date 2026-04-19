@@ -76,6 +76,20 @@ function ScopeButton({ label, copy, active, onClick }) {
     );
 }
 
+function PaymentModeButton({ label, copy, active, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`hover-target rounded-sm border p-4 text-left transition-colors ${active ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/10 bg-white/72 text-[#1C1C1C] hover:bg-white'}`}
+        >
+            <p className="text-[10px] uppercase tracking-[0.22em] opacity-70">Checkout Route</p>
+            <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.08em] leading-none">{label}</p>
+            <p className={`mt-3 text-sm leading-relaxed ${active ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}>{copy}</p>
+        </button>
+    );
+}
+
 function PricingValidationCard({ label, message, status }) {
     const shellClassName = status === 'invalid'
         ? 'border-red-200 bg-red-50 text-red-700'
@@ -89,7 +103,7 @@ function PricingValidationCard({ label, message, status }) {
     );
 }
 
-export default function CheckoutExperience({ initialProfile, isSignedIn = false, schemaMessage = '' }) {
+export default function CheckoutExperience({ initialProfile, isSignedIn = false, schemaMessage = '', stripeReady = false }) {
     const router = useRouter();
     const {
         cartItems,
@@ -128,6 +142,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const [shippingMapUrl, setShippingMapUrl] = useState('');
     const [discountCode, setDiscountCode] = useState('');
     const [affiliateCode, setAffiliateCode] = useState('');
+    const [checkoutMode, setCheckoutMode] = useState(stripeReady ? 'stripe_checkout' : 'manual_review');
     const [submittedOrder, setSubmittedOrder] = useState(null);
     const [pricingPreview, setPricingPreview] = useState(() => createBaseCheckoutPricing({
         subtotal: Number(cartTotal || 0),
@@ -210,6 +225,20 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const hasPricingBlocker = (Boolean(discountCode) && pricingPreview.discount.status === 'invalid')
         || (Boolean(affiliateCode) && pricingPreview.affiliate.status === 'invalid')
         || ((discountCode || affiliateCode) && pricingPreview.pricingReady === false);
+    const hasInventoryHints = cartItems.some((item) => item.inventory_count != null);
+    const likelyMadeToOrder = hasInventoryHints && cartItems.some((item) => Number(item.inventory_count ?? 0) <= 0);
+    const payNowEligible = structuredCheckoutReady && stripeReady && shippingScope === 'domestic_bg' && !likelyMadeToOrder;
+    const paymentBlockers = [
+        !stripeReady ? 'Secure online payment is not configured in this environment yet.' : '',
+        shippingScope !== 'domestic_bg' ? 'Worldwide shipping still needs atelier review before payment.' : '',
+        likelyMadeToOrder ? 'One or more selected pieces are made to order and still need manual review.' : '',
+    ].filter(Boolean);
+
+    useEffect(() => {
+        if (!payNowEligible && checkoutMode !== 'manual_review') {
+            setCheckoutMode('manual_review');
+        }
+    }, [checkoutMode, payNowEligible]);
 
     useEffect(() => {
         const basePricing = createBaseCheckoutPricing({ subtotal: orderSubtotal, shippingInput });
@@ -279,7 +308,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        const order = await checkoutCart({
+        const result = await checkoutCart({
             fullName,
             email,
             phone: buildPhoneValue(selectedCountryOption?.dialCode || '', phoneNumber),
@@ -304,10 +333,16 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
             affiliateCode,
             affiliateCommissionType: pricingPreview.affiliate.commissionType,
             affiliateCommissionValue: pricingPreview.affiliate.commissionValue,
+            checkoutMode,
         });
 
-        if (order) {
-            setSubmittedOrder(order);
+        if (result?.redirectUrl) {
+            window.location.assign(result.redirectUrl);
+            return;
+        }
+
+        if (result?.order) {
+            setSubmittedOrder(result.order);
             router.refresh();
         }
     };
@@ -595,6 +630,40 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     )}
                 </section>
 
+                <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+                    <div>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Payment Route</p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">How This Order Moves</h3>
+                    </div>
+
+                    {payNowEligible ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <PaymentModeButton
+                                label="Online Payment"
+                                copy="Move this domestic order into secure Stripe Checkout. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
+                                active={checkoutMode === 'stripe_checkout'}
+                                onClick={() => setCheckoutMode('stripe_checkout')}
+                            />
+                            <PaymentModeButton
+                                label="Atelier Review"
+                                copy="Keep the order in the manual review lane first, then confirm payment and next steps directly with the atelier."
+                                active={checkoutMode === 'manual_review'}
+                                onClick={() => setCheckoutMode('manual_review')}
+                            />
+                        </div>
+                    ) : (
+                        <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
+                            {paymentBlockers[0] || 'This order will stay in atelier review first.'}
+                        </div>
+                    )}
+
+                    <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
+                        {checkoutMode === 'stripe_checkout'
+                            ? 'The final secure payment amount will be reconfirmed on the server against the live catalog before Stripe Checkout opens.'
+                            : 'Manual review is the safe lane for worldwide delivery, made-to-order work, or any order that still needs atelier confirmation before payment.'}
+                    </div>
+                </section>
+
                 {(cartMessage || checkoutStatus === 'error') && (
                     <div className={`border rounded-sm px-4 py-4 text-sm leading-relaxed ${checkoutStatus === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#1C1C1C]/10 bg-white/70 text-[#1C1C1C]/75'}`}>
                         {cartMessage}
@@ -604,7 +673,15 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                 <div className="flex flex-col sm:flex-row gap-3">
                     {structuredCheckoutReady ? (
                         <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker ? 'opacity-60' : 'hover:bg-black'}`}>
-                            {checkoutStatus === 'submitting' ? 'Submitting Order...' : pricingStatus === 'loading' ? 'Validating Codes...' : 'Submit Order Request'}
+                            {checkoutStatus === 'submitting'
+                                ? 'Submitting Order...'
+                                : checkoutStatus === 'redirecting'
+                                    ? 'Opening Secure Payment...'
+                                    : pricingStatus === 'loading'
+                                        ? 'Validating Codes...'
+                                        : checkoutMode === 'stripe_checkout'
+                                            ? 'Continue To Secure Payment'
+                                            : 'Submit Order Request'}
                         </button>
                     ) : (
                         <a href="/contact" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">Request Through Atelier</a>
