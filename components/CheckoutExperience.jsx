@@ -710,8 +710,8 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                 </div>
             </form>
 
-            <aside className="xl:sticky xl:top-28 flex flex-col gap-6">
-                <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-5">
+            <aside className="flex flex-col gap-6 xl:sticky xl:top-28 xl:min-h-0 xl:h-[calc(100vh-7.5rem)]">
+                <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-5 xl:min-h-0 xl:flex-1">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Order Summary</p>
                         <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">Selection Review</h3>
@@ -732,14 +732,14 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-4">
+                    <div data-lenis-prevent-wheel className="flex flex-col gap-4 max-h-[20rem] overflow-y-auto overscroll-contain pr-1 md:max-h-[24rem] xl:min-h-0 xl:max-h-none xl:flex-1">
                         {cartItems.map((item, index) => (
                             <CheckoutItem key={`${item.id}-${index}`} item={item} index={index} />
                         ))}
                     </div>
                 </section>
 
-                <section className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5">
+                <section className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 shrink-0">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.28em] text-white/42 mb-3">Pricing Structure</p>
                         <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none">Current Totals</h3>

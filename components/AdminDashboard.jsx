@@ -275,6 +275,47 @@ function describeProductSelection(products = []) {
     return names.join(', ');
 }
 
+function normalizeOptionValue(value) {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+
+    if (value == null) {
+        return '';
+    }
+
+    return String(value).trim();
+}
+
+function buildManagedOptionList(seedOptions = [], values = []) {
+    const normalizedSeedOptions = [...new Set(seedOptions.map((option) => normalizeOptionValue(option)).filter(Boolean))];
+    const normalizedValues = [...new Set(values.map((value) => normalizeOptionValue(value)).filter(Boolean))];
+
+    if (normalizedValues.length === 0) {
+        return normalizedSeedOptions;
+    }
+
+    const seedOptionSet = new Set(normalizedSeedOptions);
+    const seededMatches = normalizedSeedOptions.filter((option) => normalizedValues.includes(option));
+    const customMatches = normalizedValues
+        .filter((option) => !seedOptionSet.has(option))
+        .sort((leftOption, rightOption) => leftOption.localeCompare(rightOption));
+
+    return [...seededMatches, ...customMatches];
+}
+
+function resolvePreferredOption(options = [], fallback = '') {
+    if (options.includes(fallback)) {
+        return fallback;
+    }
+
+    return options[0] || fallback;
+}
+
+function getTaxonomyLabel(field) {
+    return field === 'collection' ? 'Collection' : 'Category';
+}
+
 function ModalShell({ open, onClose, children, maxWidth = 'max-w-xl' }) {
     const [isVisible, setIsVisible] = useState(false);
 
@@ -362,6 +403,97 @@ function ConfirmDialog({
     );
 }
 
+function ValueDialog({
+    open,
+    title,
+    copy,
+    label,
+    value,
+    confirmLabel,
+    onCancel,
+    onChange,
+    onConfirm,
+}) {
+    const trimmedValue = value.trim();
+
+    return (
+        <ModalShell open={open} onClose={onCancel} maxWidth="max-w-lg">
+            <div className="flex flex-col gap-6 p-6 md:p-8">
+                <div className="flex flex-col gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Quick Add</p>
+                    <h3 className="font-serif text-3xl font-light uppercase tracking-[0.1em] leading-none">{title}</h3>
+                    <p className="text-sm leading-relaxed text-white/70">{copy}</p>
+                </div>
+
+                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/55">
+                    {label}
+                    <input
+                        autoFocus
+                        value={value}
+                        onChange={(event) => onChange(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' && trimmedValue) {
+                                event.preventDefault();
+                                onConfirm();
+                            }
+                        }}
+                        className="h-14 border border-white/12 bg-white/6 px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/24"
+                    />
+                </label>
+
+                <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="hover-target h-12 px-5 rounded-full border border-white/12 bg-white/5 text-[10px] uppercase tracking-[0.22em] text-white/72 transition-colors hover:bg-white/10"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={!trimmedValue}
+                        className={`hover-target h-12 px-6 rounded-full bg-[#EFE7DA] text-[#1C1C1C] text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${!trimmedValue ? 'opacity-60' : 'hover:bg-white'}`}
+                    >
+                        {confirmLabel}
+                    </button>
+                </div>
+            </div>
+        </ModalShell>
+    );
+}
+
+function TaxonomyField({
+    label,
+    value,
+    options,
+    helperText,
+    onChange,
+    onAdd,
+    onRemove,
+    removeDisabled,
+}) {
+    return (
+        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+            {label}
+            <div className="grid grid-cols-[minmax(0,1fr)_3rem_3rem] gap-3">
+                <select value={value} onChange={(event) => onChange(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                    {options.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
+                <button type="button" onClick={onAdd} className="hover-target h-14 border border-[#1C1C1C]/12 bg-white text-lg leading-none text-[#1C1C1C] transition-colors hover:bg-[#1C1C1C] hover:text-[#EFECE8]" aria-label={`Add ${label}`}>
+                    +
+                </button>
+                <button type="button" onClick={onRemove} disabled={removeDisabled} className={`hover-target h-14 border border-red-200 bg-red-50 text-lg leading-none text-red-700 transition-colors ${removeDisabled ? 'opacity-50' : 'hover:bg-red-100'}`} aria-label={`Remove ${label}`}>
+                    -
+                </button>
+            </div>
+            <p className="text-[11px] normal-case tracking-normal leading-relaxed text-[#1C1C1C]/52">{helperText}</p>
+        </label>
+    );
+}
+
 function BulkFieldRow({ active, label, hint, children, onToggle }) {
     return (
         <div className={`rounded-sm border p-4 transition-colors ${active ? 'border-[#1C1C1C]/18 bg-white' : 'border-[#1C1C1C]/10 bg-white/72'}`}>
@@ -391,6 +523,8 @@ function BulkEditorPanel({
     selectedProductId,
     enabledFields,
     value,
+    categoryOptions,
+    collectionOptions,
     gridColumns,
     gridDraft,
     dirtyCount,
@@ -502,6 +636,11 @@ function BulkEditorPanel({
                                             <tr key={product.id} className={`${selectedProductId === product.id ? 'bg-[#1C1C1C]/[0.04]' : 'bg-white/55'} ${rowIsDirty ? 'shadow-[inset_3px_0_0_#1C1C1C]' : ''}`}>
                                                 {gridColumns.map((columnKey) => {
                                                     const column = getBulkGridColumnDefinition(columnKey);
+                                                    const resolvedOptions = columnKey === 'category'
+                                                        ? categoryOptions.map((option) => ({ value: option, label: option }))
+                                                        : columnKey === 'collection'
+                                                            ? collectionOptions.map((option) => ({ value: option, label: option }))
+                                                            : column.options;
 
                                                     return (
                                                         <td key={columnKey} className="border-b border-[#1C1C1C]/8 px-4 py-3 align-top min-w-[140px]">
@@ -511,7 +650,7 @@ function BulkEditorPanel({
                                                                     onChange={(event) => onGridChange(product.id, columnKey, event.target.value)}
                                                                     className="h-11 w-full border border-[#1C1C1C]/10 bg-white px-3 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
                                                                 >
-                                                                    {column.options.map((option) => (
+                                                                    {resolvedOptions.map((option) => (
                                                                         <option key={option.value} value={option.value}>{option.label}</option>
                                                                     ))}
                                                                 </select>
@@ -593,7 +732,7 @@ function BulkEditorPanel({
 
                     <BulkFieldRow active={enabledFields.category} label="Category" hint="Reclassify the selection under one product category." onToggle={() => onToggleField('category')}>
                         <select value={value.category} onChange={(event) => onChange('category', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                            {PRODUCT_CATEGORY_OPTIONS.map((option) => (
+                            {categoryOptions.map((option) => (
                                 <option key={option} value={option}>{option}</option>
                             ))}
                         </select>
@@ -601,7 +740,7 @@ function BulkEditorPanel({
 
                     <BulkFieldRow active={enabledFields.collection} label="Collection" hint="Move the selected products into a single storefront collection." onToggle={() => onToggleField('collection')}>
                         <select value={value.collection} onChange={(event) => onChange('collection', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                            {PRODUCT_COLLECTION_OPTIONS.map((option) => (
+                            {collectionOptions.map((option) => (
                                 <option key={option} value={option}>{option}</option>
                             ))}
                         </select>
@@ -733,10 +872,23 @@ export default function AdminDashboard({
     const [bulkGridDraft, setBulkGridDraft] = useState({});
     const [bulkFeedback, setBulkFeedback] = useState({ type: 'idle', message: '' });
     const [isBulkSaving, setIsBulkSaving] = useState(false);
+    const [valueDialog, setValueDialog] = useState({ open: false, field: 'category', value: '' });
+    const [taxonomyDeleteDialog, setTaxonomyDeleteDialog] = useState({ open: false, field: 'category', value: '' });
+    const [isTaxonomyUpdating, setIsTaxonomyUpdating] = useState(false);
 
     const activeCount = products.filter((product) => product.status === 'active').length;
     const draftCount = products.filter((product) => product.status === 'draft').length;
     const featuredCount = products.filter((product) => product.featured).length;
+    const categoryOptions = buildManagedOptionList(PRODUCT_CATEGORY_OPTIONS, [
+        ...products.map((product) => product.category),
+        draft.category,
+        bulkEditDraft.category,
+    ]);
+    const collectionOptions = buildManagedOptionList(PRODUCT_COLLECTION_OPTIONS, [
+        ...products.map((product) => product.collection),
+        draft.collection,
+        bulkEditDraft.collection,
+    ]);
     const previewProduct = normalizeProductRecord({
         ...draft,
         gallery: draft.gallery,
@@ -803,17 +955,25 @@ export default function AdminDashboard({
         }
     }, [selectedProducts, editorMode]);
 
-    const resetToNewDraft = (sourceProducts = products) => {
-        const highestSortOrder = sourceProducts.reduce((runningMax, product) => Math.max(runningMax, product.sort_order || 0), 0);
+    const buildFreshDraft = (sourceProducts = products) => {
+        const draftSourceProducts = Array.isArray(sourceProducts) ? sourceProducts : products;
+        const highestSortOrder = draftSourceProducts.reduce((runningMax, product) => Math.max(runningMax, product.sort_order || 0), 0);
+        const nextCategoryOptions = buildManagedOptionList(PRODUCT_CATEGORY_OPTIONS, draftSourceProducts.map((product) => product.category));
+        const nextCollectionOptions = buildManagedOptionList(PRODUCT_COLLECTION_OPTIONS, draftSourceProducts.map((product) => product.collection));
 
-        setEditorMode('single');
-        setSelectedProductId('new');
-        setDraft(createEmptyProductDraft({
-            category: 'Top',
-            collection: 'Atelier Archive',
+        return createEmptyProductDraft({
+            category: resolvePreferredOption(nextCategoryOptions, 'Top'),
+            collection: resolvePreferredOption(nextCollectionOptions, 'Atelier Archive'),
             status: 'draft',
             sort_order: highestSortOrder + 10,
-        }));
+        });
+    };
+
+    const resetToNewDraft = (sourceProducts = products) => {
+        const draftSourceProducts = Array.isArray(sourceProducts) ? sourceProducts : products;
+        setEditorMode('single');
+        setSelectedProductId('new');
+        setDraft(buildFreshDraft(draftSourceProducts));
         setFeedback({ type: 'idle', message: '' });
         setUploadFeedback({ type: 'idle', message: '' });
     };
@@ -875,6 +1035,121 @@ export default function AdminDashboard({
 
             return nextDraft;
         });
+    };
+
+    const openValueDialog = (field) => {
+        setValueDialog({ open: true, field, value: '' });
+    };
+
+    const closeValueDialog = () => {
+        setValueDialog((currentDialog) => ({ ...currentDialog, open: false, value: '' }));
+    };
+
+    const confirmValueDialog = () => {
+        const nextValue = normalizeOptionValue(valueDialog.value);
+
+        if (!nextValue) {
+            return;
+        }
+
+        handleFieldChange(valueDialog.field, nextValue);
+        setFeedback({ type: 'success', message: `${getTaxonomyLabel(valueDialog.field)} added to the draft. Save the product to persist it.` });
+        closeValueDialog();
+    };
+
+    const openTaxonomyDeleteDialog = (field) => {
+        const currentValue = normalizeOptionValue(draft[field]);
+
+        if (!currentValue || isTaxonomyUpdating) {
+            return;
+        }
+
+        setTaxonomyDeleteDialog({ open: true, field, value: currentValue });
+    };
+
+    const closeTaxonomyDeleteDialog = () => {
+        setTaxonomyDeleteDialog({ open: false, field: 'category', value: '' });
+    };
+
+    const handleTaxonomyDelete = async () => {
+        const field = taxonomyDeleteDialog.field;
+        const currentValue = normalizeOptionValue(taxonomyDeleteDialog.value);
+
+        if (!currentValue || isTaxonomyUpdating) {
+            return;
+        }
+
+        const availableOptions = field === 'collection' ? collectionOptions : categoryOptions;
+        const replacementValue = resolvePreferredOption(
+            availableOptions.filter((option) => option !== currentValue),
+            field === 'collection' ? PRODUCT_DEFAULTS.collection : PRODUCT_DEFAULTS.category
+        );
+
+        if (!replacementValue || replacementValue === currentValue) {
+            setFeedback({ type: 'error', message: `Choose or create another ${field} before removing "${currentValue}".` });
+            closeTaxonomyDeleteDialog();
+            return;
+        }
+
+        const matchingProducts = products.filter((product) => normalizeOptionValue(product[field]) === currentValue);
+
+        setIsTaxonomyUpdating(true);
+        setFeedback({ type: 'idle', message: '' });
+
+        try {
+            if (matchingProducts.length > 0) {
+                const response = await fetch('/api/admin/products', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ids: matchingProducts.map((product) => product.id),
+                        updates: { [field]: replacementValue },
+                    }),
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Unable to remove this ${field} right now.`);
+                }
+
+                const updatedProducts = Array.isArray(data.products)
+                    ? data.products.map((product) => normalizeProductRecord(product))
+                    : [];
+                const updatesById = new Map(updatedProducts.map((product) => [product.id, product]));
+                const nextProducts = sortProducts(products.map((product) => updatesById.get(product.id) || product));
+
+                setProducts(nextProducts);
+                setBulkEditDraft((currentDraft) => currentDraft[field] === currentValue ? { ...currentDraft, [field]: replacementValue } : currentDraft);
+
+                if (selectedProductId !== 'new' && updatesById.has(selectedProductId)) {
+                    setDraft(createProductEditorState(updatesById.get(selectedProductId)));
+                } else if (normalizeOptionValue(draft[field]) === currentValue) {
+                    setDraft((currentDraft) => ({
+                        ...currentDraft,
+                        [field]: replacementValue,
+                    }));
+                }
+
+                const nextSelectedProducts = sortProducts(nextProducts.filter((product) => selectedProductIds.includes(product.id)));
+                setBulkGridDraft(createBulkGridDraft(nextSelectedProducts));
+                setFeedback({ type: 'success', message: `${getTaxonomyLabel(field)} removed. ${matchingProducts.length} ${matchingProducts.length === 1 ? 'product' : 'products'} moved to ${replacementValue}.` });
+            } else {
+                setDraft((currentDraft) => ({
+                    ...currentDraft,
+                    [field]: replacementValue,
+                }));
+                setBulkEditDraft((currentDraft) => currentDraft[field] === currentValue ? { ...currentDraft, [field]: replacementValue } : currentDraft);
+                setFeedback({ type: 'success', message: `${getTaxonomyLabel(field)} removed from the draft.` });
+            }
+
+            closeTaxonomyDeleteDialog();
+        } catch (error) {
+            setFeedback({ type: 'error', message: error.message || `Unable to remove this ${field} right now.` });
+        } finally {
+            setIsTaxonomyUpdating(false);
+        }
     };
 
     const handleUpload = async (event, field) => {
@@ -1085,9 +1360,18 @@ export default function AdminDashboard({
             ]);
 
             setProducts(nextProducts);
-            setSelectedProductId(savedProduct.id);
-            setDraft(createProductEditorState(savedProduct));
-            setFeedback({ type: 'success', message: method === 'POST' ? 'Product created.' : 'Product saved.' });
+
+            if (method === 'POST') {
+                setEditorMode('single');
+                setSelectedProductId('new');
+                setDraft(buildFreshDraft(nextProducts));
+                setUploadFeedback({ type: 'idle', message: '' });
+                setFeedback({ type: 'success', message: 'Product created. Ready for the next draft.' });
+            } else {
+                setSelectedProductId(savedProduct.id);
+                setDraft(createProductEditorState(savedProduct));
+                setFeedback({ type: 'success', message: 'Product saved.' });
+            }
         } catch (error) {
             setFeedback({ type: 'error', message: error.message || 'Unable to save this product.' });
         } finally {
@@ -1377,6 +1661,8 @@ export default function AdminDashboard({
                             selectedProductId={selectedProductId}
                             enabledFields={enabledBulkFields}
                             value={bulkEditDraft}
+                            categoryOptions={categoryOptions}
+                            collectionOptions={collectionOptions}
                             gridColumns={bulkGridColumns}
                             gridDraft={bulkGridDraft}
                             dirtyCount={dirtyBulkGridCount}
@@ -1469,23 +1755,27 @@ export default function AdminDashboard({
                                 </select>
                             </label>
 
-                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                                Category
-                                <select value={draft.category} onChange={(event) => handleFieldChange('category', event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                                    {PRODUCT_CATEGORY_OPTIONS.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </label>
+                            <TaxonomyField
+                                label="Category"
+                                value={draft.category}
+                                options={categoryOptions}
+                                helperText="Add a new category for this draft or remove the current one from every product that still uses it."
+                                onChange={(value) => handleFieldChange('category', value)}
+                                onAdd={() => openValueDialog('category')}
+                                onRemove={() => openTaxonomyDeleteDialog('category')}
+                                removeDisabled={!draft.category || isTaxonomyUpdating}
+                            />
 
-                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                                Collection
-                                <select value={draft.collection} onChange={(event) => handleFieldChange('collection', event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                                    {PRODUCT_COLLECTION_OPTIONS.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </label>
+                            <TaxonomyField
+                                label="Collection"
+                                value={draft.collection}
+                                options={collectionOptions}
+                                helperText="Add a new collection name quickly or remove the current one and reassign matching products in one step."
+                                onChange={(value) => handleFieldChange('collection', value)}
+                                onAdd={() => openValueDialog('collection')}
+                                onRemove={() => openTaxonomyDeleteDialog('collection')}
+                                removeDisabled={!draft.collection || isTaxonomyUpdating}
+                            />
 
                             <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                                 Price
@@ -1501,7 +1791,7 @@ export default function AdminDashboard({
                                 <input type="checkbox" checked={Boolean(draft.featured)} onChange={(event) => handleFieldChange('featured', event.target.checked)} className="h-4 w-4 border border-[#1C1C1C]/20" />
                                 Featured Product
                             </label>
-                            <p className="md:col-span-2 -mt-2 text-xs leading-relaxed text-[#1C1C1C]/52">Featured products now power both the collections carousel and the Spotlight page. Use sort order to decide which featured piece appears first.</p>
+                            <p className="md:col-span-2 -mt-2 text-xs leading-relaxed text-[#1C1C1C]/52">Featured products stay at the front of the archive and continue to feed the Spotlight page. Use sort order to decide which lead piece appears first.</p>
                         </div>
                     </div>
 
@@ -1607,6 +1897,29 @@ export default function AdminDashboard({
                 isLoading={isDeleting}
                 onCancel={closeDeleteDialog}
                 onConfirm={confirmDelete}
+            />
+
+            <ConfirmDialog
+                open={taxonomyDeleteDialog.open}
+                title={`Remove ${getTaxonomyLabel(taxonomyDeleteDialog.field)}`}
+                copy={`This removes "${taxonomyDeleteDialog.value}" from the available ${taxonomyDeleteDialog.field} list by reassigning any matching products to another value.`}
+                detail={`Current replacement target: ${resolvePreferredOption((taxonomyDeleteDialog.field === 'collection' ? collectionOptions : categoryOptions).filter((option) => option !== taxonomyDeleteDialog.value), taxonomyDeleteDialog.field === 'collection' ? PRODUCT_DEFAULTS.collection : PRODUCT_DEFAULTS.category)}`}
+                confirmLabel={`Remove ${getTaxonomyLabel(taxonomyDeleteDialog.field)}`}
+                isLoading={isTaxonomyUpdating}
+                onCancel={closeTaxonomyDeleteDialog}
+                onConfirm={handleTaxonomyDelete}
+            />
+
+            <ValueDialog
+                open={valueDialog.open}
+                title={`Add ${getTaxonomyLabel(valueDialog.field)}`}
+                copy={`Create a new ${valueDialog.field} value and apply it to the product draft immediately.`}
+                label={getTaxonomyLabel(valueDialog.field)}
+                value={valueDialog.value}
+                confirmLabel={`Use ${getTaxonomyLabel(valueDialog.field)}`}
+                onCancel={closeValueDialog}
+                onChange={(nextValue) => setValueDialog((currentDialog) => ({ ...currentDialog, value: nextValue }))}
+                onConfirm={confirmValueDialog}
             />
 
             </div>
