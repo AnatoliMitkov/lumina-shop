@@ -7,8 +7,8 @@ import { sortProducts } from '../../utils/products';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_ORDER_SELECT = 'id, order_code, status, checkout_mode, payment_status, payment_provider, payment_reference, amount_paid, paid_at, total, subtotal, discount_amount, shipping_amount, item_count, created_at, customer_email, customer_name, customer_phone, customer_location, customer_notes, discount_code, affiliate_code, affiliate_commission_type, affiliate_commission_value, shipping_scope, delivery_method, shipping_country, shipping_city, shipping_region, shipping_postal_code, shipping_address_line1, shipping_address_line2, shipping_office_code, shipping_office_label, delivery_snapshot, pricing_snapshot, items';
-const ADMIN_INQUIRY_SELECT = 'id, full_name, email, phone, location, query_type, message, status, created_at';
+const ADMIN_ORDER_SELECT = '*';
+const ADMIN_INQUIRY_SELECT = '*';
 const ADMIN_DISCOUNT_SELECT = 'id, code, label, description, discount_type, discount_value, shipping_benefit, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
 const ADMIN_AFFILIATE_SELECT = 'id, code, partner_name, notes, customer_discount_type, customer_discount_value, commission_type, commission_value, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
 const ADMIN_ACTIVITY_LIMIT = 500;

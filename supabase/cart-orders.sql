@@ -67,6 +67,7 @@ create table if not exists public.orders (
   customer_snapshot jsonb not null default '{}'::jsonb,
   delivery_snapshot jsonb not null default '{}'::jsonb,
   pricing_snapshot jsonb not null default '{}'::jsonb,
+  admin_attention_status text not null default 'unseen' check (admin_attention_status in ('unseen', 'reviewing', 'seen')),
   created_at timestamptz not null default timezone('utc', now())
 );
 
@@ -128,6 +129,7 @@ alter table public.orders add column if not exists shipping_office_label text;
 alter table public.orders add column if not exists customer_snapshot jsonb not null default '{}'::jsonb;
 alter table public.orders add column if not exists delivery_snapshot jsonb not null default '{}'::jsonb;
 alter table public.orders add column if not exists pricing_snapshot jsonb not null default '{}'::jsonb;
+alter table public.orders add column if not exists admin_attention_status text not null default 'unseen';
 
 alter table public.payments add column if not exists provider text not null default 'stripe';
 alter table public.payments add column if not exists mode text not null default 'full';
@@ -154,12 +156,18 @@ set subtotal = coalesce(subtotal, total, 0),
     delivery_method = case when delivery_method in ('speedy_address', 'speedy_office', 'econt_address', 'econt_office', 'worldwide_quote') then delivery_method else 'worldwide_quote' end,
   checkout_mode = case when checkout_mode in ('manual_review', 'stripe_checkout') then checkout_mode else 'manual_review' end,
   payment_status = case when payment_status in ('manual_review', 'awaiting_payment', 'paid', 'failed', 'cancelled', 'expired', 'refunded') then payment_status else 'manual_review' end,
+    admin_attention_status = case
+      when admin_attention_status in ('unseen', 'reviewing', 'seen') then admin_attention_status
+      when status in ('fulfilled', 'cancelled') then 'seen'
+      else 'unseen'
+    end,
     customer_snapshot = case when customer_snapshot is null or jsonb_typeof(customer_snapshot) <> 'object' then '{}'::jsonb else customer_snapshot end,
     delivery_snapshot = case when delivery_snapshot is null or jsonb_typeof(delivery_snapshot) <> 'object' then '{}'::jsonb else delivery_snapshot end,
     pricing_snapshot = case when pricing_snapshot is null or jsonb_typeof(pricing_snapshot) <> 'object' then '{}'::jsonb else pricing_snapshot end;
 
 create unique index if not exists orders_order_code_uidx on public.orders (order_code);
   create index if not exists orders_payment_status_idx on public.orders (payment_status, created_at desc);
+create index if not exists orders_admin_attention_idx on public.orders (admin_attention_status, created_at desc);
 create unique index if not exists payments_provider_session_uidx on public.payments (provider_session_id) where provider_session_id is not null;
 
 create table if not exists public.profiles (
@@ -241,6 +249,17 @@ drop trigger if exists discount_codes_set_updated_at on public.discount_codes;
 drop trigger if exists affiliate_codes_set_updated_at on public.affiliate_codes;
 drop trigger if exists payments_set_updated_at on public.payments;
 
+alter table public.contact_inquiries add column if not exists admin_attention_status text not null default 'unseen';
+create index if not exists contact_inquiries_attention_idx on public.contact_inquiries (admin_attention_status, created_at desc);
+
+update public.contact_inquiries
+set admin_attention_status = case
+  when admin_attention_status in ('unseen', 'reviewing', 'seen') then admin_attention_status
+  when status = 'closed' then 'seen'
+  when status = 'in_progress' then 'reviewing'
+  else 'unseen'
+end;
+
 
 update public.discount_codes
 set shipping_benefit = case when shipping_benefit in ('sender_covers', 'receiver_covers') then shipping_benefit else 'none' end;
@@ -292,6 +311,7 @@ drop policy if exists "Admins can view all orders" on public.orders;
 drop policy if exists "Admins can update all orders" on public.orders;
 drop policy if exists "Users can view own contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can view all contact inquiries" on public.contact_inquiries;
+drop policy if exists "Admins can update all contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can view all discount codes" on public.discount_codes;
 drop policy if exists "Admins can insert all discount codes" on public.discount_codes;
 drop policy if exists "Admins can update all discount codes" on public.discount_codes;
@@ -373,6 +393,27 @@ on public.contact_inquiries
 for select
 to authenticated
 using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can update all contact inquiries"
+on public.contact_inquiries
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+)
+with check (
   exists (
     select 1
     from public.profiles

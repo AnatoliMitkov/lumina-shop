@@ -191,7 +191,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
         >
             <div className="pointer-events-none absolute inset-x-5 top-6 bottom-24 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
 
-            <a href={href} className="transition-link w-full aspect-[3/4] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text="Inspect">
+            <a href={href} className="transition-link w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text="Inspect">
                 <img className={`w-full h-full object-cover transition-transform duration-[1.8s] ease-out ${isFocused ? 'scale-[1.08]' : 'group-hover:scale-[1.04]'}`} src={image} alt={product.name} />
             </a>
 
@@ -203,7 +203,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
 
                 <div className="flex items-end justify-between gap-4">
                     <div>
-                        <a href={href} className="transition-link font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] hover-target">{product.name}</a>
+                        <a href={href} className="transition-link font-serif text-xl md:text-2xl xl:text-[1.75rem] font-light leading-[0.94] uppercase tracking-[0.06em] hover-target [overflow-wrap:anywhere]">{product.name}</a>
                         {product.subtitle && <p className="mt-3 max-w-md text-sm leading-relaxed text-[#1C1C1C]/58">{product.subtitle}</p>}
                     </div>
 
@@ -227,8 +227,11 @@ export default function CollectionsArchive({ products = [] }) {
         .filter((product) => product.status !== 'archived');
     const [activeCollection, setActiveCollection] = useState('All');
     const [searchValue, setSearchValue] = useState('');
+    const [cardsPerRow, setCardsPerRow] = useState(3);
     const [focusedProductId, setFocusedProductId] = useState(null);
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
+    const tabletColumns = Math.min(cardsPerRow, 4);
+    const desktopColumns = Math.max(cardsPerRow, 2);
 
     const collectionOptions = ['All', ...Array.from(new Set(normalizedProducts.map((product) => product.collection).filter(Boolean)))];
     const featuredProducts = normalizedProducts.filter((product) => product.featured).slice(0, 5);
@@ -338,15 +341,30 @@ export default function CollectionsArchive({ products = [] }) {
                         <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">The page now opens directly on the live counts. Use this compact filter row to jump into collections, categories, or a product name without the old featured lead block.</p>
                     </div>
 
-                    <label className="flex w-full max-w-xl flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                        Search Pieces
-                        <input
-                            value={searchValue}
-                            onChange={(event) => setSearchValue(event.target.value)}
-                            placeholder="Search by collection, category, mood, or name"
-                            className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
-                        />
-                    </label>
+                    <div className="flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-end">
+                        <label className="flex min-w-0 flex-1 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
+                            Search Pieces
+                            <input
+                                value={searchValue}
+                                onChange={(event) => setSearchValue(event.target.value)}
+                                placeholder="Search by collection, category, mood, or name"
+                                className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                            />
+                        </label>
+
+                        <label className="flex w-full md:w-44 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
+                            Cards Per Row
+                            <select
+                                value={cardsPerRow}
+                                onChange={(event) => setCardsPerRow(Number(event.target.value) || 3)}
+                                className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                            >
+                                {[2, 3, 4, 6, 12].map((option) => (
+                                    <option key={option} value={option}>{String(option).padStart(2, '0')}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -356,7 +374,7 @@ export default function CollectionsArchive({ products = [] }) {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42">
-                    <p>{String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible</p>
+                    <p>{String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible across {String(cardsPerRow).padStart(2, '0')} columns</p>
                     {(activeCollection !== 'All' || searchValue) && (
                         <button type="button" onClick={handleReset} className="hover-target border border-[#1C1C1C]/12 bg-white/60 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/58 transition-colors hover:text-[#1C1C1C]">
                             Reset Archive
@@ -372,7 +390,13 @@ export default function CollectionsArchive({ products = [] }) {
                     <button type="button" onClick={handleReset} className="hover-target w-max px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium">Reset Archive</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-12 md:gap-y-14">
+                <div
+                    className="grid grid-cols-1 gap-x-6 gap-y-12 md:gap-y-14 md:[grid-template-columns:repeat(var(--archive-columns-tablet),minmax(0,1fr))] xl:[grid-template-columns:repeat(var(--archive-columns-desktop),minmax(0,1fr))]"
+                    style={{
+                        '--archive-columns-tablet': tabletColumns,
+                        '--archive-columns-desktop': desktopColumns,
+                    }}
+                >
                     {filteredProducts.map((product) => (
                         <ProductCard
                             key={product.id || product.slug}

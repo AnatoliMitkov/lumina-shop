@@ -90,7 +90,7 @@ export default async function SpotlightPage() {
 
             <section className="px-5 sm:px-6 md:px-12 max-w-[1800px] mx-auto mb-16 md:mb-20">
                 <div className="grid grid-cols-1 lg:grid-cols-[0.98fr_0.88fr] gap-5 md:gap-8 items-start">
-                    <div className="spotlight-lead-stage min-w-0 storefront-media-stage relative aspect-[4/5] sm:aspect-[5/4] lg:aspect-auto overflow-hidden rounded-sm bg-[#1C1C1C] view-img hover-target" data-cursor-text="Lead Frame">
+                    <a href={buildProductHref(leadProduct)} className="spotlight-lead-stage transition-link min-w-0 storefront-media-stage relative block aspect-[4/5] sm:aspect-[5/4] lg:aspect-auto overflow-hidden rounded-sm bg-[#1C1C1C] view-img hover-target" data-cursor-text="Lead Frame">
                         <img src={galleryFrames[0]} alt={leadProduct.name} className="spotlight-lead-image w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent"></div>
                         <div className="absolute inset-x-0 bottom-0 min-w-0 max-w-full overflow-hidden p-5 sm:p-6 md:p-8 text-[#EFECE8] flex flex-col gap-3 md:gap-4">
@@ -98,7 +98,7 @@ export default async function SpotlightPage() {
                             <h2 className="storefront-panel-display max-w-[10ch] sm:max-w-[12ch] md:max-w-[14ch] lg:max-w-full font-serif font-light uppercase tracking-[0.03em] md:tracking-[0.08em] leading-[0.94] [overflow-wrap:anywhere]">{leadProduct.name}</h2>
                             {leadProduct.subtitle && <p className="max-w-[18rem] sm:max-w-xl text-sm md:text-base leading-relaxed text-white/72 [overflow-wrap:anywhere]">{leadProduct.subtitle}</p>}
                         </div>
-                    </div>
+                    </a>
 
                     <div className="min-w-0 flex flex-col gap-5 md:gap-8">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">

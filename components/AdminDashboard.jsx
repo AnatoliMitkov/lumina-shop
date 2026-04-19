@@ -6,6 +6,7 @@ import AdminAffiliateCodesPanel from './AdminAffiliateCodesPanel';
 import AdminInquiriesPanel from './AdminInquiriesPanel';
 import AdminDiscountCodesPanel from './AdminDiscountCodesPanel';
 import AdminOrdersPanel from './AdminOrdersPanel';
+import { countAdminAttentionItems, normalizeAdminAttentionStatus } from '../utils/admin-attention';
 import {
     PRODUCT_DEFAULTS,
     PRODUCT_CATEGORY_OPTIONS,
@@ -237,6 +238,54 @@ function buildInquiryPreview(message) {
     return trimmedMessage.length > 140 ? `${trimmedMessage.slice(0, 137)}...` : trimmedMessage;
 }
 
+function getAttentionStorageKey(scope, userId) {
+    return `va_admin_attention:${scope}:${userId || 'local'}`;
+}
+
+function readAttentionStorage(scope, userId) {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    try {
+        const rawValue = window.localStorage.getItem(getAttentionStorageKey(scope, userId));
+
+        if (!rawValue) {
+            return {};
+        }
+
+        const parsedValue = JSON.parse(rawValue);
+        return parsedValue && typeof parsedValue === 'object' ? parsedValue : {};
+    } catch {
+        return {};
+    }
+}
+
+function applyStoredAttentionState(items = [], storedMap = {}) {
+    return items.map((item) => ({
+        ...item,
+        admin_attention_status: normalizeAdminAttentionStatus(storedMap[item.id] || item.admin_attention_status),
+    }));
+}
+
+function writeAttentionStorage(scope, userId, items = []) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    try {
+        const serializedMap = Object.fromEntries(
+            items
+                .filter((item) => item?.id)
+                .map((item) => [item.id, normalizeAdminAttentionStatus(item.admin_attention_status)])
+        );
+
+        window.localStorage.setItem(getAttentionStorageKey(scope, userId), JSON.stringify(serializedMap));
+    } catch {
+        // Ignore localStorage write failures and keep the admin UI functional in memory.
+    }
+}
+
 function MetricCard({ label, value, copy }) {
     return (
         <div className="border border-[#1C1C1C]/10 bg-white/65 rounded-sm p-5 md:p-6 flex flex-col gap-3">
@@ -456,6 +505,86 @@ function ValueDialog({
                         className={`hover-target h-12 px-6 rounded-full bg-[#EFE7DA] text-[#1C1C1C] text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${!trimmedValue ? 'opacity-60' : 'hover:bg-white'}`}
                     >
                         {confirmLabel}
+                    </button>
+                </div>
+            </div>
+        </ModalShell>
+    );
+}
+
+function AttentionDialog({
+    open,
+    orderCounts,
+    inquiryCounts,
+    onClose,
+    onGoToOrders,
+    onGoToInquiries,
+}) {
+    const orderNeedsAttention = orderCounts.unseen + orderCounts.reviewing;
+    const inquiryNeedsAttention = inquiryCounts.unseen + inquiryCounts.reviewing;
+
+    return (
+        <ModalShell open={open} onClose={onClose} maxWidth="max-w-2xl">
+            <div className="flex flex-col gap-6 p-6 md:p-8">
+                <div className="flex flex-col gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Admin Attention</p>
+                    <h3 className="font-serif text-3xl font-light uppercase tracking-[0.1em] leading-none">New Activity Needs A Look</h3>
+                    <p className="text-sm leading-relaxed text-white/70">Unseen items stay highlighted until you open them, and reviewing items stay visible until you explicitly mark them as seen.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 flex flex-col gap-4">
+                        <div className="flex items-end justify-between gap-4">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 mb-2">Orders</p>
+                                <p className="font-serif text-4xl font-light leading-none text-white">{String(orderNeedsAttention).padStart(2, '0')}</p>
+                            </div>
+                            <div className="text-right text-[10px] uppercase tracking-[0.22em] text-white/42">
+                                <p>{orderCounts.unseen} unseen</p>
+                                <p>{orderCounts.reviewing} reviewing</p>
+                            </div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-white/66">Jump straight into the order queue and clear the items that still need a first look or final acknowledgement.</p>
+                        <button
+                            type="button"
+                            onClick={onGoToOrders}
+                            disabled={orderNeedsAttention === 0}
+                            className={`hover-target h-12 px-6 rounded-full text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${orderNeedsAttention === 0 ? 'border border-white/12 bg-white/5 text-white/42' : 'bg-[#EFE7DA] text-[#1C1C1C] hover:bg-white'}`}
+                        >
+                            Go To Orders
+                        </button>
+                    </div>
+
+                    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 flex flex-col gap-4">
+                        <div className="flex items-end justify-between gap-4">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 mb-2">Inbox</p>
+                                <p className="font-serif text-4xl font-light leading-none text-white">{String(inquiryNeedsAttention).padStart(2, '0')}</p>
+                            </div>
+                            <div className="text-right text-[10px] uppercase tracking-[0.22em] text-white/42">
+                                <p>{inquiryCounts.unseen} unseen</p>
+                                <p>{inquiryCounts.reviewing} reviewing</p>
+                            </div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-white/66">Use the inbox shortcut when fresh messages land and need to be moved from unseen into the normal response flow.</p>
+                        <button
+                            type="button"
+                            onClick={onGoToInquiries}
+                            disabled={inquiryNeedsAttention === 0}
+                            className={`hover-target h-12 px-6 rounded-full text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${inquiryNeedsAttention === 0 ? 'border border-white/12 bg-white/5 text-white/42' : 'bg-[#EFE7DA] text-[#1C1C1C] hover:bg-white'}`}
+                        >
+                            Open Inbox
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="hover-target h-12 px-5 rounded-full border border-white/12 bg-white/5 text-[10px] uppercase tracking-[0.22em] text-white/72 transition-colors hover:bg-white/10"
+                    >
+                        Close
                     </button>
                 </div>
             </div>
@@ -843,6 +972,8 @@ export default function AdminDashboard({
 }) {
     const sortedInitialProducts = sortProducts(initialProducts ?? []);
     const [products, setProducts] = useState(sortedInitialProducts);
+    const [adminOrders, setAdminOrders] = useState(recentOrders ?? []);
+    const [adminInquiries, setAdminInquiries] = useState(recentInquiries ?? []);
     const [selectedProductId, setSelectedProductId] = useState(sortedInitialProducts[0]?.id || 'new');
     const [draft, setDraft] = useState(
         sortedInitialProducts[0]
@@ -875,6 +1006,8 @@ export default function AdminDashboard({
     const [valueDialog, setValueDialog] = useState({ open: false, field: 'category', value: '' });
     const [taxonomyDeleteDialog, setTaxonomyDeleteDialog] = useState({ open: false, field: 'category', value: '' });
     const [isTaxonomyUpdating, setIsTaxonomyUpdating] = useState(false);
+    const [isAttentionDialogOpen, setIsAttentionDialogOpen] = useState(false);
+    const [hasAttentionDialogOpened, setHasAttentionDialogOpened] = useState(false);
 
     const activeCount = products.filter((product) => product.status === 'active').length;
     const draftCount = products.filter((product) => product.status === 'draft').length;
@@ -918,6 +1051,34 @@ export default function AdminDashboard({
     const selectedProductCount = selectedProducts.length;
     const hasSelectedProducts = selectedProductCount > 0;
     const dirtyBulkGridCount = selectedProducts.filter((product) => isBulkGridRowDirty(product, bulkGridDraft[product.id] || createBulkGridRowDraft(product))).length;
+    const orderAttentionCounts = countAdminAttentionItems(adminOrders);
+    const inquiryAttentionCounts = countAdminAttentionItems(adminInquiries);
+    const unresolvedActivityCount = orderAttentionCounts.unseen + orderAttentionCounts.reviewing + inquiryAttentionCounts.unseen + inquiryAttentionCounts.reviewing;
+
+    useEffect(() => {
+        setAdminOrders(applyStoredAttentionState(recentOrders ?? [], readAttentionStorage('orders', user?.id)));
+    }, [recentOrders, user?.id]);
+
+    useEffect(() => {
+        setAdminInquiries(applyStoredAttentionState(recentInquiries ?? [], readAttentionStorage('inquiries', user?.id)));
+    }, [recentInquiries, user?.id]);
+
+    useEffect(() => {
+        writeAttentionStorage('orders', user?.id, adminOrders);
+    }, [adminOrders, user?.id]);
+
+    useEffect(() => {
+        writeAttentionStorage('inquiries', user?.id, adminInquiries);
+    }, [adminInquiries, user?.id]);
+
+    useEffect(() => {
+        if (hasAttentionDialogOpened || unresolvedActivityCount === 0) {
+            return;
+        }
+
+        setIsAttentionDialogOpen(true);
+        setHasAttentionDialogOpened(true);
+    }, [hasAttentionDialogOpened, unresolvedActivityCount]);
 
     useEffect(() => {
         const availableProductIds = new Set(products.map((product) => product.id));
@@ -1534,15 +1695,25 @@ export default function AdminDashboard({
         }
     };
 
+    const closeAttentionDialog = () => {
+        setIsAttentionDialogOpen(false);
+    };
+
+    const jumpToPanel = (panelId) => {
+        document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        closeAttentionDialog();
+    };
+
     return (
         <>
             <div className="flex flex-col gap-10 md:gap-12">
-            <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 md:gap-5">
+            <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 md:gap-5">
                 <MetricCard label="Catalog" value={String(products.length).padStart(2, '0')} copy="Total pieces in the current admin catalog." />
                 <MetricCard label="Active" value={String(activeCount).padStart(2, '0')} copy="Visible on the storefront right now." />
                 <MetricCard label="Drafts" value={String(draftCount).padStart(2, '0')} copy="Internal pieces waiting for polish or approval." />
                 <MetricCard label="Featured" value={String(featuredCount).padStart(2, '0')} copy="Lead products carrying the archive direction." />
-                <MetricCard label="Inbox" value={String(recentInquiries.length).padStart(2, '0')} copy="Recent inquiries visible from the same admin view." />
+                <MetricCard label="Review" value={String(unresolvedActivityCount).padStart(2, '0')} copy="Orders and inbox items still waiting for a first look or final acknowledgement." />
+                <MetricCard label="Inbox" value={String(adminInquiries.length).padStart(2, '0')} copy={`${inquiryAttentionCounts.unseen} unseen and ${inquiryAttentionCounts.reviewing} reviewing in the current inbox.`} />
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-8 md:gap-10 items-start">
@@ -1879,8 +2050,8 @@ export default function AdminDashboard({
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
-                <AdminOrdersPanel recentOrders={recentOrders} />
-                <AdminInquiriesPanel recentInquiries={recentInquiries} />
+                <AdminOrdersPanel recentOrders={adminOrders} onOrdersChange={setAdminOrders} panelId="admin-orders-panel" />
+                <AdminInquiriesPanel recentInquiries={adminInquiries} onInquiriesChange={setAdminInquiries} panelId="admin-inquiries-panel" />
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
@@ -1897,6 +2068,15 @@ export default function AdminDashboard({
                 isLoading={isDeleting}
                 onCancel={closeDeleteDialog}
                 onConfirm={confirmDelete}
+            />
+
+            <AttentionDialog
+                open={isAttentionDialogOpen}
+                orderCounts={orderAttentionCounts}
+                inquiryCounts={inquiryAttentionCounts}
+                onClose={closeAttentionDialog}
+                onGoToOrders={() => jumpToPanel('admin-orders-panel')}
+                onGoToInquiries={() => jumpToPanel('admin-inquiries-panel')}
             />
 
             <ConfirmDialog

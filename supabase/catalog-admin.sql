@@ -126,6 +126,7 @@ drop policy if exists "Admins can update products" on public.products;
 drop policy if exists "Admins can delete products" on public.products;
 drop policy if exists "Admins can view all orders" on public.orders;
 drop policy if exists "Admins can view all contact inquiries" on public.contact_inquiries;
+drop policy if exists "Admins can update all contact inquiries" on public.contact_inquiries;
 
 create policy "Public can view active products"
 on public.products
@@ -211,6 +212,27 @@ on public.contact_inquiries
 for select
 to authenticated
 using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can update all contact inquiries"
+on public.contact_inquiries
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+)
+with check (
   exists (
     select 1
     from public.profiles

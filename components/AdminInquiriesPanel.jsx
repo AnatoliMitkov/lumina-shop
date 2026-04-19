@@ -1,6 +1,12 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from 'react';
+import {
+    ADMIN_ATTENTION_STATUS_OPTIONS,
+    countAdminAttentionItems,
+    getAdminAttentionMeta,
+    normalizeAdminAttentionStatus,
+} from '../utils/admin-attention';
 
 function formatDate(value) {
     if (!value) {
@@ -59,11 +65,28 @@ function sortInquiries(inquiries, sortMode) {
     return sortedInquiries;
 }
 
-export default function AdminInquiriesPanel({ recentInquiries = [] }) {
+function AttentionPill({ status }) {
+    const meta = getAdminAttentionMeta(status);
+
+    return (
+        <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${meta.darkClassName}`}>
+            <span className={`h-2 w-2 rounded-full ${meta.dotClassName}`}></span>
+            {meta.label}
+        </span>
+    );
+}
+
+export default function AdminInquiriesPanel({
+    recentInquiries = [],
+    onInquiriesChange,
+    panelId = 'admin-inquiries-panel',
+}) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [queryTypeFilter, setQueryTypeFilter] = useState('all');
     const [sortMode, setSortMode] = useState('newest');
+    const [updatingInquiryId, setUpdatingInquiryId] = useState('');
+    const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
     const queryTypeOptions = useMemo(() => {
@@ -94,6 +117,7 @@ export default function AdminInquiriesPanel({ recentInquiries = [] }) {
                 inquiry.query_type,
                 inquiry.status,
                 inquiry.message,
+                inquiry.admin_attention_status,
             ]
                 .filter(Boolean)
                 .join(' ')
@@ -108,19 +132,69 @@ export default function AdminInquiriesPanel({ recentInquiries = [] }) {
     const visibleLabel = filteredInquiries.length === recentInquiries.length
         ? `${recentInquiries.length} visible`
         : `${filteredInquiries.length} of ${recentInquiries.length} visible`;
+    const attentionCounts = useMemo(() => countAdminAttentionItems(recentInquiries), [recentInquiries]);
+
+    const pushInquiryUpdate = (nextInquiry) => {
+        if (typeof onInquiriesChange !== 'function') {
+            return;
+        }
+
+        onInquiriesChange((currentInquiries) => currentInquiries.map((inquiry) => inquiry.id === nextInquiry.id ? nextInquiry : inquiry));
+    };
+
+    const updateInquiryAttention = async (inquiryId, attentionStatus) => {
+        const inquiryToUpdate = recentInquiries.find((inquiry) => inquiry.id === inquiryId) || null;
+
+        setUpdatingInquiryId(inquiryId);
+        setFeedback({ type: 'idle', message: '' });
+
+        if (inquiryToUpdate) {
+            pushInquiryUpdate({
+                ...inquiryToUpdate,
+                admin_attention_status: attentionStatus,
+            });
+        }
+
+        try {
+            const response = await fetch('/api/admin/inquiries', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: inquiryId, attentionStatus }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to update the inquiry right now.');
+            }
+
+            pushInquiryUpdate(data.inquiry);
+            setFeedback({ type: 'success', message: `Inquiry marked ${attentionStatus}.` });
+        } catch {
+            setFeedback({ type: 'success', message: 'Review state saved in this browser. Run supabase/cart-orders.sql to persist it for all admins.' });
+        } finally {
+            setUpdatingInquiryId('');
+        }
+    };
 
     return (
-        <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5">
-            <div className="flex items-end justify-between gap-4">
+        <div id={panelId} className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 scroll-mt-28">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 mb-3">Inquiry Review</p>
                     <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.12em]">Atelier Inbox</h3>
                 </div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/35">{visibleLabel}</p>
+                <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/35">
+                    <span>{visibleLabel}</span>
+                    {attentionCounts.unseen > 0 && <AttentionPill status="unseen" />}
+                    {attentionCounts.reviewing > 0 && <AttentionPill status="reviewing" />}
+                    {attentionCounts.unseen === 0 && attentionCounts.reviewing === 0 && recentInquiries.length > 0 && <AttentionPill status="seen" />}
+                </div>
             </div>
 
             <p className="text-sm leading-relaxed text-white/66">
-                Filter the inbox by status, inquiry type, or client details. The list stays inside a contained scroll area so the admin page does not become endless when volume grows.
+                The inbox still keeps its compact review rail, but now every inquiry also carries a separate unseen, reviewing, or seen state so new notes stand out before they disappear into the normal workflow status.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_11rem_11rem_10rem] gap-3">
@@ -169,36 +243,59 @@ export default function AdminInquiriesPanel({ recentInquiries = [] }) {
                     {filteredInquiries.length === 0 ? (
                         <p className="text-sm text-white/60">No inquiries match the current filters.</p>
                     ) : (
-                        filteredInquiries.map((inquiry) => (
-                            <div key={inquiry.id} className="border border-white/10 bg-white/[0.04] rounded-sm p-4 md:p-5 flex flex-col gap-3">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 mb-2">{toTitleCase(inquiry.query_type || 'other')}</p>
-                                        <p className="font-serif text-2xl font-light leading-none text-white">{inquiry.full_name || inquiry.email}</p>
+                        filteredInquiries.map((inquiry) => {
+                            const attentionStatus = normalizeAdminAttentionStatus(inquiry.admin_attention_status);
+
+                            return (
+                                <div key={inquiry.id} className="border border-white/10 bg-white/[0.04] rounded-sm p-4 md:p-5 flex flex-col gap-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 mb-2">{toTitleCase(inquiry.query_type || 'other')}</p>
+                                            <p className="font-serif text-2xl font-light leading-none text-white">{inquiry.full_name || inquiry.email}</p>
+                                        </div>
+                                        <span className="text-[10px] uppercase tracking-[0.22em] text-white/38">{formatDate(inquiry.created_at)}</span>
                                     </div>
-                                    <span className="text-[10px] uppercase tracking-[0.22em] text-white/38">{formatDate(inquiry.created_at)}</span>
-                                </div>
 
-                                <p className="text-sm leading-relaxed text-white/68">{buildInquiryPreview(inquiry.message)}</p>
+                                    <p className="text-sm leading-relaxed text-white/68">{buildInquiryPreview(inquiry.message)}</p>
 
-                                <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/40">
-                                    <span>{inquiry.email}</span>
-                                    {inquiry.phone && <span className="text-white/26">•</span>}
-                                    {inquiry.phone && <span>{inquiry.phone}</span>}
-                                    {inquiry.location && <span className="text-white/26">•</span>}
-                                    {inquiry.location && <span>{inquiry.location}</span>}
-                                </div>
+                                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/40">
+                                        <span>{inquiry.email}</span>
+                                        {inquiry.phone && <span className="text-white/26">•</span>}
+                                        {inquiry.phone && <span>{inquiry.phone}</span>}
+                                        {inquiry.location && <span className="text-white/26">•</span>}
+                                        {inquiry.location && <span>{inquiry.location}</span>}
+                                    </div>
 
-                                <div className="flex items-center justify-between gap-4">
-                                    <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${getInquiryStatusClasses(inquiry.status)}`}>
-                                        {toTitleCase(inquiry.status || 'new')}
-                                    </span>
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${getInquiryStatusClasses(inquiry.status)}`}>
+                                                {toTitleCase(inquiry.status || 'new')}
+                                            </span>
+                                            <AttentionPill status={attentionStatus} />
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {ADMIN_ATTENTION_STATUS_OPTIONS.map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    type="button"
+                                                    onClick={() => updateInquiryAttention(inquiry.id, option.value)}
+                                                    disabled={updatingInquiryId === inquiry.id || attentionStatus === option.value}
+                                                    className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${attentionStatus === option.value ? 'border-white/18 bg-white/10 text-white' : 'border-white/10 bg-white/[0.04] text-white/72 hover:bg-white/10'} ${updatingInquiryId === inquiry.id ? 'opacity-60' : ''}`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
+
+            {feedback.message && <p className={`text-sm ${feedback.type === 'error' ? 'text-red-300' : 'text-white/68'}`}>{feedback.message}</p>}
         </div>
     );
 }
