@@ -14,6 +14,14 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [status, setStatus] = useState({ type: 'idle', message: '' });
 
+    const buildRedirectUrl = (path) => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        return `${window.location.origin}${path}`;
+    };
+
     const persistProfile = async () => {
         const response = await fetch('/api/account/profile', {
             method: 'PUT',
@@ -39,6 +47,24 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 throw new Error('Account auth is unavailable locally until Supabase env values are added to .env.local.');
             }
 
+            if (mode === 'recovery') {
+                const redirectTo = buildRedirectUrl('/account/reset-password');
+                const { error } = await supabase.auth.resetPasswordForEmail(
+                    email,
+                    redirectTo ? { redirectTo } : undefined
+                );
+
+                if (error) {
+                    throw error;
+                }
+
+                setStatus({
+                    type: 'success',
+                    message: 'Password reset email sent. Open the link in your email to choose a new password.',
+                });
+                return;
+            }
+
             if (mode === 'sign-in') {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -55,6 +81,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: buildRedirectUrl('/account'),
                     data: {
                         full_name: fullName,
                     },
@@ -96,10 +123,17 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 </div>
             )}
 
-            <div className="flex gap-2 mb-8 border border-[#1C1C1C]/10 p-1 rounded-full bg-[#EFECE8]">
-                <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-in' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Login</button>
-                <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-up' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Create Account</button>
-            </div>
+            {mode === 'recovery' ? (
+                <div className="mb-8 rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4">
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Password Recovery</p>
+                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">Enter your email and the reset link will send you to a secure password update screen.</p>
+                </div>
+            ) : (
+                <div className="flex gap-2 mb-8 border border-[#1C1C1C]/10 p-1 rounded-full bg-[#EFECE8]">
+                    <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-in' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Login</button>
+                    <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-up' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Create Account</button>
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 {mode === 'sign-up' && (
@@ -114,17 +148,37 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                     <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                 </label>
 
-                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Password
-                    <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                </label>
+                {mode !== 'recovery' && (
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        Password
+                        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                    </label>
+                )}
+
+                {mode === 'sign-in' && (
+                    <button type="button" onClick={() => {
+                        setMode('recovery');
+                        setStatus({ type: 'idle', message: '' });
+                    }} className="w-fit text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 transition-colors hover:text-[#1C1C1C]">
+                        Forgot Password?
+                    </button>
+                )}
+
+                {mode === 'recovery' && (
+                    <button type="button" onClick={() => {
+                        setMode('sign-in');
+                        setStatus({ type: 'idle', message: '' });
+                    }} className="w-fit text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 transition-colors hover:text-[#1C1C1C]">
+                        Back To Login
+                    </button>
+                )}
 
                 {status.message && (
                     <p className={`text-xs leading-relaxed ${status.type === 'error' ? 'text-red-600' : 'text-[#1C1C1C]/65'}`}>{status.message}</p>
                 )}
 
                 <button disabled={isSubmitting || !supabase} className={`mt-2 h-14 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.24em] text-xs font-medium transition-colors hover:bg-black ${(isSubmitting || !supabase) ? 'opacity-60' : ''}`}>
-                    {isSubmitting ? 'Working...' : mode === 'sign-in' ? 'Enter Account' : 'Create Account'}
+                    {isSubmitting ? 'Working...' : mode === 'sign-in' ? 'Enter Account' : mode === 'recovery' ? 'Send Reset Email' : 'Create Account'}
                 </button>
             </form>
         </div>

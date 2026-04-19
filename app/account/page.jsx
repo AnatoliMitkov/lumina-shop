@@ -5,6 +5,37 @@ import AccountDashboard from '../../components/AccountDashboard';
 
 export const dynamic = 'force-dynamic';
 
+function readAuthMessage(searchParams) {
+    const notice = searchParams?.notice;
+    const error = searchParams?.error;
+
+    if (notice === 'email-confirmed') {
+        return { type: 'success', message: 'Your email is confirmed. You can sign in to your account now.' };
+    }
+
+    if (notice === 'magic-link-confirmed') {
+        return { type: 'success', message: 'You are signed in. Your secure email link was accepted.' };
+    }
+
+    if (notice === 'invite-accepted') {
+        return { type: 'success', message: 'Your invitation was accepted. Continue in your account.' };
+    }
+
+    if (notice === 'email-change-confirmed') {
+        return { type: 'success', message: 'Your email change is confirmed.' };
+    }
+
+    if (notice === 'password-reset') {
+        return { type: 'success', message: 'Your password was updated successfully.' };
+    }
+
+    if (error === 'auth-link-invalid') {
+        return { type: 'error', message: 'This email link is invalid or expired. Request a fresh one and try again.' };
+    }
+
+    return null;
+}
+
 function isProfilesTableMissing(error) {
     const message = typeof error?.message === 'string' ? error.message : '';
 
@@ -30,7 +61,9 @@ function readErrorMessage(error) {
     return 'Some account data is not available yet.';
 }
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams = {} }) {
+    const authMessage = readAuthMessage(searchParams);
+
     if (!isSupabaseConfigured()) {
         return (
             <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
@@ -78,6 +111,11 @@ export default async function AccountPage() {
     if (!user) {
         return (
             <div className="pt-32 md:pt-40 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
+                {authMessage && (
+                    <div className={`mb-8 rounded-sm border px-4 py-4 text-sm leading-relaxed ${authMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#1C1C1C]/10 bg-[#EFECE8] text-[#1C1C1C]/70'}`}>
+                        {authMessage.message}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.9fr] gap-12 md:gap-20 items-start">
                     <section className="flex flex-col gap-8 md:gap-10">
                         <div>
@@ -128,6 +166,11 @@ export default async function AccountPage() {
 
     return (
         <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
+            {authMessage && (
+                <div className={`mb-8 rounded-sm border px-4 py-4 text-sm leading-relaxed ${authMessage.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#1C1C1C]/10 bg-[#EFECE8] text-[#1C1C1C]/70'}`}>
+                    {authMessage.message}
+                </div>
+            )}
             <div className="mb-10 md:mb-12 grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 md:gap-6 items-stretch">
                 <section className="account-surface reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
