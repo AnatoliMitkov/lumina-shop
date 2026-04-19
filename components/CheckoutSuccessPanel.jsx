@@ -3,25 +3,53 @@
 import { useEffect, useState } from 'react';
 import { useCart } from './CartProvider';
 
-export default function CheckoutSuccessPanel({ orderCode = '' }) {
+export default function CheckoutSuccessPanel({ orderCode = '', orderId = '', sessionId = '' }) {
   const { clearCart } = useCart();
   const [isFinalizing, setIsFinalizing] = useState(true);
+  const [finalizedOrderCode, setFinalizedOrderCode] = useState(orderCode);
+  const [confirmationMessage, setConfirmationMessage] = useState('');
 
   useEffect(() => {
     let isActive = true;
 
     async function finalizeCheckoutState() {
+      let nextOrderCode = orderCode;
+
       try {
+        const hasSessionReference = sessionId && !sessionId.includes('{');
+
+        if (hasSessionReference) {
+          const confirmResponse = await fetch('/api/payments/stripe/confirm', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ orderId, sessionId }),
+          });
+          const confirmData = await confirmResponse.json().catch(() => ({}));
+
+          if (!confirmResponse.ok) {
+            throw new Error(confirmData.error || 'Payment confirmation is still syncing. Refresh the account page in a moment.');
+          }
+
+          nextOrderCode = confirmData?.order?.orderCode || nextOrderCode;
+        }
+
         await fetch('/api/cart/session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
         });
+      } catch (error) {
+        if (isActive) {
+          setConfirmationMessage(error.message || 'Payment confirmation is still syncing. Refresh the account page in a moment.');
+        }
       } finally {
         clearCart();
 
         if (isActive) {
+          setFinalizedOrderCode(nextOrderCode);
           setIsFinalizing(false);
         }
       }
@@ -40,24 +68,24 @@ export default function CheckoutSuccessPanel({ orderCode = '' }) {
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45 mb-4">Payment Received</p>
           <h1 className="font-serif text-4xl md:text-6xl font-light uppercase tracking-[0.1em] leading-[0.92] text-[#1C1C1C]">
-            {orderCode || 'THE VA STORE'}
+            {finalizedOrderCode || 'THE VA STORE'}
           </h1>
         </div>
 
         <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
           {isFinalizing
             ? 'Your secure payment completed. Finalizing the local cart and starting a fresh session now.'
-            : 'Your secure payment completed successfully. The atelier has the paid order in the queue now, and your cart has been cleared for a fresh session.'}
+            : confirmationMessage || 'Your secure payment completed successfully. The atelier has the paid order in the queue now, and your cart has been cleared for a fresh session.'}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Order</p>
-            <p className="font-serif text-3xl font-light text-[#1C1C1C]">{orderCode || 'Processing'}</p>
+            <p className="font-serif text-3xl font-light text-[#1C1C1C]">{finalizedOrderCode || 'Processing'}</p>
           </div>
           <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Payment</p>
-            <p className="font-serif text-3xl font-light text-[#1C1C1C]">Paid</p>
+            <p className="font-serif text-3xl font-light text-[#1C1C1C]">{confirmationMessage ? 'Syncing' : 'Paid'}</p>
           </div>
           <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Next Step</p>

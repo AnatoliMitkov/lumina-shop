@@ -69,11 +69,8 @@ export function buildTrustedCartSnapshot(items = [], productRecords = []) {
 export function evaluateCheckoutMode({ requestedMode = '', shippingScope = 'worldwide', productRecords = [], total = 0 } = {}) {
   const normalizedRequestedMode = normalizeCheckoutMode(requestedMode);
   const normalizedShippingScope = shippingScope === 'domestic_bg' ? 'domestic_bg' : 'worldwide';
+  const manualLaneEnabled = normalizedShippingScope === 'domestic_bg';
   const reasons = [];
-
-  if (normalizedShippingScope !== 'domestic_bg') {
-    reasons.push('Worldwide shipping still requires atelier review before payment.');
-  }
 
   if (productRecords.some((product) => Number(product.inventory_count ?? 0) <= 0)) {
     reasons.push('One or more selected pieces are made to order and still need atelier review.');
@@ -90,11 +87,18 @@ export function evaluateCheckoutMode({ requestedMode = '', shippingScope = 'worl
   const payNowEligible = reasons.length === 0;
 
   return {
-    availableModes: payNowEligible ? ['stripe_checkout', 'manual_review'] : ['manual_review'],
+    availableModes: payNowEligible
+      ? manualLaneEnabled
+        ? ['stripe_checkout', 'manual_review']
+        : ['stripe_checkout']
+      : ['manual_review'],
     payNowEligible,
     reasons,
-    resolvedMode: payNowEligible && normalizedRequestedMode === 'stripe_checkout'
-      ? 'stripe_checkout'
+    manualLaneEnabled,
+    resolvedMode: payNowEligible
+      ? manualLaneEnabled && normalizedRequestedMode === 'manual_review'
+        ? 'manual_review'
+        : 'stripe_checkout'
       : 'manual_review',
   };
 }

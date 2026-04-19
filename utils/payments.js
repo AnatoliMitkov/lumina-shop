@@ -10,8 +10,8 @@ export const PAYMENT_MODE_OPTIONS = [
   },
   {
     value: 'manual_review',
-    label: 'Atelier Review',
-    copy: 'Send the order for manual review first, then confirm payment with the atelier.',
+    label: 'Local Review',
+    copy: 'Send the order through the local review lane before payment is confirmed.',
   },
 ];
 
@@ -95,8 +95,8 @@ export function getPaymentStatusMeta(status = '', checkoutMode = 'manual_review'
             className: 'border-sky-200 bg-sky-50 text-sky-700',
           }
         : {
-            label: 'Review First',
-            description: 'The atelier reviews this order before requesting payment.',
+            label: 'Local Review',
+            description: 'The atelier confirms delivery and payment details before payment is collected.',
             className: 'border-[#D9C08A] bg-[#FFF8E8] text-[#8A6A2F]',
           };
   }

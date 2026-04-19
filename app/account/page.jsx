@@ -61,8 +61,9 @@ function readErrorMessage(error) {
     return 'Some account data is not available yet.';
 }
 
-export default async function AccountPage({ searchParams = {} }) {
-    const authMessage = readAuthMessage(searchParams);
+export default async function AccountPage({ searchParams }) {
+    const resolvedSearchParams = await searchParams;
+    const authMessage = readAuthMessage(resolvedSearchParams);
 
     if (!isSupabaseConfigured()) {
         return (

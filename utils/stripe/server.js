@@ -26,19 +26,25 @@ export function toStripeAmount(value = 0) {
   return Math.round(Number(value ?? 0) * 100);
 }
 
+function encodeSearchParamValue(value) {
+  const stringValue = String(value);
+
+  if (/^\{[A-Z0-9_]+\}$/.test(stringValue)) {
+    return stringValue;
+  }
+
+  return encodeURIComponent(stringValue);
+}
+
 export function buildAbsoluteUrl(request, path, searchParams = {}) {
   const origin = request.headers.get('origin')
     || process.env.NEXT_PUBLIC_SITE_URL
     || request.nextUrl.origin;
   const url = new URL(path, origin);
+  const query = Object.entries(searchParams)
+    .filter(([, value]) => value != null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeSearchParamValue(value)}`)
+    .join('&');
 
-  Object.entries(searchParams).forEach(([key, value]) => {
-    if (value == null || value === '') {
-      return;
-    }
-
-    url.searchParams.set(key, String(value));
-  });
-
-  return url.toString();
+  return query ? `${url.origin}${url.pathname}?${query}` : url.toString();
 }

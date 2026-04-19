@@ -227,18 +227,23 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         || ((discountCode || affiliateCode) && pricingPreview.pricingReady === false);
     const hasInventoryHints = cartItems.some((item) => item.inventory_count != null);
     const likelyMadeToOrder = hasInventoryHints && cartItems.some((item) => Number(item.inventory_count ?? 0) <= 0);
-    const payNowEligible = structuredCheckoutReady && stripeReady && shippingScope === 'domestic_bg' && !likelyMadeToOrder;
+    const payNowEligible = structuredCheckoutReady && stripeReady && !likelyMadeToOrder;
+    const domesticManualLaneEnabled = shippingScope === 'domestic_bg';
     const paymentBlockers = [
         !stripeReady ? 'Secure online payment is not configured in this environment yet.' : '',
-        shippingScope !== 'domestic_bg' ? 'Worldwide shipping still needs atelier review before payment.' : '',
         likelyMadeToOrder ? 'One or more selected pieces are made to order and still need manual review.' : '',
     ].filter(Boolean);
 
     useEffect(() => {
         if (!payNowEligible && checkoutMode !== 'manual_review') {
             setCheckoutMode('manual_review');
+            return;
         }
-    }, [checkoutMode, payNowEligible]);
+
+        if (payNowEligible && !domesticManualLaneEnabled && checkoutMode !== 'stripe_checkout') {
+            setCheckoutMode('stripe_checkout');
+        }
+    }, [checkoutMode, domesticManualLaneEnabled, payNowEligible]);
 
     useEffect(() => {
         const basePricing = createBaseCheckoutPricing({ subtotal: orderSubtotal, shippingInput });
@@ -637,20 +642,31 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     </div>
 
                     {payNowEligible ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <PaymentModeButton
-                                label="Online Payment"
-                                copy="Move this domestic order into secure Stripe Checkout. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
-                                active={checkoutMode === 'stripe_checkout'}
-                                onClick={() => setCheckoutMode('stripe_checkout')}
-                            />
-                            <PaymentModeButton
-                                label="Atelier Review"
-                                copy="Keep the order in the manual review lane first, then confirm payment and next steps directly with the atelier."
-                                active={checkoutMode === 'manual_review'}
-                                onClick={() => setCheckoutMode('manual_review')}
-                            />
-                        </div>
+                        domesticManualLaneEnabled ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <PaymentModeButton
+                                    label="Online Payment"
+                                    copy="Move this order into secure Stripe payment. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
+                                    active={checkoutMode === 'stripe_checkout'}
+                                    onClick={() => setCheckoutMode('stripe_checkout')}
+                                />
+                                <PaymentModeButton
+                                    label="Local Delivery"
+                                    copy="Keep this Bulgarian order in the local coordination lane first when payment or handoff will be confirmed directly around delivery."
+                                    active={checkoutMode === 'manual_review'}
+                                    onClick={() => setCheckoutMode('manual_review')}
+                                />
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-4">
+                                <PaymentModeButton
+                                    label="Online Payment"
+                                    copy="Pay securely by card without sending the order through a manual review lane first."
+                                    active={checkoutMode === 'stripe_checkout'}
+                                    onClick={() => setCheckoutMode('stripe_checkout')}
+                                />
+                            </div>
+                        )
                     ) : (
                         <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
                             {paymentBlockers[0] || 'This order will stay in atelier review first.'}
@@ -660,7 +676,9 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
                         {checkoutMode === 'stripe_checkout'
                             ? 'The final secure payment amount will be reconfirmed on the server against the live catalog before Stripe Checkout opens.'
-                            : 'Manual review is the safe lane for worldwide delivery, made-to-order work, or any order that still needs atelier confirmation before payment.'}
+                            : domesticManualLaneEnabled
+                                ? 'Domestic Bulgaria can stay in the local coordination lane when delivery and payment need to be confirmed directly first.'
+                                : 'This order will stay in atelier review until it is ready for payment.'}
                     </div>
                 </section>
 
@@ -681,7 +699,9 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                         ? 'Validating Codes...'
                                         : checkoutMode === 'stripe_checkout'
                                             ? 'Continue To Secure Payment'
-                                            : 'Submit Order Request'}
+                                            : domesticManualLaneEnabled
+                                                ? 'Submit Local Delivery Request'
+                                                : 'Submit Order Request'}
                         </button>
                     ) : (
                         <a href="/contact" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">Request Through Atelier</a>
