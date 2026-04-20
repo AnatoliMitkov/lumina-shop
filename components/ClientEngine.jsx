@@ -13,12 +13,46 @@ gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
 
 const baseCursorClassName = 'hidden md:flex fixed top-0 left-0 relative rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 justify-center items-center text-white text-[10px] uppercase font-medium text-opacity-0 select-none';
+const PAGE_MOTION_STORAGE_KEY = 'lumina-page-motion';
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function resolvePageMotionEnabled() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return true;
+    }
+
+    try {
+        const storedPreference = window.localStorage.getItem(PAGE_MOTION_STORAGE_KEY);
+
+        if (storedPreference === 'on') {
+            return true;
+        }
+
+        if (storedPreference === 'off') {
+            return false;
+        }
+    } catch {
+        // Ignore storage failures and fall back to system preference.
+    }
+
+    return !window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function syncPageMotionAttribute(isEnabled) {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    document.documentElement.dataset.pageMotion = isEnabled ? 'on' : 'off';
+}
 
 export default function ClientEngine({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartPersistenceMode } = useCart();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const drawerNote = cartPersistenceMode === 'supabase'
         ? 'Account sync is active, and the full selection can be archived from the cart page.'
@@ -94,6 +128,22 @@ export default function ClientEngine({ children }) {
     }, [pathname]);
 
     useEffect(() => {
+        const nextMotionEnabled = resolvePageMotionEnabled();
+
+        setHasMounted(true);
+        setIsPageMotionEnabled(nextMotionEnabled);
+        syncPageMotionAttribute(nextMotionEnabled);
+    }, []);
+
+    useEffect(() => {
+        if (!hasMounted) {
+            return;
+        }
+
+        syncPageMotionAttribute(isPageMotionEnabled);
+    }, [hasMounted, isPageMotionEnabled]);
+
+    useEffect(() => {
         if (!isMobileMenuOpen) {
             return undefined;
         }
@@ -115,6 +165,24 @@ export default function ClientEngine({ children }) {
         }
 
         setIsMobileMenuOpen((currentValue) => !currentValue);
+    };
+
+    const togglePageMotion = () => {
+        const nextMotionEnabled = !isPageMotionEnabled;
+
+        setIsPageMotionEnabled(nextMotionEnabled);
+        syncPageMotionAttribute(nextMotionEnabled);
+
+        try {
+            window.localStorage.setItem(PAGE_MOTION_STORAGE_KEY, nextMotionEnabled ? 'on' : 'off');
+        } catch {
+            // Ignore storage failures and keep the live preference applied for this visit.
+        }
+
+        if (!nextMotionEnabled && typeof window !== 'undefined') {
+            window.__luminaLastRevealPathname = pathname;
+            window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
+        }
     };
 
     useGSAP(() => {
@@ -229,73 +297,86 @@ export default function ClientEngine({ children }) {
 
     // --- 3. Page Load & Scroll Animations (Triggers on Route Change) ---
     useGSAP(() => {
-        const isInitialLoad = !hasPlayedInitialLoadRef.current;
-        const transitionTimings = isInitialLoad
-            ? {
-                loaderInDuration: 0.9,
-                loaderInStagger: 0.12,
-                loaderInDelay: 0.08,
-                loaderOutDuration: 0.62,
-                loaderOutStagger: 0.06,
-                loaderOutDelay: 0.28,
-                preloaderLiftDuration: 0.82,
-                heroDuration: 1.5,
-                heroTitleDuration: 1.05,
-                heroTitleStagger: 0.08,
-                heroSubDuration: 0.9,
-                navDuration: 0.9,
-            }
-            : {
-                loaderInDuration: 0.56,
-                loaderInStagger: 0.07,
-                loaderInDelay: 0.03,
-                loaderOutDuration: 0.44,
-                loaderOutStagger: 0.04,
-                loaderOutDelay: 0.14,
-                preloaderLiftDuration: 0.76,
-                heroDuration: 1.1,
-                heroTitleDuration: 0.88,
-                heroTitleStagger: 0.06,
-                heroSubDuration: 0.7,
-                navDuration: 0.68,
-            };
+        if (isPageMotionEnabled) {
+            const isInitialLoad = !hasPlayedInitialLoadRef.current;
+            const transitionTimings = isInitialLoad
+                ? {
+                    loaderInDuration: 0.9,
+                    loaderInStagger: 0.12,
+                    loaderInDelay: 0.08,
+                    loaderOutDuration: 0.62,
+                    loaderOutStagger: 0.06,
+                    loaderOutDelay: 0.28,
+                    preloaderLiftDuration: 0.82,
+                    heroDuration: 1.5,
+                    heroTitleDuration: 1.05,
+                    heroTitleStagger: 0.08,
+                    heroSubDuration: 0.9,
+                    navDuration: 0.9,
+                }
+                : {
+                    loaderInDuration: 0.56,
+                    loaderInStagger: 0.07,
+                    loaderInDelay: 0.03,
+                    loaderOutDuration: 0.44,
+                    loaderOutStagger: 0.04,
+                    loaderOutDelay: 0.14,
+                    preloaderLiftDuration: 0.76,
+                    heroDuration: 1.1,
+                    heroTitleDuration: 0.88,
+                    heroTitleStagger: 0.06,
+                    heroSubDuration: 0.7,
+                    navDuration: 0.68,
+                };
 
-        // Initial Reveal Wipe
-        const tl = gsap.timeline();
-        tl.to('.loader-text', {
-            y: '0%',
-            opacity: 1,
-            duration: transitionTimings.loaderInDuration,
-            stagger: transitionTimings.loaderInStagger,
-            ease: "power4.out",
-            delay: transitionTimings.loaderInDelay,
-        })
-          .to('.loader-text', {
-              y: '-100%',
-              opacity: 0,
-              duration: transitionTimings.loaderOutDuration,
-              stagger: transitionTimings.loaderOutStagger,
-              ease: "power4.in",
-              delay: transitionTimings.loaderOutDelay,
-          })
-          .to(preloaderRef.current, { yPercent: -100, duration: transitionTimings.preloaderLiftDuration, ease: "power4.inOut" })
-          .to('.hero-img', { opacity: 1, scale: 1, duration: transitionTimings.heroDuration, ease: "power3.out" }, "-=0.45")
-          .to('.hero-title', { y: '0%', duration: transitionTimings.heroTitleDuration, stagger: transitionTimings.heroTitleStagger, ease: "power4.out" }, "-=0.72")
-          .to('.hero-sub', { opacity: 1, duration: transitionTimings.heroSubDuration, stagger: 0.1, ease: "power3.out" }, "-=0.52")
-          .to(
-              '#nav',
-              {
-                  opacity: 1,
-                  duration: transitionTimings.navDuration,
-                  onComplete: () => {
-                      if (typeof window !== 'undefined') {
-                          window.__luminaLastRevealPathname = pathname;
-                          window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
-                      }
+            const tl = gsap.timeline();
+            tl.to('.loader-text', {
+                y: '0%',
+                opacity: 1,
+                duration: transitionTimings.loaderInDuration,
+                stagger: transitionTimings.loaderInStagger,
+                ease: "power4.out",
+                delay: transitionTimings.loaderInDelay,
+            })
+              .to('.loader-text', {
+                  y: '-100%',
+                  opacity: 0,
+                  duration: transitionTimings.loaderOutDuration,
+                  stagger: transitionTimings.loaderOutStagger,
+                  ease: "power4.in",
+                  delay: transitionTimings.loaderOutDelay,
+              })
+              .to(preloaderRef.current, { yPercent: -100, duration: transitionTimings.preloaderLiftDuration, ease: "power4.inOut" })
+              .to('.hero-img', { opacity: 1, scale: 1, duration: transitionTimings.heroDuration, ease: "power3.out" }, "-=0.45")
+              .to('.hero-title', { y: '0%', duration: transitionTimings.heroTitleDuration, stagger: transitionTimings.heroTitleStagger, ease: "power4.out" }, "-=0.72")
+              .to('.hero-sub', { opacity: 1, duration: transitionTimings.heroSubDuration, stagger: 0.1, ease: "power3.out" }, "-=0.52")
+              .to(
+                  '#nav',
+                  {
+                      opacity: 1,
+                      duration: transitionTimings.navDuration,
+                      onComplete: () => {
+                          if (typeof window !== 'undefined') {
+                              window.__luminaLastRevealPathname = pathname;
+                              window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
+                          }
+                      },
                   },
-              },
-              "-=0.5"
-          );
+                  "-=0.5"
+              );
+        } else {
+            gsap.set(preloaderRef.current, { yPercent: -100 });
+            gsap.set('.loader-text', { y: '0%', opacity: 0 });
+            gsap.set('.hero-img', { opacity: 1, scale: 1 });
+            gsap.set('.hero-title', { y: '0%' });
+            gsap.set('.hero-sub', { opacity: 1 });
+            gsap.set('#nav', { opacity: 1 });
+
+            if (typeof window !== 'undefined') {
+                window.__luminaLastRevealPathname = pathname;
+                window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
+            }
+        }
 
         hasPlayedInitialLoadRef.current = true;
 
@@ -342,23 +423,60 @@ export default function ClientEngine({ children }) {
 
     // --- 4. Page Transition Interceptor ---
     useEffect(() => {
-        const handleLinkClick = (e) => {
-            const link = e.target.closest('.transition-link');
-            if (link) {
-                e.preventDefault();
-                const url = link.getAttribute('href');
-                if (pathname === url) return;
-                
-                gsap.set('.loader-text', { opacity: 0 });
-                gsap.to(preloaderRef.current, { 
-                    yPercent: 0, duration: 0.78, ease: "power4.inOut", 
-                    onComplete: () => router.push(url)
-                });
+        const handleLinkClick = (event) => {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
             }
+
+            const link = event.target.closest('.transition-link');
+
+            if (!(link instanceof HTMLAnchorElement)) {
+                return;
+            }
+
+            const url = link.getAttribute('href');
+
+            if (!url || url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('tel:') || link.target === '_blank' || link.hasAttribute('download')) {
+                return;
+            }
+
+            let nextUrl;
+
+            try {
+                nextUrl = new URL(url, window.location.href);
+            } catch {
+                return;
+            }
+
+            if (nextUrl.origin !== window.location.origin) {
+                return;
+            }
+
+            const nextHref = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+            const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+            if (nextHref === currentHref) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (!isPageMotionEnabled) {
+                router.push(nextHref);
+                return;
+            }
+
+            gsap.set('.loader-text', { opacity: 0 });
+            gsap.to(preloaderRef.current, {
+                yPercent: 0,
+                duration: 0.78,
+                ease: "power4.inOut",
+                onComplete: () => router.push(nextHref),
+            });
         };
         document.addEventListener('click', handleLinkClick);
         return () => document.removeEventListener('click', handleLinkClick);
-    }, [pathname, router]);
+    }, [isPageMotionEnabled, router]);
 
     // --- 5. Cart Toggle Animation ---
     useEffect(() => {
@@ -483,8 +601,24 @@ export default function ClientEngine({ children }) {
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-3 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40">
                         <p>&copy; 2026 The VA Store.</p>
+                            <div className="flex items-center gap-3">
+                                <span className="text-white/34">Page Motion</span>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={hasMounted ? isPageMotionEnabled : true}
+                                    aria-label={hasMounted && !isPageMotionEnabled ? 'Turn page motion on' : 'Turn page motion off'}
+                                    onClick={togglePageMotion}
+                                    className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-white/72 transition-colors hover:bg-white/[0.08]"
+                                >
+                                    <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
+                                        <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
+                                    </span>
+                                    <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
+                                </button>
+                            </div>
                         <p className="hover-target">Crafted by Victoria</p>
                     </div>
                 </div>

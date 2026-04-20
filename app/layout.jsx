@@ -26,11 +26,26 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" data-page-motion="on" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function () {
+  try {
+    var storedPreference = window.localStorage.getItem('lumina-page-motion');
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var pageMotionEnabled = storedPreference === 'on' || (storedPreference !== 'off' && !prefersReducedMotion);
+
+    document.documentElement.dataset.pageMotion = pageMotionEnabled ? 'on' : 'off';
+  } catch (error) {
+    document.documentElement.dataset.pageMotion = 'on';
+  }
+})();`,
+          }}
+        />
       </head>
       
       <body suppressHydrationWarning className="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-x-hidden selection:bg-[#1C1C1C] selection:text-[#EFECE8]">

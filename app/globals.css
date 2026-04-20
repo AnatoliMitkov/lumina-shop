@@ -10,6 +10,32 @@
         --product-lightbox-hover-zoom: 5;
 }
 
+html[data-page-motion='off'] #preloader {
+    transform: translate3d(0, -100%, 0);
+    pointer-events: none;
+}
+
+html[data-page-motion='off'] #preloader .loader-text {
+    opacity: 0 !important;
+}
+
+html[data-page-motion='off'] #nav {
+    opacity: 1 !important;
+}
+
+html[data-page-motion='off'] .hero-title {
+    transform: translateY(0) !important;
+}
+
+html[data-page-motion='off'] .hero-sub {
+    opacity: 1 !important;
+}
+
+html[data-page-motion='off'] .hero-img {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 html.lenis,
 html.lenis body {
     height: auto;
