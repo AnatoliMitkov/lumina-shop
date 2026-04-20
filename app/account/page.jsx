@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
 import AuthPanel from '../../components/AuthPanel';
 import AccountDashboard from '../../components/AccountDashboard';
+import EditableText from '../../components/site-copy/EditableText';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,11 +72,11 @@ export default async function AccountPage({ searchParams }) {
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.9fr] gap-10 md:gap-14 items-start">
                     <section className="border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Client Access / The VA Store</p>
-                            <h1 className="font-serif text-4xl md:text-6xl font-light uppercase tracking-[0.12em] leading-none">Account</h1>
+                            <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="account.setup.eyebrow" fallback="Client Access / The VA Store" editorLabel="Account setup eyebrow" /></p>
+                            <h1 className="font-serif text-4xl md:text-6xl font-light uppercase tracking-[0.12em] leading-none"><EditableText contentKey="account.setup.title" fallback="Account" editorLabel="Account setup title" /></h1>
                         </div>
 
-                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62 max-w-2xl">The local account area needs Supabase public environment variables before it can create the auth client. Production is already fine; your local workspace is missing the values.</p>
+                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62 max-w-2xl"><EditableText contentKey="account.setup.copy" fallback="The local account area needs Supabase public environment variables before it can create the auth client. Production is already fine; your local workspace is missing the values." editorLabel="Account setup copy" /></p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
@@ -84,16 +85,16 @@ export default async function AccountPage({ searchParams }) {
                                 ['3', 'Restart Next.js', 'Stop and restart npm run dev so Next reloads the env values.'],
                             ].map(([step, title, copy]) => (
                                 <div key={step} className="border border-[#1C1C1C]/10 bg-white/75 rounded-sm p-4 md:p-5">
-                                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Step {step}</p>
-                                    <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.1em] text-[#1C1C1C]">{title}</p>
-                                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42"><EditableText contentKey={`account.setup.steps.${step}.eyebrow`} fallback={`Step ${step}`} editorLabel={`Account setup step ${step} eyebrow`} /></p>
+                                    <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.1em] text-[#1C1C1C]"><EditableText contentKey={`account.setup.steps.${step}.title`} fallback={title} editorLabel={`Account setup step ${step} title`} /></p>
+                                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={`account.setup.steps.${step}.copy`} fallback={copy} editorLabel={`Account setup step ${step} copy`} /></p>
                                 </div>
                             ))}
                         </div>
 
                         <div className="rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4 md:px-5 md:py-5">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">Quick Option</p>
-                            <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">If the Vercel project already has the right variables, run vercel env pull after linking the project locally. Otherwise copy the same two public values from Supabase Dashboard → Project Settings → API.</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45"><EditableText contentKey="account.setup.quick_option.eyebrow" fallback="Quick Option" editorLabel="Account setup quick option eyebrow" /></p>
+                            <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="account.setup.quick_option.copy" fallback="If the Vercel project already has the right variables, run vercel env pull after linking the project locally. Otherwise copy the same two public values from Supabase Dashboard → Project Settings → API." editorLabel="Account setup quick option copy" /></p>
                         </div>
                     </section>
 
@@ -120,12 +121,12 @@ export default async function AccountPage({ searchParams }) {
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_0.9fr] gap-12 md:gap-20 items-start">
                     <section className="flex flex-col gap-8 md:gap-10">
                         <div>
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-6">Client Access / The VA Store</p>
-                            <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full">Your</h1></div>
-                            <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display storefront-hero-shift font-serif font-light uppercase translate-y-full">Account</h1></div>
+                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-6"><EditableText contentKey="account.auth.eyebrow" fallback="Client Access / The VA Store" editorLabel="Account auth eyebrow" /></p>
+                            <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full"><EditableText contentKey="account.auth.title.line_one" fallback="Your" editorLabel="Account auth title line one" /></h1></div>
+                            <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display storefront-hero-shift font-serif font-light uppercase translate-y-full"><EditableText contentKey="account.auth.title.line_two" fallback="Account" editorLabel="Account auth title line two" /></h1></div>
                         </div>
 
-                        <p className="hero-sub storefront-copy-measure opacity-0 max-w-xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/65 font-light">Create an account to track orders, keep your atelier details saved, and move faster when you want a spotlight piece or personal support.</p>
+                        <p className="hero-sub storefront-copy-measure opacity-0 max-w-xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/65 font-light"><EditableText contentKey="account.auth.copy" fallback="Create an account to track orders, keep your atelier details saved, and move faster when you want a spotlight piece or personal support." editorLabel="Account auth copy" /></p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                             {[
@@ -134,8 +135,8 @@ export default async function AccountPage({ searchParams }) {
                                 ['Reach', 'Submit atelier requests with a personal touch.'],
                             ].map(([title, copy]) => (
                                 <div key={title} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/40 p-4 md:p-5 rounded-sm">
-                                    <p className="font-serif text-xl md:text-2xl font-light uppercase tracking-widest mb-3">{title}</p>
-                                    <p className="text-sm text-[#1C1C1C]/60 leading-relaxed">{copy}</p>
+                                    <p className="font-serif text-xl md:text-2xl font-light uppercase tracking-widest mb-3"><EditableText contentKey={`account.auth.benefits.${title.toLowerCase()}.title`} fallback={title} editorLabel={`${title} benefit title`} /></p>
+                                    <p className="text-sm text-[#1C1C1C]/60 leading-relaxed"><EditableText contentKey={`account.auth.benefits.${title.toLowerCase()}.copy`} fallback={copy} editorLabel={`${title} benefit copy`} /></p>
                                 </div>
                             ))}
                         </div>
@@ -175,14 +176,14 @@ export default async function AccountPage({ searchParams }) {
             <div className="mb-10 md:mb-12 grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 md:gap-6 items-stretch">
                 <section className="account-surface reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Client Room / The VA Store</p>
-                        <div className="overflow-hidden"><h1 className="hero-title storefront-section-display font-serif font-light uppercase translate-y-full">Account</h1></div>
+                        <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="account.dashboard.eyebrow" fallback="Client Room / The VA Store" editorLabel="Account dashboard eyebrow" /></p>
+                        <div className="overflow-hidden"><h1 className="hero-title storefront-section-display font-serif font-light uppercase translate-y-full"><EditableText contentKey="account.dashboard.title" fallback="Account" editorLabel="Account dashboard title" /></h1></div>
                     </div>
-                    <p className="hero-sub opacity-0 text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed">Signed in as {user.email}. Keep your profile sharp, save atelier-ready details faster, and review orders and requests without the oversized empty intro.</p>
+                    <p className="hero-sub opacity-0 text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed"><EditableText contentKey="account.dashboard.copy_prefix" fallback="Signed in as" editorLabel="Account dashboard copy prefix" /> {user.email}. <EditableText contentKey="account.dashboard.copy_suffix" fallback="Keep your profile sharp, save atelier-ready details faster, and review orders and requests without the oversized empty intro." editorLabel="Account dashboard copy suffix" /></p>
                     <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">
-                        <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full">Verified account</span>
-                        <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full">{profileStorageMode === 'metadata' ? 'Metadata-backed profile' : 'Supabase profile table'}</span>
-                        {isAdmin && <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full">Studio admin access</span>}
+                        <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full"><EditableText contentKey="account.dashboard.tags.verified" fallback="Verified account" editorLabel="Account dashboard verified tag" /></span>
+                        <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full"><EditableText contentKey={profileStorageMode === 'metadata' ? 'account.dashboard.tags.metadata' : 'account.dashboard.tags.profile_table'} fallback={profileStorageMode === 'metadata' ? 'Metadata-backed profile' : 'Supabase profile table'} editorLabel="Account dashboard storage tag" /></span>
+                        {isAdmin && <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full"><EditableText contentKey="account.dashboard.tags.admin" fallback="Studio admin access" editorLabel="Account dashboard admin tag" /></span>}
                     </div>
                 </section>
 
@@ -193,9 +194,9 @@ export default async function AccountPage({ searchParams }) {
                         ['Profile', profile.full_name ? 'Ready' : 'Open', profile.full_name ? 'Details are available for faster support.' : 'Add your details for smoother follow-up.'],
                     ].map(([label, value, copy]) => (
                         <div key={label} className="account-metric-card account-surface storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-4 md:p-5 flex flex-col justify-between">
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{label}</p>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={`account.dashboard.metrics.${label.toLowerCase()}.label`} fallback={label} editorLabel={`${label} metric label`} /></p>
                             <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{value}</p>
-                            <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
+                            <p className="text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={`account.dashboard.metrics.${label.toLowerCase()}.copy`} fallback={copy} editorLabel={`${label} metric copy`} /></p>
                         </div>
                     ))}
                 </section>

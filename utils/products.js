@@ -303,6 +303,23 @@ export function buildProductHref(product = {}) {
   return `/product/${encodeURIComponent(slugOrId)}`;
 }
 
+export function buildCollectionsHref(filters = {}) {
+  const searchParams = new URLSearchParams();
+  const category = toText(filters.category);
+  const collection = toText(filters.collection);
+
+  if (category && category.toLowerCase() !== 'all') {
+    searchParams.set('category', category);
+  }
+
+  if (collection && collection.toLowerCase() !== 'all') {
+    searchParams.set('collection', collection);
+  }
+
+  const query = searchParams.toString();
+  return query ? `/collections?${query}` : '/collections';
+}
+
 export function formatProductCurrency(value) {
   return `€${toNumber(value, 0).toFixed(2)}`;
 }

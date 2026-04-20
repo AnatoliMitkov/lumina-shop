@@ -1,11 +1,17 @@
 "use client";
 
 import { gsap } from 'gsap';
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import EditableText from './site-copy/EditableText';
+import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import {
+    buildCollectionsHref,
     buildProductHref,
     formatProductCurrency,
     normalizeProductRecord,
+    PRODUCT_CATEGORY_OPTIONS,
+    PRODUCT_COLLECTION_OPTIONS,
     resolveProductGallery,
     sortProducts,
 } from '../utils/products';
@@ -25,6 +31,45 @@ function buildSearchString(product) {
         .toLowerCase();
 }
 
+function normalizeOptionValue(value) {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+
+    if (value == null) {
+        return '';
+    }
+
+    return String(value).trim();
+}
+
+function buildFilterOptionList(seedOptions = [], values = []) {
+    const normalizedSeedOptions = [...new Set(seedOptions.map((option) => normalizeOptionValue(option)).filter(Boolean))];
+    const normalizedValues = [...new Set(values.map((value) => normalizeOptionValue(value)).filter(Boolean))];
+
+    if (normalizedValues.length === 0) {
+        return normalizedSeedOptions;
+    }
+
+    const seedOptionSet = new Set(normalizedSeedOptions.map((option) => option.toLowerCase()));
+    const seededMatches = normalizedSeedOptions.filter((option) => normalizedValues.some((value) => value.toLowerCase() === option.toLowerCase()));
+    const customMatches = normalizedValues
+        .filter((option) => !seedOptionSet.has(option.toLowerCase()))
+        .sort((leftOption, rightOption) => leftOption.localeCompare(rightOption));
+
+    return [...seededMatches, ...customMatches];
+}
+
+function resolveFilterValue(value, options = []) {
+    const normalizedValue = normalizeOptionValue(value).toLowerCase();
+
+    if (!normalizedValue || normalizedValue === 'all') {
+        return 'All';
+    }
+
+    return options.find((option) => option.toLowerCase() === normalizedValue) || 'All';
+}
+
 function FilterButton({ label, isActive, onClick }) {
     return (
         <button
@@ -37,7 +82,7 @@ function FilterButton({ label, isActive, onClick }) {
     );
 }
 
-function StatCard({ label, value, copy, delayMs = 0 }) {
+function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
     const cardRef = useRef(null);
     const animationFrameRef = useRef(null);
     const startTimeoutRef = useRef(null);
@@ -158,9 +203,9 @@ function StatCard({ label, value, copy, delayMs = 0 }) {
 
     return (
         <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-4 md:p-5 flex flex-col gap-2.5">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{label}</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
             <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
-            <p className="text-xs md:text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
+            <p className="text-xs md:text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={copyKey} fallback={copy} editorLabel={`${label} stat copy`} /></p>
         </div>
     );
 }
@@ -220,26 +265,39 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
 }
 
 export default function CollectionsArchive({ products = [] }) {
+    const siteCopy = useSiteCopy();
+    const pathname = usePathname();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const archiveRef = useRef(null);
     const hoverIntentTimeoutRef = useRef(null);
-    const normalizedProducts = sortProducts(products)
-        .map((product) => normalizeProductRecord(product))
-        .filter((product) => product.status !== 'archived');
-    const [activeCollection, setActiveCollection] = useState('All');
     const [searchValue, setSearchValue] = useState('');
     const [cardsPerRow, setCardsPerRow] = useState(3);
     const [focusedProductId, setFocusedProductId] = useState(null);
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
     const tabletColumns = Math.min(cardsPerRow, 4);
     const desktopColumns = Math.max(cardsPerRow, 2);
-
-    const collectionOptions = ['All', ...Array.from(new Set(normalizedProducts.map((product) => product.collection).filter(Boolean)))];
+    const normalizedProducts = useMemo(() => {
+        return sortProducts(products)
+            .map((product) => normalizeProductRecord(product))
+            .filter((product) => product.status !== 'archived');
+    }, [products]);
+    const collectionOptions = useMemo(() => {
+        return ['All', ...buildFilterOptionList(PRODUCT_COLLECTION_OPTIONS, normalizedProducts.map((product) => product.collection))];
+    }, [normalizedProducts]);
+    const categoryOptions = useMemo(() => {
+        return ['All', ...buildFilterOptionList(PRODUCT_CATEGORY_OPTIONS, normalizedProducts.map((product) => product.category))];
+    }, [normalizedProducts]);
+    const activeCollection = resolveFilterValue(searchParams.get('collection'), collectionOptions);
+    const activeCategory = resolveFilterValue(searchParams.get('category'), categoryOptions);
     const featuredProducts = normalizedProducts.filter((product) => product.featured).slice(0, 5);
+    const searchPlaceholder = siteCopy ? siteCopy.resolveText('collections.filters.search_placeholder', 'Search by collection, category, mood, or name') : 'Search by collection, category, mood, or name';
     const filteredProducts = normalizedProducts.filter((product) => {
         const matchesCollection = activeCollection === 'All' || product.collection === activeCollection;
+        const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
         const matchesSearch = !deferredSearch || buildSearchString(product).includes(deferredSearch);
 
-        return matchesCollection && matchesSearch;
+        return matchesCollection && matchesCategory && matchesSearch;
     });
     useEffect(() => {
         if (!filteredProducts.some((product) => (product.id || product.slug) === focusedProductId)) {
@@ -293,7 +351,7 @@ export default function CollectionsArchive({ products = [] }) {
         return () => {
             ctx.revert();
         };
-    }, [activeCollection, deferredSearch, filteredProducts.length]);
+    }, [activeCategory, activeCollection, deferredSearch, filteredProducts.length]);
 
     useEffect(() => {
         return () => {
@@ -303,9 +361,21 @@ export default function CollectionsArchive({ products = [] }) {
         };
     }, []);
 
+    const updateArchiveFilters = ({ collection = activeCollection, category = activeCategory }) => {
+        const nextHref = buildCollectionsHref({ collection, category });
+        const currentQuery = searchParams.toString();
+        const currentHref = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+
+        if (nextHref === currentHref) {
+            return;
+        }
+
+        router.replace(nextHref, { scroll: false });
+    };
+
     const handleReset = () => {
-        setActiveCollection('All');
         setSearchValue('');
+        updateArchiveFilters({ collection: 'All', category: 'All' });
     };
 
     const handleProductHoverStart = (productId) => {
@@ -329,31 +399,31 @@ export default function CollectionsArchive({ products = [] }) {
     return (
         <div ref={archiveRef}>
             <section className="mb-12 md:mb-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-                <StatCard label="Pieces" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." />
-                <StatCard label="Featured" value={featuredProducts.length} delayMs={160} copy="Lead pieces carrying the strongest seasonal direction right now." />
-                <StatCard label="Collections" value={Math.max(collectionOptions.length - 1, 1)} delayMs={320} copy="Distinct storylines shaping the archive into easier visual paths." />
+                <StatCard label="Pieces" labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." copyKey="collections.stats.pieces.copy" />
+                <StatCard label="Collections" labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} copy="Distinct storylines shaping the archive into easier visual paths." copyKey="collections.stats.collections.copy" />
+                <StatCard label="Categories" labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} copy="Focused entry points for shoppers who already know the silhouette they want." copyKey="collections.stats.categories.copy" />
             </section>
 
             <section className="mb-10 md:mb-12 flex flex-col gap-5 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-5 md:p-6">
                 <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
                     <div className="max-w-2xl">
-                        <p className="text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-3">Filter The Archive</p>
-                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">The page now opens directly on the live counts. Use this compact filter row to jump into collections, categories, or a product name without the old featured lead block.</p>
+                        <p className="text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
+                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="collections.filters.copy" fallback="Move through the archive by collection or silhouette, then narrow further with search if you already know the mood, name, or finish you want." editorLabel="Collections filter copy" /></p>
                     </div>
 
                     <div className="flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-end">
                         <label className="flex min-w-0 flex-1 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                            Search Pieces
+                            <EditableText contentKey="collections.filters.search_label" fallback="Search Pieces" editorLabel="Collections search label" />
                             <input
                                 value={searchValue}
                                 onChange={(event) => setSearchValue(event.target.value)}
-                                placeholder="Search by collection, category, mood, or name"
+                                placeholder={searchPlaceholder}
                                 className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
                             />
                         </label>
 
                         <label className="flex w-full md:w-44 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                            Cards Per Row
+                            <EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" />
                             <select
                                 value={cardsPerRow}
                                 onChange={(event) => setCardsPerRow(Number(event.target.value) || 3)}
@@ -369,15 +439,25 @@ export default function CollectionsArchive({ products = [] }) {
 
                 <div className="flex flex-wrap gap-2">
                     {collectionOptions.map((option) => (
-                        <FilterButton key={option} label={option} isActive={activeCollection === option} onClick={() => setActiveCollection(option)} />
+                        <FilterButton key={option} label={option} isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
+                    ))}
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-t border-[#1C1C1C]/10 pt-4">
+                    {categoryOptions.map((option) => (
+                        <FilterButton key={option} label={option} isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
                     ))}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42">
-                    <p>{String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible across {String(cardsPerRow).padStart(2, '0')} columns</p>
-                    {(activeCollection !== 'All' || searchValue) && (
+                    <p>
+                        {String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible across {String(cardsPerRow).padStart(2, '0')} columns
+                        {activeCollection !== 'All' ? ` / ${activeCollection}` : ''}
+                        {activeCategory !== 'All' ? ` / ${activeCategory}` : ''}
+                    </p>
+                    {(activeCollection !== 'All' || activeCategory !== 'All' || searchValue) && (
                         <button type="button" onClick={handleReset} className="hover-target border border-[#1C1C1C]/12 bg-white/60 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/58 transition-colors hover:text-[#1C1C1C]">
-                            Reset Archive
+                            <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
                         </button>
                     )}
                 </div>
@@ -385,9 +465,9 @@ export default function CollectionsArchive({ products = [] }) {
 
             {filteredProducts.length === 0 ? (
                 <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-8 md:p-10 flex flex-col gap-5">
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">No Matches</p>
-                    <p className="font-serif text-3xl md:text-5xl font-light leading-tight max-w-2xl">Nothing matched that filter. Try a broader collection or clear the search phrase.</p>
-                    <button type="button" onClick={handleReset} className="hover-target w-max px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium">Reset Archive</button>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey="collections.empty.eyebrow" fallback="No Matches" editorLabel="Collections empty eyebrow" /></p>
+                    <p className="font-serif text-3xl md:text-5xl font-light leading-tight max-w-2xl"><EditableText contentKey="collections.empty.title" fallback="Nothing matched that filter. Try a broader collection or clear the search phrase." editorLabel="Collections empty title" /></p>
+                    <button type="button" onClick={handleReset} className="hover-target w-max px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium"><EditableText contentKey="collections.empty.reset" fallback="Reset Archive" editorLabel="Collections empty reset" /></button>
                 </div>
             ) : (
                 <div

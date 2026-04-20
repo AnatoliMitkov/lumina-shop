@@ -3,6 +3,8 @@
 import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from './CartProvider';
+import EditableText from './site-copy/EditableText';
+import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { formatCustomMeasurementSummary } from '../utils/cart';
 import {
     buildPhoneValue,
@@ -35,14 +37,14 @@ function CheckoutItem({ item, index }) {
                 {item.image_main ? (
                     <img src={item.image_main} alt={item.name} className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/35">Piece</div>
+                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/35"><EditableText contentKey="checkout.item.image_fallback" fallback="Piece" editorLabel="Checkout item image fallback" /></div>
                 )}
             </div>
 
             <div className="min-w-0 flex-1 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40 mb-2">Piece {String(index + 1).padStart(2, '0')}</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/40 mb-2"><EditableText contentKey="checkout.item.eyebrow" fallback="Piece" editorLabel="Checkout item eyebrow" /> {String(index + 1).padStart(2, '0')}</p>
                         <p className="font-serif text-2xl font-light leading-none break-words text-[#1C1C1C]">{item.name}</p>
                     </div>
                     <p className="shrink-0 text-sm uppercase tracking-[0.18em] text-[#1C1C1C]">{formatCurrency(item.price)}</p>
@@ -50,60 +52,61 @@ function CheckoutItem({ item, index }) {
 
                 <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/46">
                     {item.category && <span className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">{item.category}</span>}
-                    {item.selected_size && <span className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">Size {item.selected_size}</span>}
-                    {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">Tone {item.selected_tone}</span>}
+                    {item.selected_size && <span className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2"><EditableText contentKey="checkout.item.size" fallback="Size" editorLabel="Checkout item size label" /> {item.selected_size}</span>}
+                    {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2"><EditableText contentKey="checkout.item.tone" fallback="Tone" editorLabel="Checkout item tone label" /> {item.selected_tone}</span>}
                 </div>
 
                 {customMeasurementSummary && (
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Custom {customMeasurementSummary}</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42"><EditableText contentKey="checkout.item.custom" fallback="Custom" editorLabel="Checkout item custom label" /> {customMeasurementSummary}</p>
                 )}
             </div>
         </div>
     );
 }
 
-function ScopeButton({ label, copy, active, onClick }) {
+function ScopeButton({ label, copy, active, onClick, contentKeyPrefix }) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={`hover-target rounded-sm border p-4 text-left transition-colors ${active ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/10 bg-white/72 text-[#1C1C1C] hover:bg-white'}`}
         >
-            <p className="text-[10px] uppercase tracking-[0.22em] opacity-70">Shipping Scope</p>
-            <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.08em] leading-none">{label}</p>
-            <p className={`mt-3 text-sm leading-relaxed ${active ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}>{copy}</p>
+            <p className="text-[10px] uppercase tracking-[0.22em] opacity-70"><EditableText contentKey="checkout.shipping_scope.kicker" fallback="Shipping Scope" editorLabel="Checkout shipping scope kicker" /></p>
+            <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.08em] leading-none"><EditableText contentKey={`${contentKeyPrefix}.label`} fallback={label} editorLabel={`${label} shipping scope`} /></p>
+            <p className={`mt-3 text-sm leading-relaxed ${active ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}><EditableText contentKey={`${contentKeyPrefix}.copy`} fallback={copy} editorLabel={`${label} shipping scope copy`} /></p>
         </button>
     );
 }
 
-function PaymentModeButton({ label, copy, active, onClick }) {
+function PaymentModeButton({ label, copy, active, onClick, contentKeyPrefix }) {
     return (
         <button
             type="button"
             onClick={onClick}
             className={`hover-target rounded-sm border p-4 text-left transition-colors ${active ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/10 bg-white/72 text-[#1C1C1C] hover:bg-white'}`}
         >
-            <p className="text-[10px] uppercase tracking-[0.22em] opacity-70">Checkout Route</p>
-            <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.08em] leading-none">{label}</p>
-            <p className={`mt-3 text-sm leading-relaxed ${active ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}>{copy}</p>
+            <p className="text-[10px] uppercase tracking-[0.22em] opacity-70"><EditableText contentKey="checkout.payment_route.kicker" fallback="Checkout Route" editorLabel="Checkout route kicker" /></p>
+            <p className="mt-3 font-serif text-2xl font-light uppercase tracking-[0.08em] leading-none"><EditableText contentKey={`${contentKeyPrefix}.label`} fallback={label} editorLabel={`${label} payment route`} /></p>
+            <p className={`mt-3 text-sm leading-relaxed ${active ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}><EditableText contentKey={`${contentKeyPrefix}.copy`} fallback={copy} editorLabel={`${label} payment route copy`} /></p>
         </button>
     );
 }
 
-function PricingValidationCard({ label, message, status }) {
+function PricingValidationCard({ label, labelKey, message, status }) {
     const shellClassName = status === 'invalid'
         ? 'border-red-200 bg-red-50 text-red-700'
         : 'border-[#1C1C1C]/10 bg-white/72 text-[#1C1C1C]/62';
 
     return (
         <div className={`rounded-sm border px-4 py-4 text-sm leading-relaxed ${shellClassName}`}>
-            <p className="text-[10px] uppercase tracking-[0.22em] mb-2 opacity-60">{label}</p>
+            <p className="text-[10px] uppercase tracking-[0.22em] mb-2 opacity-60"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} validation label`} /></p>
             <p>{message}</p>
         </div>
     );
 }
 
 export default function CheckoutExperience({ initialProfile, isSignedIn = false, schemaMessage = '', stripeReady = false }) {
+    const siteCopy = useSiteCopy();
     const router = useRouter();
     const {
         cartItems,
@@ -230,9 +233,13 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const payNowEligible = structuredCheckoutReady && stripeReady && !likelyMadeToOrder;
     const domesticManualLaneEnabled = shippingScope === 'domestic_bg';
     const paymentBlockers = [
-        !stripeReady ? 'Secure online payment is not configured in this environment yet.' : '',
-        likelyMadeToOrder ? 'One or more selected pieces are made to order and still need manual review.' : '',
+        !stripeReady ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.no_stripe', 'Secure online payment is not configured in this environment yet.') : 'Secure online payment is not configured in this environment yet.') : '',
+        likelyMadeToOrder ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.made_to_order', 'One or more selected pieces are made to order and still need manual review.') : 'One or more selected pieces are made to order and still need manual review.') : '',
     ].filter(Boolean);
+    const selectCountryLabel = siteCopy ? siteCopy.resolveText('checkout.delivery.select_country', 'Select country') : 'Select country';
+    const mapsPlaceholder = siteCopy ? siteCopy.resolveText('checkout.delivery.maps_placeholder', 'https://maps.app.goo.gl/...') : 'https://maps.app.goo.gl/...';
+    const discountPlaceholder = siteCopy ? siteCopy.resolveText('checkout.codes.discount_placeholder', 'PROMO') : 'PROMO';
+    const affiliatePlaceholder = siteCopy ? siteCopy.resolveText('checkout.codes.affiliate_placeholder', 'PARTNER') : 'PARTNER';
 
     useEffect(() => {
         if (!payNowEligible && checkoutMode !== 'manual_review') {
@@ -355,8 +362,8 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     if (!hasLoadedCart) {
         return (
             <section className="border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-8 md:p-10">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-4">Loading Checkout</p>
-                <p className="font-serif text-2xl md:text-3xl font-light leading-tight text-[#1C1C1C]">Bringing the order details into place.</p>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="checkout.loading.eyebrow" fallback="Loading Checkout" editorLabel="Checkout loading eyebrow" /></p>
+                <p className="font-serif text-2xl md:text-3xl font-light leading-tight text-[#1C1C1C]"><EditableText contentKey="checkout.loading.title" fallback="Bringing the order details into place." editorLabel="Checkout loading title" /></p>
             </section>
         );
     }
@@ -365,32 +372,32 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         return (
             <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-8 md:p-10 flex flex-col gap-8">
                 <div>
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45 mb-4">Order Submitted</p>
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="checkout.submitted.eyebrow" fallback="Order Submitted" editorLabel="Checkout submitted eyebrow" /></p>
                     <h2 className="font-serif text-4xl md:text-6xl font-light uppercase tracking-[0.1em] leading-[0.92] text-[#1C1C1C]">{submittedOrder.orderCode || 'VA-PENDING'}</h2>
                 </div>
 
                 <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
-                    {cartMessage || 'The atelier now has the customer and delivery structure needed to review this order.'}
+                    {cartMessage || <EditableText contentKey="checkout.submitted.copy" fallback="The atelier now has the customer and delivery structure needed to review this order." editorLabel="Checkout submitted copy" />}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
-                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Status</p>
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.submitted.status" fallback="Status" editorLabel="Checkout submitted status" /></p>
                         <p className="font-serif text-3xl font-light text-[#1C1C1C]">{submittedOrder.status || 'pending'}</p>
                     </div>
                     <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
-                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Pieces</p>
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.submitted.pieces" fallback="Pieces" editorLabel="Checkout submitted pieces" /></p>
                         <p className="font-serif text-3xl font-light text-[#1C1C1C]">{submittedOrder.itemCount || 0}</p>
                     </div>
                     <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 md:p-5">
-                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Total</p>
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.submitted.total" fallback="Total" editorLabel="Checkout submitted total" /></p>
                         <p className="font-serif text-3xl font-light text-[#1C1C1C]">{formatCurrency(submittedOrder.total || 0)}</p>
                     </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                    <a href="/account" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">{isSignedIn ? 'Open Account Archive' : 'Create Account'}</a>
-                    <a href="/collections" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors">Return To Collections</a>
+                    <a href="/account" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">{isSignedIn ? <EditableText contentKey="checkout.submitted.open_account" fallback="Open Account Archive" editorLabel="Checkout submitted open account" /> : <EditableText contentKey="checkout.submitted.create_account" fallback="Create Account" editorLabel="Checkout submitted create account" />}</a>
+                    <a href="/collections" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors"><EditableText contentKey="checkout.submitted.return_collections" fallback="Return To Collections" editorLabel="Checkout submitted return collections" /></a>
                 </div>
             </section>
         );
@@ -399,11 +406,11 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     if (cartItems.length === 0) {
         return (
             <section className="border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-8 md:p-10 flex flex-col gap-6">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">Checkout</p>
-                <p className="font-serif text-2xl md:text-4xl font-light leading-tight text-[#1C1C1C]">There is nothing in the cart to submit yet.</p>
+                <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey="checkout.empty.eyebrow" fallback="Checkout" editorLabel="Checkout empty eyebrow" /></p>
+                <p className="font-serif text-2xl md:text-4xl font-light leading-tight text-[#1C1C1C]"><EditableText contentKey="checkout.empty.title" fallback="There is nothing in the cart to submit yet." editorLabel="Checkout empty title" /></p>
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <a href="/collections" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">Explore Collections</a>
-                    <a href="/cart" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors">Back To Cart</a>
+                    <a href="/collections" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors"><EditableText contentKey="checkout.empty.explore" fallback="Explore Collections" editorLabel="Checkout empty explore" /></a>
+                    <a href="/cart" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors"><EditableText contentKey="checkout.empty.back_cart" fallback="Back To Cart" editorLabel="Checkout empty back to cart" /></a>
                 </div>
             </section>
         );
@@ -414,22 +421,22 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
             <form onSubmit={handleSubmit} className="flex flex-col gap-8">
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Client Details</p>
-                        <h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">Checkout</h2>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.form.client_details" fallback="Client Details" editorLabel="Checkout client details eyebrow" /></p>
+                        <h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.form.title" fallback="Checkout" editorLabel="Checkout form title" /></h2>
                         <p className="mt-4 max-w-2xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
-                            This step captures the customer and delivery context the atelier actually needs before confirming shipping, timeline, and next steps.
+                            <EditableText contentKey="checkout.form.copy" fallback="This step captures the customer and delivery context the atelier actually needs before confirming shipping, timeline, and next steps." editorLabel="Checkout form copy" />
                         </p>
                     </div>
 
                     {!isSignedIn && (
                         <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                            You can submit this as a guest, but signing in lets the checkout start with your saved account details and keeps the order visible in your archive.
+                            <EditableText contentKey="checkout.form.guest_notice" fallback="You can submit this as a guest, but signing in lets the checkout start with your saved account details and keeps the order visible in your archive." editorLabel="Checkout guest notice" />
                         </div>
                     )}
 
                     {!structuredCheckoutReady && (
                         <div className="border border-red-200 bg-red-50 rounded-sm px-4 py-4 text-sm leading-relaxed text-red-700">
-                            Structured checkout is not active in this environment yet. Use the atelier contact route until Supabase order persistence is enabled.
+                            <EditableText contentKey="checkout.form.structured_notice" fallback="Structured checkout is not active in this environment yet. Use the atelier contact route until Supabase order persistence is enabled." editorLabel="Checkout structured notice" />
                         </div>
                     )}
 
@@ -441,15 +448,15 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Full Name
+                            <EditableText contentKey="checkout.form.full_name" fallback="Full Name" editorLabel="Checkout full name label" />
                             <input value={fullName} onChange={(event) => setFullName(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Email
+                            <EditableText contentKey="checkout.form.email" fallback="Email" editorLabel="Checkout email label" />
                             <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Phone
+                            <EditableText contentKey="checkout.form.phone" fallback="Phone" editorLabel="Checkout phone label" />
                             <div className="grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] gap-3">
                                 <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} aria-label="Country calling code" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                                     {countryPhoneOptions.map((option) => (
@@ -460,7 +467,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             </div>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Location
+                            <EditableText contentKey="checkout.form.location" fallback="Location" editorLabel="Checkout location label" />
                             <>
                                 <input value={location} onChange={(event) => setLocation(event.target.value)} list={locationListId} autoComplete="address-level2" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 <datalist id={locationListId}>
@@ -473,15 +480,15 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     </div>
 
                     <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                        Notes For Atelier
+                        <EditableText contentKey="checkout.form.notes" fallback="Notes For Atelier" editorLabel="Checkout notes label" />
                         <textarea value={customerNotes} onChange={(event) => setCustomerNotes(event.target.value)} rows={5} className="border border-[#1C1C1C]/12 bg-white px-4 py-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C] resize-none" />
                     </label>
                 </section>
 
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Delivery Structure</p>
-                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">Shipping & Delivery</h3>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.delivery.eyebrow" fallback="Delivery Structure" editorLabel="Checkout delivery eyebrow" /></p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.delivery.title" fallback="Shipping & Delivery" editorLabel="Checkout delivery title" /></h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -492,13 +499,14 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                 copy={option.copy}
                                 active={shippingScope === option.value}
                                 onClick={() => setShippingScope(option.value)}
+                                contentKeyPrefix={`checkout.delivery.scope.${option.value}`}
                             />
                         ))}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                            Delivery Method
+                            <EditableText contentKey="checkout.delivery.method" fallback="Delivery Method" editorLabel="Checkout delivery method label" />
                             <select value={deliveryMethod} onChange={(event) => setDeliveryMethod(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                                 {deliveryMethodOptions.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -508,12 +516,12 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         </label>
 
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Country
+                            <EditableText contentKey="checkout.delivery.country" fallback="Country" editorLabel="Checkout delivery country label" />
                             {shippingScope === 'domestic_bg' ? (
                                 <input value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required readOnly className="h-14 border border-[#1C1C1C]/12 bg-[#EFECE8] px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                             ) : (
                                 <select value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                                    <option value="">Select country</option>
+                                    <option value="">{selectCountryLabel}</option>
                                     {countryPhoneOptions.map((option) => (
                                         <option key={option.country} value={option.label}>{option.label}</option>
                                     ))}
@@ -521,7 +529,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             )}
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            City
+                            <EditableText contentKey="checkout.delivery.city" fallback="City" editorLabel="Checkout delivery city label" />
                             <>
                                 <input value={shippingCity} onChange={(event) => setShippingCity(event.target.value)} list={shippingCityListId} autoComplete="address-level2" required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 <datalist id={shippingCityListId}>
@@ -532,22 +540,22 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             </>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            State / Province / Region
+                            <EditableText contentKey="checkout.delivery.region" fallback="State / Province / Region" editorLabel="Checkout delivery region label" />
                             <input value={shippingRegion} onChange={(event) => setShippingRegion(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Postal Code
+                            <EditableText contentKey="checkout.delivery.postal_code" fallback="Postal Code" editorLabel="Checkout delivery postal code label" />
                             <input value={shippingPostalCode} onChange={(event) => setShippingPostalCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
 
                         {needsCustomAddress && (
                             <>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    {shippingScope === 'worldwide' ? 'Custom Address' : 'Address Line 1'}
+                                    {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.custom_address" fallback="Custom Address" editorLabel="Checkout custom address label" /> : <EditableText contentKey="checkout.delivery.address_line_one" fallback="Address Line 1" editorLabel="Checkout address line one label" />}
                                     <input value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    {shippingScope === 'worldwide' ? 'Address Details' : 'Address Line 2'}
+                                    {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.address_details" fallback="Address Details" editorLabel="Checkout address details label" /> : <EditableText contentKey="checkout.delivery.address_line_two" fallback="Address Line 2" editorLabel="Checkout address line two label" />}
                                     <input value={shippingAddressLine2} onChange={(event) => setShippingAddressLine2(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                             </>
@@ -556,24 +564,24 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         {requiresOfficeDetails && (
                             <>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    Office Name / Label
+                                    <EditableText contentKey="checkout.delivery.office_label" fallback="Office Name / Label" editorLabel="Checkout office label" />
                                     <input value={shippingOfficeLabel} onChange={(event) => setShippingOfficeLabel(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                                    Office Code
+                                    <EditableText contentKey="checkout.delivery.office_code" fallback="Office Code" editorLabel="Checkout office code label" />
                                     <input value={shippingOfficeCode} onChange={(event) => setShippingOfficeCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                                 </label>
                                 <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62 md:col-span-1">
-                                    Speedy and ECONT office-map integration will plug into these fields once the carrier credentials and verified office endpoints are ready, so the checkout stays stable instead of guessing against undocumented APIs.
+                                    <EditableText contentKey="checkout.delivery.office_notice" fallback="Speedy and ECONT office-map integration will plug into these fields once the carrier credentials and verified office endpoints are ready, so the checkout stays stable instead of guessing against undocumented APIs." editorLabel="Checkout office notice" />
                                 </div>
                             </>
                         )}
 
                         {shippingScope === 'worldwide' && (
                             <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                Google Maps Pin Link
-                                <input value={shippingMapUrl} onChange={(event) => setShippingMapUrl(event.target.value)} placeholder="https://maps.app.goo.gl/..." className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                                <span className="text-xs leading-relaxed text-[#1C1C1C]/55 normal-case tracking-normal">Optional, but useful for villas, gated buildings, ateliers, or destinations that are easier to confirm with a dropped pin than a typed address alone.</span>
+                                <EditableText contentKey="checkout.delivery.maps_link" fallback="Google Maps Pin Link" editorLabel="Checkout maps link label" />
+                                <input value={shippingMapUrl} onChange={(event) => setShippingMapUrl(event.target.value)} placeholder={mapsPlaceholder} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <span className="text-xs leading-relaxed text-[#1C1C1C]/55 normal-case tracking-normal"><EditableText contentKey="checkout.delivery.maps_helper" fallback="Optional, but useful for villas, gated buildings, ateliers, or destinations that are easier to confirm with a dropped pin than a typed address alone." editorLabel="Checkout maps helper" /></span>
                             </label>
                         )}
                     </div>
@@ -581,18 +589,18 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Codes & Attribution</p>
-                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">Discounts & Affiliates</h3>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.codes.eyebrow" fallback="Codes & Attribution" editorLabel="Checkout codes eyebrow" /></p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.codes.title" fallback="Discounts & Affiliates" editorLabel="Checkout codes title" /></h3>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Discount Code
-                            <input value={discountCode} onChange={(event) => setDiscountCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder="PROMO" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <EditableText contentKey="checkout.codes.discount" fallback="Discount Code" editorLabel="Checkout discount code label" />
+                            <input value={discountCode} onChange={(event) => setDiscountCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder={discountPlaceholder} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Affiliate Code
-                            <input value={affiliateCode} onChange={(event) => setAffiliateCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder="PARTNER" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <EditableText contentKey="checkout.codes.affiliate" fallback="Affiliate Code" editorLabel="Checkout affiliate code label" />
+                            <input value={affiliateCode} onChange={(event) => setAffiliateCode(event.target.value.replace(/\s+/g, '').toUpperCase())} placeholder={affiliatePlaceholder} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-[0.18em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                     </div>
 
@@ -601,6 +609,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             {discountCode && (
                                 <PricingValidationCard
                                     label="Discount Result"
+                                    labelKey="checkout.codes.discount_result"
                                     status={pricingPreview.discount.status}
                                     message={pricingPreview.discount.status === 'applied'
                                         ? `${pricingPreview.discount.code} saves ${formatPromotionCurrency(pricingPreview.discount.appliedAmount)}.`
@@ -611,6 +620,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             {affiliateCode && (
                                 <PricingValidationCard
                                     label="Affiliate Result"
+                                    labelKey="checkout.codes.affiliate_result"
                                     status={pricingPreview.affiliate.status}
                                     message={pricingPreview.affiliate.status === 'applied'
                                         ? `${pricingPreview.affiliate.code} saves ${formatPromotionCurrency(pricingPreview.affiliate.customerDiscountAmount)} and tracks the partner attribution.`
@@ -623,12 +633,13 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     )}
 
                     <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                        Codes are validated against the live studio settings. Shopper savings update immediately, domestic shipping follows the current studio rules, and worldwide routing still stays manual until confirmed.
+                        <EditableText contentKey="checkout.codes.notice" fallback="Codes are validated against the live studio settings. Shopper savings update immediately, domestic shipping follows the current studio rules, and worldwide routing still stays manual until confirmed." editorLabel="Checkout codes notice" />
                     </div>
 
                     {pricingMessage && (
                         <PricingValidationCard
                             label="Promotion Notice"
+                            labelKey="checkout.codes.promotion_notice"
                             status={pricingPreview.pricingReady === false || pricingStatus === 'error' ? 'invalid' : 'ready'}
                             message={pricingMessage}
                         />
@@ -637,8 +648,8 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Payment Route</p>
-                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">How This Order Moves</h3>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.payment_route.eyebrow" fallback="Payment Route" editorLabel="Checkout payment route eyebrow" /></p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.payment_route.title" fallback="How This Order Moves" editorLabel="Checkout payment route title" /></h3>
                     </div>
 
                     {payNowEligible ? (
@@ -649,12 +660,14 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                     copy="Move this order into secure Stripe payment. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
                                     active={checkoutMode === 'stripe_checkout'}
                                     onClick={() => setCheckoutMode('stripe_checkout')}
+                                    contentKeyPrefix="checkout.payment_route.online_payment"
                                 />
                                 <PaymentModeButton
                                     label="Local Delivery"
                                     copy="Keep this Bulgarian order in the local coordination lane first when payment or handoff will be confirmed directly around delivery."
                                     active={checkoutMode === 'manual_review'}
                                     onClick={() => setCheckoutMode('manual_review')}
+                                    contentKeyPrefix="checkout.payment_route.local_delivery"
                                 />
                             </div>
                         ) : (
@@ -664,21 +677,22 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                     copy="Pay securely by card without sending the order through a manual review lane first."
                                     active={checkoutMode === 'stripe_checkout'}
                                     onClick={() => setCheckoutMode('stripe_checkout')}
+                                    contentKeyPrefix="checkout.payment_route.online_payment"
                                 />
                             </div>
                         )
                     ) : (
                         <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                            {paymentBlockers[0] || 'This order will stay in atelier review first.'}
+                            {paymentBlockers[0] || <EditableText contentKey="checkout.payment_route.manual_review" fallback="This order will stay in atelier review first." editorLabel="Checkout manual review notice" />}
                         </div>
                     )}
 
                     <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
                         {checkoutMode === 'stripe_checkout'
-                            ? 'The final secure payment amount will be reconfirmed on the server against the live catalog before Stripe Checkout opens.'
+                            ? <EditableText contentKey="checkout.payment_route.stripe_notice" fallback="The final secure payment amount will be reconfirmed on the server against the live catalog before Stripe Checkout opens." editorLabel="Checkout stripe notice" />
                             : domesticManualLaneEnabled
-                                ? 'Domestic Bulgaria can stay in the local coordination lane when delivery and payment need to be confirmed directly first.'
-                                : 'This order will stay in atelier review until it is ready for payment.'}
+                                ? <EditableText contentKey="checkout.payment_route.domestic_notice" fallback="Domestic Bulgaria can stay in the local coordination lane when delivery and payment need to be confirmed directly first." editorLabel="Checkout domestic notice" />
+                                : <EditableText contentKey="checkout.payment_route.manual_notice" fallback="This order will stay in atelier review until it is ready for payment." editorLabel="Checkout manual notice" />}
                     </div>
                 </section>
 
@@ -692,42 +706,42 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     {structuredCheckoutReady ? (
                         <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker ? 'opacity-60' : 'hover:bg-black'}`}>
                             {checkoutStatus === 'submitting'
-                                ? 'Submitting Order...'
+                                ? <EditableText contentKey="checkout.submit.submitting" fallback="Submitting Order..." editorLabel="Checkout submitting" />
                                 : checkoutStatus === 'redirecting'
-                                    ? 'Opening Secure Payment...'
+                                    ? <EditableText contentKey="checkout.submit.redirecting" fallback="Opening Secure Payment..." editorLabel="Checkout redirecting" />
                                     : pricingStatus === 'loading'
-                                        ? 'Validating Codes...'
+                                        ? <EditableText contentKey="checkout.submit.validating" fallback="Validating Codes..." editorLabel="Checkout validating codes" />
                                         : checkoutMode === 'stripe_checkout'
-                                            ? 'Continue To Secure Payment'
+                                            ? <EditableText contentKey="checkout.submit.secure_payment" fallback="Continue To Secure Payment" editorLabel="Checkout continue to secure payment" />
                                             : domesticManualLaneEnabled
-                                                ? 'Submit Local Delivery Request'
-                                                : 'Submit Order Request'}
+                                                ? <EditableText contentKey="checkout.submit.local_delivery" fallback="Submit Local Delivery Request" editorLabel="Checkout local delivery submit" />
+                                                : <EditableText contentKey="checkout.submit.order_request" fallback="Submit Order Request" editorLabel="Checkout order request submit" />}
                         </button>
                     ) : (
-                        <a href="/contact" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors">Request Through Atelier</a>
+                        <a href="/contact" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors"><EditableText contentKey="checkout.submit.request_atelier" fallback="Request Through Atelier" editorLabel="Checkout request through atelier" /></a>
                     )}
-                    <a href="/cart" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors">Back To Cart</a>
+                    <a href="/cart" className="hover-target transition-link inline-flex items-center justify-center px-8 py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors"><EditableText contentKey="checkout.submit.back_to_cart" fallback="Back To Cart" editorLabel="Checkout back to cart" /></a>
                 </div>
             </form>
 
             <aside className="flex flex-col gap-6 xl:sticky xl:top-28 xl:min-h-0 xl:h-[calc(100vh-7.5rem)]">
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-5 xl:min-h-0 xl:flex-1">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Order Summary</p>
-                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]">Selection Review</h3>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.summary.eyebrow" fallback="Order Summary" editorLabel="Checkout summary eyebrow" /></p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.summary.title" fallback="Selection Review" editorLabel="Checkout summary title" /></h3>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Pieces</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.pieces" fallback="Pieces" editorLabel="Checkout summary pieces" /></p>
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{cartItems.length}</p>
                         </div>
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Savings</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.savings" fallback="Savings" editorLabel="Checkout summary savings" /></p>
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(discountAmount)}</p>
                         </div>
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Shipping</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.shipping" fallback="Shipping" editorLabel="Checkout summary shipping" /></p>
                             <p className="font-serif text-xl font-light leading-tight text-[#1C1C1C]">{shippingDisplayValue}</p>
                         </div>
                     </div>
@@ -741,25 +755,25 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <section className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 shrink-0">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/42 mb-3">Pricing Structure</p>
-                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none">Current Totals</h3>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/42 mb-3"><EditableText contentKey="checkout.pricing.eyebrow" fallback="Pricing Structure" editorLabel="Checkout pricing eyebrow" /></p>
+                        <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none"><EditableText contentKey="checkout.pricing.title" fallback="Current Totals" editorLabel="Checkout pricing title" /></h3>
                     </div>
 
                     <div className="flex flex-col gap-3 text-sm md:text-base leading-relaxed text-white/72">
-                        <div className="flex items-center justify-between gap-4"><span>Subtotal</span><span>{formatCurrency(orderSubtotal)}</span></div>
-                        {discountCode && <div className="flex items-center justify-between gap-4"><span>Discount Code</span><span>{pricingPreview.discount.status === 'applied' ? `-${formatCurrency(pricingPreview.discount.appliedAmount)}` : pricingPreview.discount.message || discountCode}</span></div>}
-                        {affiliateCode && <div className="flex items-center justify-between gap-4"><span>Affiliate</span><span>{pricingPreview.affiliate.status === 'applied' ? `-${formatCurrency(pricingPreview.affiliate.customerDiscountAmount)}` : pricingPreview.affiliate.status === 'tracked' ? 'Tracked' : pricingPreview.affiliate.message || affiliateCode}</span></div>}
-                        <div className="flex items-center justify-between gap-4"><span>Total Savings</span><span>{formatCurrency(discountAmount)}</span></div>
-                        <div className="flex items-center justify-between gap-4"><span>Shipping</span><span>{shippingDisplayValue}</span></div>
+                        <div className="flex items-center justify-between gap-4"><span><EditableText contentKey="checkout.pricing.subtotal" fallback="Subtotal" editorLabel="Checkout pricing subtotal" /></span><span>{formatCurrency(orderSubtotal)}</span></div>
+                        {discountCode && <div className="flex items-center justify-between gap-4"><span><EditableText contentKey="checkout.pricing.discount_code" fallback="Discount Code" editorLabel="Checkout pricing discount code" /></span><span>{pricingPreview.discount.status === 'applied' ? `-${formatCurrency(pricingPreview.discount.appliedAmount)}` : pricingPreview.discount.message || discountCode}</span></div>}
+                        {affiliateCode && <div className="flex items-center justify-between gap-4"><span><EditableText contentKey="checkout.pricing.affiliate" fallback="Affiliate" editorLabel="Checkout pricing affiliate" /></span><span>{pricingPreview.affiliate.status === 'applied' ? `-${formatCurrency(pricingPreview.affiliate.customerDiscountAmount)}` : pricingPreview.affiliate.status === 'tracked' ? 'Tracked' : pricingPreview.affiliate.message || affiliateCode}</span></div>}
+                        <div className="flex items-center justify-between gap-4"><span><EditableText contentKey="checkout.pricing.total_savings" fallback="Total Savings" editorLabel="Checkout pricing total savings" /></span><span>{formatCurrency(discountAmount)}</span></div>
+                        <div className="flex items-center justify-between gap-4"><span><EditableText contentKey="checkout.pricing.shipping" fallback="Shipping" editorLabel="Checkout pricing shipping" /></span><span>{shippingDisplayValue}</span></div>
                     </div>
 
                     <div className="border-t border-white/10 pt-4 flex items-center justify-between gap-4">
-                        <span className="text-[10px] uppercase tracking-[0.24em] text-white/42">Estimated Total</span>
+                        <span className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="checkout.pricing.estimated_total" fallback="Estimated Total" editorLabel="Checkout estimated total" /></span>
                         <span className="font-serif text-3xl font-light text-white">{formatCurrency(orderTotal)}</span>
                     </div>
 
                     <p className="text-sm leading-relaxed text-white/62">
-                        {pricingPreview.shipping.message || 'Live codes now affect the checkout total immediately, while worldwide shipping remains manual until the atelier confirms the route.'}
+                        {pricingPreview.shipping.message || <EditableText contentKey="checkout.pricing.notice" fallback="Live codes now affect the checkout total immediately, while worldwide shipping remains manual until the atelier confirms the route." editorLabel="Checkout pricing notice" />}
                     </p>
                 </section>
             </aside>

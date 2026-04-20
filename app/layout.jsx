@@ -1,8 +1,12 @@
 import './globals.css';
+import { cookies } from 'next/headers';
 import ClientEngine from '../components/ClientEngine';
 import { CartProvider } from '../components/CartProvider';
+import SiteCopyProvider from '../components/site-copy/SiteCopyProvider';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { createClient, isSupabaseConfigured, resolveSupabaseWithTimeout } from '../utils/supabase/server';
+import { isSiteCopySetupError, toSiteCopyMap } from '../utils/site-copy';
 
 export const metadata = {
   title: 'The VA Store | High-End Macramé',
@@ -24,7 +28,46 @@ export const viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({ children }) {
+async function loadSiteCopyState() {
+  if (!isSupabaseConfigured()) {
+    return { initialEntries: {}, isAdmin: false };
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const authResult = await resolveSupabaseWithTimeout(
+    () => supabase.auth.getUser(),
+    { data: { user: null }, error: null }
+  );
+  const copyResult = await resolveSupabaseWithTimeout(
+    () => supabase.from('site_copy_entries').select('key, value'),
+    { data: [], error: null }
+  );
+
+  let isAdmin = false;
+
+  if (authResult.data?.user) {
+    const profileResult = await resolveSupabaseWithTimeout(
+      () => supabase.from('profiles').select('is_admin').eq('id', authResult.data.user.id).maybeSingle(),
+      { data: null, error: null }
+    );
+
+    isAdmin = Boolean(profileResult.data?.is_admin);
+  }
+
+  if (copyResult.error && !isSiteCopySetupError(copyResult.error)) {
+    return { initialEntries: {}, isAdmin };
+  }
+
+  return {
+    initialEntries: toSiteCopyMap(copyResult.data || []),
+    isAdmin,
+  };
+}
+
+export default async function RootLayout({ children }) {
+  const { initialEntries, isAdmin } = await loadSiteCopyState();
+
   return (
     <html lang="en" data-page-motion="on" suppressHydrationWarning>
       <head>
@@ -49,11 +92,13 @@ export default function RootLayout({ children }) {
       </head>
       
       <body suppressHydrationWarning className="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-x-hidden selection:bg-[#1C1C1C] selection:text-[#EFECE8]">
-        <CartProvider>
-          <ClientEngine>
-            {children}
-          </ClientEngine>
-        </CartProvider>
+        <SiteCopyProvider initialEntries={initialEntries} isAdmin={isAdmin}>
+          <CartProvider>
+            <ClientEngine>
+              {children}
+            </ClientEngine>
+          </CartProvider>
+        </SiteCopyProvider>
         <Analytics />
         <SpeedInsights />
       </body>

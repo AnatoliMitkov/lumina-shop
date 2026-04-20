@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import ProductDetailAccordions from '../../../components/ProductDetailAccordions';
 import ProductGallery from '../../../components/ProductGallery';
 import ProductPurchaseControls from '../../../components/ProductPurchaseControls';
+import EditableText from '../../../components/site-copy/EditableText';
 import { createClient } from '../../../utils/supabase/server';
 import {
     buildProductHref,
@@ -99,12 +100,12 @@ function buildDispatchCopy(product) {
     return `Prepared in the atelier with ${buildLeadTimeLabel(product)} before dispatch.`;
 }
 
-function DetailCard({ eyebrow, title, copy, wide = false }) {
+function DetailCard({ eyebrow, eyebrowKey, title, titleKey, copy, copyKey, wide = false }) {
     return (
         <div className={`reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-5 md:p-6 flex flex-col gap-3 ${wide ? 'md:col-span-2' : ''}`}>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{eyebrow}</p>
-            <p className="font-serif text-2xl md:text-3xl font-light leading-tight uppercase tracking-[0.06em] text-[#1C1C1C]">{title}</p>
-            <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{copy}</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{eyebrowKey ? <EditableText contentKey={eyebrowKey} fallback={eyebrow} editorLabel={`${eyebrow} card eyebrow`} /> : eyebrow}</p>
+            <p className="font-serif text-2xl md:text-3xl font-light leading-tight uppercase tracking-[0.06em] text-[#1C1C1C]">{titleKey ? <EditableText contentKey={titleKey} fallback={title} editorLabel={`${title} card title`} /> : title}</p>
+            <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{copyKey ? <EditableText contentKey={copyKey} fallback={copy} editorLabel={`${eyebrow} card copy`} /> : copy}</p>
         </div>
     );
 }
@@ -166,46 +167,65 @@ export default async function ProductPage({ params }) {
         {
             title: 'Product Notes',
             copy: product.tags.length > 0 ? `Filed under ${product.tags.join(', ')}.` : defaultProductNotesCopy,
+            titleKey: 'product.accordion.product_notes.title',
+            copyKey: product.tags.length > 0 ? null : 'product.accordion.product_notes.copy',
             bullets: highlightList,
         },
         {
             title: 'Size & Fit',
             copy: product.fit_notes || defaultFitCopy,
+            titleKey: 'product.accordion.size_fit.title',
+            copyKey: product.fit_notes ? null : 'product.accordion.size_fit.copy',
         },
         {
             title: 'Size & Measurements',
             copy: 'Use the standard XS to XL chart below as the closest starting point before ordering. If you need a made-for-you fit, choose Custom in the purchase panel and enter your body measurements there.',
+            titleKey: 'product.accordion.size_measurements.title',
+            copyKey: 'product.accordion.size_measurements.copy',
             table: SIZE_MEASUREMENTS,
         },
         {
             title: 'Color & Palette',
             copy: buildColorCopy(product),
+            titleKey: 'product.accordion.color_palette.title',
+            copyKey: product.palette.length > 0 ? null : 'product.accordion.color_palette.copy',
             chips: product.palette,
         },
         {
             title: 'Materials & Care',
             copy: materialsCopy || defaultCareCopy,
+            titleKey: 'product.accordion.materials_care.title',
+            copyKey: materialsCopy ? null : 'product.accordion.materials_care.copy',
         },
         {
             title: 'Shipping & Returns',
             copy: defaultShippingCopy,
+            titleKey: 'product.accordion.shipping_returns.title',
+            copyKey: 'product.accordion.shipping_returns.copy',
         },
     ];
     const detailPanels = [
         {
             eyebrow: 'Atelier Finish',
+            eyebrowKey: 'product.detail_cards.atelier_finish.eyebrow',
             title: product.artisan_note ? 'Hand-tensioned final pass' : 'Finished in small runs',
+            titleKey: product.artisan_note ? null : 'product.detail_cards.atelier_finish.title',
             copy: product.artisan_note || 'Every piece is checked by hand so the structure stays controlled, directional, and easy to wear around other tailored layers.',
+            copyKey: product.artisan_note ? null : 'product.detail_cards.atelier_finish.copy',
         },
         {
             eyebrow: 'Dispatch',
+            eyebrowKey: 'product.detail_cards.dispatch.eyebrow',
             title: buildAvailabilityLabel(product),
             copy: buildDispatchCopy(product),
         },
         {
             eyebrow: 'Palette & Mood',
+            eyebrowKey: 'product.detail_cards.palette.eyebrow',
             title: paletteLabel,
+            titleKey: product.palette.length > 0 ? null : 'product.detail_cards.palette.title',
             copy: buildColorCopy(product),
+            copyKey: product.palette.length > 0 ? null : 'product.detail_cards.palette.copy',
             wide: true,
         },
     ];
@@ -215,7 +235,7 @@ export default async function ProductPage({ params }) {
             <section className="mb-10 md:mb-14 border-b border-[#1C1C1C]/10 pb-8 md:pb-10">
                 <div className="grid grid-cols-1 xl:grid-cols-[1.04fr_0.96fr] gap-6 md:gap-8 items-end">
                     <div>
-                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45 mb-4">Product / {product.collection}</p>
+                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.hero.eyebrow_prefix" fallback="Product" editorLabel="Product hero eyebrow prefix" /> / {product.collection}</p>
                         <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full">{product.name}</h1></div>
                     </div>
 
@@ -259,15 +279,15 @@ export default async function ProductPage({ params }) {
 
                             <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Availability</p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback="Availability" editorLabel="Product availability label" /></p>
                                     <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{buildAvailabilityState(product)}</p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Lead Time</p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback="Lead Time" editorLabel="Product lead time label" /></p>
                                     <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{product.lead_time_days}d</p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2">Piece Type</p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback="Piece Type" editorLabel="Product piece type label" /></p>
                                     <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{product.category}</p>
                                 </div>
                             </div>
@@ -275,8 +295,8 @@ export default async function ProductPage({ params }) {
                             <ProductPurchaseControls product={product} sizeOptions={sizeOptions} toneOptions={product.palette} />
 
                             <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <a href="/contact" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors">Contact Atelier</a>
-                                <a href="/collections" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors">Return To Archive</a>
+                                <a href="/contact" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors"><EditableText contentKey="product.cta.contact_atelier" fallback="Contact Atelier" editorLabel="Product contact atelier CTA" /></a>
+                                <a href="/collections" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors"><EditableText contentKey="product.cta.return_to_archive" fallback="Return To Archive" editorLabel="Product return to archive CTA" /></a>
                             </div>
                         </div>
 
@@ -288,8 +308,8 @@ export default async function ProductPage({ params }) {
             <section className="mx-auto max-w-[1540px] mb-14 md:mb-16 grid grid-cols-1 xl:grid-cols-[0.9fr_1fr] gap-5 md:gap-6 items-stretch">
                 <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 justify-between">
                     <div className="flex flex-col gap-6">
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-white/42">Atelier Story</p>
-                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.08em]">A piece should read with clarity from the first glance and hold attention once you move closer.</h2>
+                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-white/42"><EditableText contentKey="product.story.eyebrow" fallback="Atelier Story" editorLabel="Product story eyebrow" /></p>
+                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.08em]"><EditableText contentKey="product.story.title" fallback="A piece should read with clarity from the first glance and hold attention once you move closer." editorLabel="Product story title" /></h2>
                         <p className="reveal-text opacity-0 translate-y-8 text-sm leading-relaxed text-white/70">{productStory}</p>
                     </div>
 
@@ -298,7 +318,7 @@ export default async function ProductPage({ params }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                     {detailPanels.map((panel) => (
-                        <DetailCard key={panel.eyebrow} eyebrow={panel.eyebrow} title={panel.title} copy={panel.copy} wide={panel.wide} />
+                        <DetailCard key={panel.eyebrow} eyebrow={panel.eyebrow} eyebrowKey={panel.eyebrowKey} title={panel.title} titleKey={panel.titleKey} copy={panel.copy} copyKey={panel.copyKey} wide={panel.wide} />
                     ))}
                 </div>
             </section>
@@ -307,10 +327,10 @@ export default async function ProductPage({ params }) {
                 <section>
                     <div className="mb-10 md:mb-12 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#1C1C1C]/10 pb-8">
                         <div>
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4">Continue The Story</p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]">Related Pieces</h2>
+                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.related.eyebrow" fallback="Continue The Story" editorLabel="Product related eyebrow" /></p>
+                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]"><EditableText contentKey="product.related.title" fallback="Related Pieces" editorLabel="Product related title" /></h2>
                         </div>
-                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium">View Full Archive</a>
+                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium"><EditableText contentKey="product.related.view_archive" fallback="View Full Archive" editorLabel="Product related view archive CTA" /></a>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">

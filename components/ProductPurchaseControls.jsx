@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AddToCartBtn from './AddToCartBtn';
+import EditableText from './site-copy/EditableText';
 
 const CUSTOM_SIZE_OPTION = 'Custom';
 const customMeasurementFields = [
@@ -47,6 +48,11 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
         : isCustomSize && !hasCompleteCustomMeasurements
             ? 'Enter Custom Measurements'
             : `Add ${selectedSize} To Cart`;
+    const buttonLabelKey = !selectedSize
+        ? 'product.purchase.add_to_cart.select_size'
+        : isCustomSize && !hasCompleteCustomMeasurements
+            ? 'product.purchase.add_to_cart.enter_custom'
+            : 'product.purchase.add_to_cart.add_selected';
 
     const cartProduct = {
         ...product,
@@ -72,7 +78,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
             {sizeOptions.length > 0 && (
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/44">
-                        <span>Choose Size</span>
+                        <span><EditableText contentKey="product.purchase.choose_size" fallback="Choose Size" editorLabel="Product choose size label" /></span>
                         <span>{sizeStatusLabel}</span>
                     </div>
 
@@ -96,8 +102,8 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
 
                     <p className="text-[11px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
                         {isCustomSize
-                            ? 'Enter all four measurements below for a custom atelier fit.'
-                            : 'Measurements guide is available in the accordion below.'}
+                            ? <EditableText contentKey="product.purchase.custom_size_help" fallback="Enter all four measurements below for a custom atelier fit." editorLabel="Product custom size help" />
+                            : <EditableText contentKey="product.purchase.measurements_help" fallback="Measurements guide is available in the accordion below." editorLabel="Product measurements help" />}
                     </p>
 
                     {isCustomSize && (
@@ -105,7 +111,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {customMeasurementFields.map((field) => (
                                     <label key={field.key} className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
-                                        <span>{field.label}</span>
+                                        <span><EditableText contentKey={`product.purchase.custom_measurements.${field.key}.label`} fallback={field.label} editorLabel={`${field.label} measurement label`} /></span>
                                         <input
                                             type="number"
                                             min="0"
@@ -122,11 +128,11 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
 
                             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_9rem] gap-3 items-end">
                                 <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                                    These measurements will be sent with the cart item so the atelier can review the fit before final confirmation.
+                                    <EditableText contentKey="product.purchase.custom_measurements.copy" fallback="These measurements will be sent with the cart item so the atelier can review the fit before final confirmation." editorLabel="Product custom measurements copy" />
                                 </p>
 
                                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
-                                    <span>Units</span>
+                                    <span><EditableText contentKey="product.purchase.custom_measurements.units" fallback="Units" editorLabel="Product custom measurement units" /></span>
                                     <select
                                         value={customMeasurementUnit}
                                         onChange={(event) => setCustomMeasurementUnit(event.target.value)}
@@ -145,7 +151,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
             {toneOptions.length > 0 && (
                 <div className="flex flex-col gap-3 border-t border-[#1C1C1C]/10 pt-5">
                     <div className="flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/44">
-                        <span>Choose Tone</span>
+                        <span><EditableText contentKey="product.purchase.choose_tone" fallback="Choose Tone" editorLabel="Product choose tone label" /></span>
                         <span>{selectedTone || toneOptions[0]}</span>
                     </div>
 
@@ -169,7 +175,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                 </div>
             )}
 
-            <AddToCartBtn product={cartProduct} label={buttonLabel} disabled={!canAddToCart} />
+            <AddToCartBtn product={cartProduct} label={buttonLabel} labelKey={buttonLabelKey} editorLabel="Product add to cart label" disabled={!canAddToCart} />
         </div>
     );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useState } from 'react';
+import EditableText from './site-copy/EditableText';
 
 function SizeMeasurementsTable({ rows = [] }) {
     return (
@@ -8,12 +9,12 @@ function SizeMeasurementsTable({ rows = [] }) {
             <table className="min-w-[760px] w-full border-collapse text-left text-sm text-[#1C1C1C]/74">
                 <thead>
                     <tr className="bg-[#F5F1EB] text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/52">
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Size</th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Unit</th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Bust / Chest</th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Waist</th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Hips</th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4">Back</th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.size" fallback="Size" editorLabel="Product measurements size header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.unit" fallback="Unit" editorLabel="Product measurements unit header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.bust" fallback="Bust / Chest" editorLabel="Product measurements bust header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.waist" fallback="Waist" editorLabel="Product measurements waist header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.hips" fallback="Hips" editorLabel="Product measurements hips header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.back" fallback="Back" editorLabel="Product measurements back header" /></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,14 +67,24 @@ export default function ProductDetailAccordions({ sections = [] }) {
                             aria-expanded={isOpen}
                             className="hover-target flex w-full items-center justify-between gap-4 py-5 text-left"
                         >
-                            <span className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/74 font-medium">{section.title}</span>
+                            <span className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/74 font-medium">
+                                {section.titleKey
+                                    ? <EditableText contentKey={section.titleKey} fallback={section.title} editorLabel={section.editorLabel || section.title} />
+                                    : section.title}
+                            </span>
                             <span className={`text-lg font-light text-[#1C1C1C]/55 transition-transform duration-300 ${isOpen ? 'rotate-45 text-[#1C1C1C]' : ''}`}>+</span>
                         </button>
 
                         <div className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                             <div className="min-h-0">
                                 <div className="pb-5 flex flex-col gap-4 text-sm leading-relaxed text-[#1C1C1C]/62 normal-case">
-                                    {section.copy && <p>{section.copy}</p>}
+                                    {section.copy && (
+                                        <p>
+                                            {section.copyKey
+                                                ? <EditableText contentKey={section.copyKey} fallback={section.copy} editorLabel={section.copyEditorLabel || `${section.title} copy`} />
+                                                : section.copy}
+                                        </p>
+                                    )}
 
                                     {section.chips?.length > 0 && (
                                         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/44">

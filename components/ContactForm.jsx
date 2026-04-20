@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useCart } from './CartProvider';
+import EditableText from './site-copy/EditableText';
+import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { buildCartSnapshot } from '../utils/cart';
 import {
     buildPhoneValue,
@@ -30,6 +32,7 @@ async function fetchCaptchaChallenge() {
 
 export default function ContactForm({ initialValues }) {
     const { cartItems, cartTotal } = useCart();
+    const siteCopy = useSiteCopy();
     const initialPhoneParts = splitStoredPhoneNumber(initialValues?.phone || '');
     const initialCountryFromLocation = detectCountryFromLocationText(initialValues?.location || '');
     const locationListId = useId();
@@ -37,6 +40,17 @@ export default function ContactForm({ initialValues }) {
     const visibleCartItems = cartSnapshot.items.slice(0, 4);
     const hiddenCartItemCount = Math.max(0, cartSnapshot.itemCount - visibleCartItems.length);
     const hasSelectionAttached = cartSnapshot.itemCount > 0;
+    const messagePlaceholder = siteCopy
+        ? siteCopy.resolveText(
+            hasSelectionAttached ? 'contact.form.message.placeholder.selection' : 'contact.form.message.placeholder.default',
+            hasSelectionAttached
+                ? 'Tell us what you need about the selected pieces, fit, occasion, or timing.'
+                : 'Tell us about the piece, fit, occasion, or support you need.'
+        )
+        : hasSelectionAttached
+            ? 'Tell us what you need about the selected pieces, fit, occasion, or timing.'
+            : 'Tell us about the piece, fit, occasion, or support you need.';
+    const captchaPlaceholder = siteCopy ? siteCopy.resolveText('contact.form.captcha.answer_placeholder', 'Type the answer here') : 'Type the answer here';
     const [fullName, setFullName] = useState(initialValues?.fullName || '');
     const [email, setEmail] = useState(initialValues?.email || '');
     const [selectedCountry, setSelectedCountry] = useState(initialPhoneParts.country || initialCountryFromLocation || defaultContactCountry);
@@ -179,15 +193,15 @@ export default function ContactForm({ initialValues }) {
         <form onSubmit={handleSubmit} className="border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Full Name
+                    <EditableText contentKey="contact.form.full_name" fallback="Full Name" editorLabel="Contact form full name label" />
                     <input value={fullName} onChange={(event) => setFullName(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                 </label>
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Email
+                    <EditableText contentKey="contact.form.email" fallback="Email" editorLabel="Contact form email label" />
                     <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                 </label>
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Phone
+                    <EditableText contentKey="contact.form.phone" fallback="Phone" editorLabel="Contact form phone label" />
                     <div className="grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] gap-3">
                         <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} aria-label="Country calling code" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                             {countryPhoneOptions.map((option) => (
@@ -198,7 +212,7 @@ export default function ContactForm({ initialValues }) {
                     </div>
                 </label>
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Location
+                    <EditableText contentKey="contact.form.location" fallback="Location" editorLabel="Contact form location label" />
                     <>
                         <input value={location} onChange={(event) => setLocation(event.target.value)} list={locationListId} autoComplete="address-level2" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         <datalist id={locationListId}>
@@ -211,7 +225,7 @@ export default function ContactForm({ initialValues }) {
             </div>
 
             <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                Query Type
+                <EditableText contentKey="contact.form.query_type" fallback="Query Type" editorLabel="Contact form query type label" />
                 <select value={queryType} onChange={(event) => setQueryType(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                     {queryOptions.map((option) => (
                         <option key={option} value={option}>{option}</option>
@@ -223,11 +237,11 @@ export default function ContactForm({ initialValues }) {
                 <div className="border border-[#1C1C1C]/10 bg-white/45 p-4 md:p-5 rounded-sm flex flex-col gap-4">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 mb-2">Selection Attached</p>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 mb-2"><EditableText contentKey="contact.form.selection.eyebrow" fallback="Selection Attached" editorLabel="Contact form selection eyebrow" /></p>
                             <p className="font-serif text-2xl md:text-3xl font-light leading-tight text-[#1C1C1C]">{cartSnapshot.itemCount} piece{cartSnapshot.itemCount === 1 ? '' : 's'} / €{cartTotal.toFixed(2)}</p>
                         </div>
                         <a href="/cart" className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 transition-colors hover:text-[#1C1C1C]">
-                            Review Cart
+                            <EditableText contentKey="contact.form.selection.review_cart" fallback="Review Cart" editorLabel="Contact form review cart" />
                         </a>
                     </div>
 
@@ -250,24 +264,24 @@ export default function ContactForm({ initialValues }) {
             )}
 
             <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                Message
-                <textarea value={message} onChange={(event) => setMessage(event.target.value)} required rows={7} className="border border-[#1C1C1C]/12 bg-white px-4 py-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C] resize-none" placeholder={hasSelectionAttached ? 'Tell us what you need about the selected pieces, fit, occasion, or timing.' : 'Tell us about the piece, fit, occasion, or support you need.'} />
+                <EditableText contentKey="contact.form.message" fallback="Message" editorLabel="Contact form message label" />
+                <textarea value={message} onChange={(event) => setMessage(event.target.value)} required rows={7} className="border border-[#1C1C1C]/12 bg-white px-4 py-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C] resize-none" placeholder={messagePlaceholder} />
             </label>
 
             <div className="border border-[#1C1C1C]/10 bg-white/45 p-4 md:p-5 rounded-sm flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 mb-2">Human Check</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 mb-2"><EditableText contentKey="contact.form.captcha.eyebrow" fallback="Human Check" editorLabel="Contact form captcha eyebrow" /></p>
                         <p className="font-serif text-xl md:text-2xl font-light leading-tight text-[#1C1C1C]">{captchaPrompt}</p>
                     </div>
                     <button type="button" onClick={() => void loadCaptcha(true)} className="h-11 px-4 border border-[#1C1C1C]/12 bg-white text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/60 transition-colors hover:border-[#1C1C1C] hover:text-[#1C1C1C]" disabled={isCaptchaLoading}>
-                        {isCaptchaLoading ? 'Loading' : 'Refresh'}
+                        {isCaptchaLoading ? <EditableText contentKey="contact.form.captcha.loading" fallback="Loading" editorLabel="Contact form captcha loading" /> : <EditableText contentKey="contact.form.captcha.refresh" fallback="Refresh" editorLabel="Contact form captcha refresh" />}
                     </button>
                 </div>
 
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Answer
-                    <input value={captchaAnswer} onChange={(event) => setCaptchaAnswer(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" placeholder="Type the answer here" />
+                    <EditableText contentKey="contact.form.captcha.answer" fallback="Answer" editorLabel="Contact form captcha answer label" />
+                    <input value={captchaAnswer} onChange={(event) => setCaptchaAnswer(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" placeholder={captchaPlaceholder} />
                 </label>
             </div>
 
@@ -295,7 +309,7 @@ export default function ContactForm({ initialValues }) {
             )}
 
             <button disabled={isSendDisabled} className={`h-14 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.24em] text-xs font-medium transition-colors hover:bg-black ${isSendDisabled ? 'opacity-60' : ''}`}>
-                {isSubmitting ? 'Sending...' : 'Send Request'}
+                {isSubmitting ? <EditableText contentKey="contact.form.submit.sending" fallback="Sending..." editorLabel="Contact form submit loading" /> : <EditableText contentKey="contact.form.submit.default" fallback="Send Request" editorLabel="Contact form submit label" />}
             </button>
         </form>
     );

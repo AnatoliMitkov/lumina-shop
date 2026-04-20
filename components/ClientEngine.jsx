@@ -7,7 +7,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import Lenis from 'lenis';
 import { useCart } from './CartProvider';
+import EditableText from './site-copy/EditableText';
 import { formatCustomMeasurementSummary } from '../utils/cart';
+import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
+import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
@@ -46,13 +49,46 @@ function syncPageMotionAttribute(isEnabled) {
     document.documentElement.dataset.pageMotion = isEnabled ? 'on' : 'off';
 }
 
+function normalizeCategoryValue(value) {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+
+    if (value == null) {
+        return '';
+    }
+
+    return String(value).trim();
+}
+
+function buildCategoryMenuItems(values = []) {
+    const normalizedValues = [...new Set(values.map((value) => normalizeCategoryValue(value)).filter(Boolean))];
+
+    if (normalizedValues.length === 0) {
+        return PRODUCT_CATEGORY_OPTIONS;
+    }
+
+    const seedOptionSet = new Set(PRODUCT_CATEGORY_OPTIONS.map((option) => option.toLowerCase()));
+    const seededMatches = PRODUCT_CATEGORY_OPTIONS.filter((option) => normalizedValues.some((value) => value.toLowerCase() === option.toLowerCase()));
+    const customMatches = normalizedValues
+        .filter((option) => !seedOptionSet.has(option.toLowerCase()))
+        .sort((leftOption, rightOption) => leftOption.localeCompare(rightOption));
+
+    return [...seededMatches, ...customMatches];
+}
+
 export default function ClientEngine({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartPersistenceMode } = useCart();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isCollectionsSubmenuOpen, setIsCollectionsSubmenuOpen] = useState(false);
+    const [isDesktopCollectionsMenuOpen, setIsDesktopCollectionsMenuOpen] = useState(false);
+    const [isDesktopCollectionsMenuMounted, setIsDesktopCollectionsMenuMounted] = useState(false);
+    const [desktopCollectionsMenuPosition, setDesktopCollectionsMenuPosition] = useState({ top: 0, left: 0 });
     const [hasMounted, setHasMounted] = useState(false);
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
+    const [categoryMenuItems, setCategoryMenuItems] = useState(() => PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const drawerNote = cartPersistenceMode === 'supabase'
         ? 'Account sync is active, and the full selection can be archived from the cart page.'
@@ -92,6 +128,10 @@ export default function ClientEngine({ children }) {
     const hoverTargetRef = useRef(null);
     const hasPlayedInitialLoadRef = useRef(false);
     const lenisRef = useRef(null);
+    const desktopCollectionsTriggerRef = useRef(null);
+    const desktopCollectionsMenuRef = useRef(null);
+    const desktopCollectionsCloseTimeoutRef = useRef(null);
+    const desktopCollectionsUnmountTimeoutRef = useRef(null);
 
     useEffect(() => {
         const lenis = new Lenis({
@@ -125,7 +165,103 @@ export default function ClientEngine({ children }) {
 
     useEffect(() => {
         setIsMobileMenuOpen(false);
+        setIsCollectionsSubmenuOpen(false);
+        setIsDesktopCollectionsMenuOpen(false);
     }, [pathname]);
+
+    useEffect(() => {
+        return () => {
+            if (desktopCollectionsCloseTimeoutRef.current != null) {
+                window.clearTimeout(desktopCollectionsCloseTimeoutRef.current);
+            }
+
+            if (desktopCollectionsUnmountTimeoutRef.current != null) {
+                window.clearTimeout(desktopCollectionsUnmountTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isDesktopCollectionsMenuOpen) {
+            if (desktopCollectionsUnmountTimeoutRef.current != null) {
+                window.clearTimeout(desktopCollectionsUnmountTimeoutRef.current);
+                desktopCollectionsUnmountTimeoutRef.current = null;
+            }
+
+            setIsDesktopCollectionsMenuMounted(true);
+        }
+    }, [isDesktopCollectionsMenuOpen]);
+
+    useEffect(() => {
+        if (!isDesktopCollectionsMenuOpen) {
+            return undefined;
+        }
+
+        const updateDesktopCollectionsMenuPosition = () => {
+            const trigger = desktopCollectionsTriggerRef.current;
+
+            if (!trigger) {
+                return;
+            }
+
+            const bounds = trigger.getBoundingClientRect();
+            const menuWidth = 304;
+            const viewportPadding = 20;
+            const maxLeft = Math.max(window.innerWidth - menuWidth - viewportPadding, viewportPadding);
+
+            setDesktopCollectionsMenuPosition({
+                top: bounds.bottom + 20,
+                left: Math.min(Math.max(bounds.left, viewportPadding), maxLeft),
+            });
+        };
+
+        updateDesktopCollectionsMenuPosition();
+        window.addEventListener('resize', updateDesktopCollectionsMenuPosition);
+
+        return () => window.removeEventListener('resize', updateDesktopCollectionsMenuPosition);
+    }, [isDesktopCollectionsMenuOpen]);
+
+    useEffect(() => {
+        if (!isDesktopCollectionsMenuMounted) {
+            return undefined;
+        }
+
+        const menu = desktopCollectionsMenuRef.current;
+
+        if (!menu) {
+            return undefined;
+        }
+
+        const enterDuration = isPageMotionEnabled ? 0.22 : 0.01;
+        const exitDuration = isPageMotionEnabled ? 0.18 : 0.01;
+
+        gsap.killTweensOf(menu);
+        gsap.set(menu, { transformOrigin: 'top left' });
+
+        if (isDesktopCollectionsMenuOpen) {
+            gsap.fromTo(
+                menu,
+                { autoAlpha: 0, y: -10, scale: 0.985 },
+                { autoAlpha: 1, y: 0, scale: 1, duration: enterDuration, ease: 'power2.out', overwrite: 'auto' }
+            );
+
+            return () => gsap.killTweensOf(menu);
+        }
+
+        gsap.to(menu, {
+            autoAlpha: 0,
+            y: -8,
+            scale: 0.985,
+            duration: exitDuration,
+            ease: 'power2.in',
+            overwrite: 'auto',
+            onComplete: () => {
+                setIsDesktopCollectionsMenuMounted(false);
+            },
+        });
+
+        return () => gsap.killTweensOf(menu);
+    }, [isDesktopCollectionsMenuMounted, isDesktopCollectionsMenuOpen, isPageMotionEnabled]);
 
     useEffect(() => {
         const nextMotionEnabled = resolvePageMotionEnabled();
@@ -133,6 +269,81 @@ export default function ClientEngine({ children }) {
         setHasMounted(true);
         setIsPageMotionEnabled(nextMotionEnabled);
         syncPageMotionAttribute(nextMotionEnabled);
+    }, []);
+
+    useEffect(() => {
+        if (!isSupabaseConfigured()) {
+            setCategoryMenuItems(PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
+            return undefined;
+        }
+
+        const supabase = createBrowserSupabaseClient();
+        let isCancelled = false;
+        let categoryChannel;
+
+        const loadCategoryMenuItems = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('category')
+                    .eq('status', 'active');
+
+                if (error) {
+                    throw error;
+                }
+
+                if (!isCancelled) {
+                    setCategoryMenuItems(buildCategoryMenuItems((data || []).map((entry) => entry.category)));
+                }
+            } catch {
+                if (!isCancelled) {
+                    setCategoryMenuItems(PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
+                }
+            }
+        };
+
+        const handleWindowFocus = () => {
+            void loadCategoryMenuItems();
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                void loadCategoryMenuItems();
+            }
+        };
+
+        void loadCategoryMenuItems();
+        window.addEventListener('focus', handleWindowFocus);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        try {
+            categoryChannel = supabase
+                .channel('lumina:menu-categories')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'products',
+                    },
+                    () => {
+                        void loadCategoryMenuItems();
+                    }
+                )
+                .subscribe();
+        } catch {
+            categoryChannel = null;
+        }
+
+        return () => {
+            isCancelled = true;
+            window.removeEventListener('focus', handleWindowFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+            if (categoryChannel) {
+                supabase.removeChannel(categoryChannel);
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -164,7 +375,65 @@ export default function ClientEngine({ children }) {
             setIsCartOpen(false);
         }
 
+        if (isMobileMenuOpen) {
+            setIsCollectionsSubmenuOpen(false);
+        }
+
         setIsMobileMenuOpen((currentValue) => !currentValue);
+    };
+
+    const handleMobileNavClose = () => {
+        setIsCollectionsSubmenuOpen(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const clearDesktopCollectionsCloseTimer = () => {
+        if (desktopCollectionsCloseTimeoutRef.current != null) {
+            window.clearTimeout(desktopCollectionsCloseTimeoutRef.current);
+            desktopCollectionsCloseTimeoutRef.current = null;
+        }
+    };
+
+    const openDesktopCollectionsMenu = () => {
+        clearDesktopCollectionsCloseTimer();
+
+        const trigger = desktopCollectionsTriggerRef.current;
+
+        if (trigger) {
+            const bounds = trigger.getBoundingClientRect();
+            const menuWidth = 304;
+            const viewportPadding = 20;
+            const maxLeft = Math.max(window.innerWidth - menuWidth - viewportPadding, viewportPadding);
+
+            setDesktopCollectionsMenuPosition({
+                top: bounds.bottom + 20,
+                left: Math.min(Math.max(bounds.left, viewportPadding), maxLeft),
+            });
+        }
+
+        setIsDesktopCollectionsMenuOpen(true);
+    };
+
+    const scheduleDesktopCollectionsMenuClose = () => {
+        clearDesktopCollectionsCloseTimer();
+
+        desktopCollectionsCloseTimeoutRef.current = window.setTimeout(() => {
+            setIsDesktopCollectionsMenuOpen(false);
+            desktopCollectionsCloseTimeoutRef.current = null;
+        }, 120);
+    };
+
+    const handleDesktopCollectionsBlur = (event) => {
+        const nextTarget = event.relatedTarget;
+
+        if (
+            (desktopCollectionsTriggerRef.current && desktopCollectionsTriggerRef.current.contains(nextTarget))
+            || (desktopCollectionsMenuRef.current && desktopCollectionsMenuRef.current.contains(nextTarget))
+        ) {
+            return;
+        }
+
+        scheduleDesktopCollectionsMenuClose();
     };
 
     const togglePageMotion = () => {
@@ -214,7 +483,7 @@ export default function ClientEngine({ children }) {
 
         const getViewModeWidth = (label) => {
             const trimmedLabel = String(label || '').trim();
-            return Math.max(60, Math.min(136, Math.round((trimmedLabel.length * 6.6) + 28)));
+            return Math.max(96, Math.min(220, Math.round((trimmedLabel.length * 8.4) + 42)));
         };
 
         const resetCursor = () => {
@@ -511,7 +780,7 @@ export default function ClientEngine({ children }) {
             </div>
 
             <nav id="nav" className="fixed w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 z-50 opacity-0 mix-blend-difference text-white">
-                <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap">The VA Store</a>
+                <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="flex md:hidden items-center gap-3">
                     <button
                         type="button"
@@ -528,31 +797,106 @@ export default function ClientEngine({ children }) {
                     </button>
                 </div>
                 <div className="hidden md:flex gap-10 text-sm md:text-base uppercase tracking-[0.2em] font-medium">
-                    <a href="/collections" className="hover-target transition-link">Collections</a>
-                    <a href="/spotlight" className="hover-target transition-link">Spotlight</a>
-                    <a href="/account" className="hover-target transition-link">Account</a>
-                    <a href="/contact" className="hover-target transition-link">Contact</a>
-                    <a href="/cart" className="hover-target transition-link">Cart ({cartItems.length})</a>
+                    <div
+                        ref={desktopCollectionsTriggerRef}
+                        className="relative flex items-center"
+                        onMouseEnter={openDesktopCollectionsMenu}
+                        onMouseLeave={scheduleDesktopCollectionsMenuClose}
+                        onFocusCapture={openDesktopCollectionsMenu}
+                        onBlurCapture={handleDesktopCollectionsBlur}
+                    >
+                        <a href="/collections" className="hover-target transition-link inline-flex items-center gap-2">
+                            <span><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></span>
+                            <span className="text-white/30">+</span>
+                        </a>
+                    </div>
+                    <a href="/spotlight" className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
+                    <a href="/account" className="hover-target transition-link"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
+                    <a href="/contact" className="hover-target transition-link"><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></a>
+                    <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /> ({cartItems.length})</a>
                 </div>
             </nav>
+
+            {isDesktopCollectionsMenuMounted && (
+                <div
+                    ref={desktopCollectionsMenuRef}
+                    className={`fixed z-[60] hidden md:block ${isDesktopCollectionsMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                    style={{ top: desktopCollectionsMenuPosition.top, left: desktopCollectionsMenuPosition.left }}
+                    onMouseEnter={clearDesktopCollectionsCloseTimer}
+                    onMouseLeave={scheduleDesktopCollectionsMenuClose}
+                    onFocusCapture={openDesktopCollectionsMenu}
+                    onBlurCapture={handleDesktopCollectionsBlur}
+                >
+                    <div className="min-w-[19rem] rounded-[1.75rem] border border-white/10 bg-[rgba(10,10,12,0.8)] p-5 text-[#F1F1F1] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                        <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-4">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-[#F1F1F1]/45"><EditableText contentKey="shell.collections_menu.eyebrow" fallback="Collections" editorLabel="Collections menu eyebrow" /></p>
+                                <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em] text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.title" fallback="By Category" editorLabel="Collections menu title" /></p>
+                            </div>
+                            <a href="/collections" className="hover-target transition-link text-[10px] uppercase tracking-[0.22em] text-[#F1F1F1]/62 transition-colors hover:text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.view_all" fallback="View All" editorLabel="Collections menu view all" /></a>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-2 text-[11px] uppercase tracking-[0.24em]">
+                            {categoryMenuItems.map((category, index) => (
+                                <a
+                                    key={category}
+                                    href={buildCollectionsHref({ category })}
+                                    className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-[#F1F1F1] transition-colors hover:bg-white/[0.11]"
+                                >
+                                    <span>{category}</span>
+                                    <span className="text-[#F1F1F1]/30">{String(index + 1).padStart(2, '0')}</span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className={`fixed inset-0 z-[120] md:hidden transition-all duration-300 ${isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <div onClick={() => setIsMobileMenuOpen(false)} className={`absolute inset-0 bg-[#1C1C1C]/42 backdrop-blur-xl transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}></div>
                 <div id="mobile-nav-panel" className={`absolute inset-x-4 top-[5.75rem] overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.72)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
                     <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Navigation</p>
-                            <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em]">The VA Store</p>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="shell.mobile_menu.eyebrow" fallback="Navigation" editorLabel="Mobile menu eyebrow" /></p>
+                            <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em]"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></p>
                         </div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36">Mobile</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36"><EditableText contentKey="shell.mobile_menu.badge" fallback="Mobile" editorLabel="Mobile menu badge" /></p>
                     </div>
 
                     <div className="mt-5 grid grid-cols-1 gap-3 text-[11px] uppercase tracking-[0.24em] font-medium">
-                        <a href="/collections" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '80ms' : '0ms' }}><span>Collections</span><span className="text-white/26">01</span></a>
-                        <a href="/spotlight" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span>Spotlight</span><span className="text-white/26">02</span></a>
-                        <a href="/account" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span>Account</span><span className="text-white/26">03</span></a>
-                        <a href="/contact" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span>Contact</span><span className="text-white/26">04</span></a>
-                        <a href="/cart" onClick={() => setIsMobileMenuOpen(false)} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span>Cart</span><span className="text-white/26">{String(cartItems.length).padStart(2, '0')}</span></a>
+                        <div className={`transition-all duration-300 ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '80ms' : '0ms' }}>
+                            <button
+                                type="button"
+                                aria-expanded={isCollectionsSubmenuOpen}
+                                onClick={() => setIsCollectionsSubmenuOpen((currentValue) => !currentValue)}
+                                className="hover-target flex w-full items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-left text-white/88 transition-colors hover:bg-white/[0.08]"
+                            >
+                                <span><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></span>
+                                <span className={`text-white/26 transition-transform duration-300 ${isCollectionsSubmenuOpen ? 'rotate-45' : ''}`}>+</span>
+                            </button>
+
+                            <div className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ${isCollectionsSubmenuOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'}`}>
+                                <div className="min-h-0 flex flex-col gap-2 pl-4">
+                                    <a href="/collections" onClick={handleMobileNavClose} className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"><span><EditableText contentKey="shell.mobile_menu.view_all_collections" fallback="View All Collections" editorLabel="Mobile menu view all collections" /></span><span className="text-white/24">00</span></a>
+                                    {categoryMenuItems.map((category, index) => (
+                                        <a
+                                            key={category}
+                                            href={buildCollectionsHref({ category })}
+                                            onClick={handleMobileNavClose}
+                                            className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"
+                                        >
+                                            <span>{category}</span>
+                                            <span className="text-white/24">{String(index + 1).padStart(2, '0')}</span>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="/spotlight" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span><span className="text-white/26">02</span></a>
+                        <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></span><span className="text-white/26">03</span></a>
+                        <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></span><span className="text-white/26">04</span></a>
+                        <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></span><span className="text-white/26">{String(cartItems.length).padStart(2, '0')}</span></a>
                     </div>
                 </div>
             </div>
@@ -567,44 +911,44 @@ export default function ClientEngine({ children }) {
                 <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-5 md:gap-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8 md:gap-x-16 md:gap-y-8 text-xs uppercase tracking-[0.15em] font-medium">
                         <div className="flex flex-col gap-4 max-w-sm">
-                            <h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest">The VA Store</h3>
-                            <p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70">Beautiful People Smile More</p>
-                            <p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50">Elevating traditional craftsmanship into avant-garde fashion.</p>
+                            <h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
+                            <p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback="Beautiful People Smile More" editorLabel="Footer slogan" /></p>
+                            <p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Footer brand copy" /></p>
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-4 text-white/30">Explore</span>
+                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.explore_title" fallback="Explore" editorLabel="Footer explore title" /></span>
                             <div className="flex flex-col gap-4">
-                                <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors">Home</a>
-                                <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors">Collections</a>
-                                <a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors">Spotlight</a>
+                                <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.home" fallback="Home" editorLabel="Footer Home label" /></a>
+                                <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></a>
+                                <a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
                             </div>
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-4 text-white/30">Client</span>
+                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback="Client" editorLabel="Footer client title" /></span>
                             <div className="flex flex-col gap-4">
-                                <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors">Account</a>
-                                <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors">Cart</a>
-                                <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors">Contact Form</a>
+                                <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
+                                <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
+                                <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.contact_form" fallback="Contact Form" editorLabel="Footer contact form label" /></a>
                                 <a href="mailto:sales@stylingbyva.com" className="hover-target hover:text-white/70 transition-colors normal-case tracking-normal text-sm">sales@stylingbyva.com</a>
                             </div>
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-4 text-white/30">Atelier</span>
+                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
                             <div className="flex flex-col gap-4 normal-case tracking-normal text-sm font-normal text-white/55">
-                                <p className="text-white/70">Ruse, Bulgaria</p>
-                                <p>Styling by VA Atelier</p>
-                                <p>Editorial spotlight and personal support for signature pieces</p>
+                                <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback="Ruse, Bulgaria" editorLabel="Footer location" /></p>
+                                <p><EditableText contentKey="shell.footer.atelier_name" fallback="Styling by VA Atelier" editorLabel="Footer atelier name" /></p>
+                                <p><EditableText contentKey="shell.footer.atelier_copy" fallback="Editorial spotlight and personal support for signature pieces" editorLabel="Footer atelier copy" /></p>
                             </div>
                         </div>
                     </div>
 
                         <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40">
-                        <p>&copy; 2026 The VA Store.</p>
+                        <p><EditableText contentKey="shell.footer.copyright" fallback="© 2026 The VA Store." editorLabel="Footer copyright" /></p>
                             <div className="flex items-center gap-3">
-                                <span className="text-white/34">Page Motion</span>
+                                <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback="Page Motion" editorLabel="Footer page motion label" /></span>
                                 <button
                                     type="button"
                                     role="switch"
@@ -619,7 +963,7 @@ export default function ClientEngine({ children }) {
                                     <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
                                 </button>
                             </div>
-                        <p className="hover-target">Crafted by Victoria</p>
+                        <p className="hover-target"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
                     </div>
                 </div>
             </footer>
@@ -627,10 +971,10 @@ export default function ClientEngine({ children }) {
             <div id="cart-container" className="fixed inset-0 z-[200] invisible flex justify-end overflow-hidden">
             <div onClick={() => setIsCartOpen(false)} className="cart-overlay absolute inset-0 bg-[#1C1C1C]/60 backdrop-blur-md opacity-0 cursor-pointer"></div>
                 <div className="cart-panel relative w-full md:w-[30vw] h-full bg-[#EFECE8] translate-x-full flex flex-col shadow-2xl">
-                <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">Cart</h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium">Close</button></div>
+                <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest"><EditableText contentKey="shell.cart_drawer.title" fallback="Cart" editorLabel="Cart drawer title" /></h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium"><EditableText contentKey="shell.cart_drawer.close" fallback="Close" editorLabel="Cart drawer close" /></button></div>
                 <div data-lenis-prevent-wheel className="flex-1 p-8 md:p-12 flex flex-col gap-8 overflow-y-auto overscroll-contain">
                     {cartItems.length === 0 ? (
-                        <p className="text-sm uppercase tracking-widest text-gray-500">Your cart is empty.</p>
+                        <p className="text-sm uppercase tracking-widest text-gray-500"><EditableText contentKey="shell.cart_drawer.empty" fallback="Your cart is empty." editorLabel="Cart drawer empty state" /></p>
                     ) : (
                         cartItems.map((item, i) => {
                             const customMeasurementSummary = formatCustomMeasurementSummary(item);
@@ -660,11 +1004,11 @@ export default function ClientEngine({ children }) {
                     )}
                 </div>
                 <div className="p-8 md:p-12 border-t border-[#1C1C1C]/10 bg-[#EFECE8]">
-                    <div className="flex justify-between items-center mb-8 font-medium uppercase tracking-widest text-xs"><span>Total</span><span className="text-sm">€{cartTotal.toFixed(2)}</span></div>
-                    <p className="mb-6 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/50">{drawerNote}</p>
+                    <div className="flex justify-between items-center mb-8 font-medium uppercase tracking-widest text-xs"><span><EditableText contentKey="shell.cart_drawer.total" fallback="Total" editorLabel="Cart drawer total label" /></span><span className="text-sm">€{cartTotal.toFixed(2)}</span></div>
+                    <p className="mb-6 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/50"><EditableText contentKey={cartPersistenceMode === 'supabase' ? 'shell.cart_drawer.note.synced' : 'shell.cart_drawer.note.local'} fallback={drawerNote} editorLabel="Cart drawer note" /></p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <a href={drawerPrimaryHref} onClick={() => setIsCartOpen(false)} className="hover-target transition-link w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center transition-colors hover:bg-black">{drawerPrimaryLabel}</a>
-                        <button onClick={() => setIsCartOpen(false)} className="hover-target w-full py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium transition-colors hover:border-[#1C1C1C]/25 hover:bg-white/50">Continue Shopping</button>
+                        <a href={drawerPrimaryHref} onClick={() => setIsCartOpen(false)} className="hover-target transition-link w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center transition-colors hover:bg-black"><EditableText contentKey={cartItems.length === 0 ? 'shell.cart_drawer.primary.explore' : 'shell.cart_drawer.primary.view_cart'} fallback={drawerPrimaryLabel} editorLabel="Cart drawer primary button" /></a>
+                        <button onClick={() => setIsCartOpen(false)} className="hover-target w-full py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium transition-colors hover:border-[#1C1C1C]/25 hover:bg-white/50"><EditableText contentKey="shell.cart_drawer.continue" fallback="Continue Shopping" editorLabel="Cart drawer continue shopping" /></button>
                     </div>
                 </div>
                 </div>

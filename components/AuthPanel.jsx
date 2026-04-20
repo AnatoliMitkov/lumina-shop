@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient, isSupabaseConfigured } from '../utils/supabase/client';
+import EditableText from './site-copy/EditableText';
 
 export default function AuthPanel({ initialMode = 'sign-in' }) {
     const supabase = isSupabaseConfigured() ? createClient() : null;
@@ -118,39 +119,39 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
         <div className="border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
             {!supabase && (
                 <div className="mb-8 rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Local Setup Needed</p>
-                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server to enable sign-in and account creation.</p>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45"><EditableText contentKey="auth.local_setup.eyebrow" fallback="Local Setup Needed" editorLabel="Auth local setup eyebrow" /></p>
+                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="auth.local_setup.copy" fallback="Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server to enable sign-in and account creation." editorLabel="Auth local setup copy" /></p>
                 </div>
             )}
 
             {mode === 'recovery' ? (
                 <div className="mb-8 rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8] px-4 py-4">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Password Recovery</p>
-                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62">Enter your email and the reset link will send you to a secure password update screen.</p>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45"><EditableText contentKey="auth.recovery.eyebrow" fallback="Password Recovery" editorLabel="Auth recovery eyebrow" /></p>
+                    <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="auth.recovery.copy" fallback="Enter your email and the reset link will send you to a secure password update screen." editorLabel="Auth recovery copy" /></p>
                 </div>
             ) : (
                 <div className="flex gap-2 mb-8 border border-[#1C1C1C]/10 p-1 rounded-full bg-[#EFECE8]">
-                    <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-in' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Login</button>
-                    <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-up' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}>Create Account</button>
+                    <button type="button" onClick={() => setMode('sign-in')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-in' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}><EditableText contentKey="auth.tabs.login" fallback="Login" editorLabel="Auth login tab" /></button>
+                    <button type="button" onClick={() => setMode('sign-up')} className={`flex-1 rounded-full px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors ${mode === 'sign-up' ? 'bg-[#1C1C1C] text-[#EFECE8]' : 'text-[#1C1C1C]/55 hover:text-[#1C1C1C]'}`}><EditableText contentKey="auth.tabs.create_account" fallback="Create Account" editorLabel="Auth create account tab" /></button>
                 </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 {mode === 'sign-up' && (
                     <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                        Full Name
+                        <EditableText contentKey="auth.fields.full_name" fallback="Full Name" editorLabel="Auth full name label" />
                         <input value={fullName} onChange={(event) => setFullName(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                     </label>
                 )}
 
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                    Email
+                    <EditableText contentKey="auth.fields.email" fallback="Email" editorLabel="Auth email label" />
                     <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                 </label>
 
                 {mode !== 'recovery' && (
                     <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                        Password
+                        <EditableText contentKey="auth.fields.password" fallback="Password" editorLabel="Auth password label" />
                         <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                     </label>
                 )}
@@ -160,7 +161,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                         setMode('recovery');
                         setStatus({ type: 'idle', message: '' });
                     }} className="w-fit text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 transition-colors hover:text-[#1C1C1C]">
-                        Forgot Password?
+                        <EditableText contentKey="auth.forgot_password" fallback="Forgot Password?" editorLabel="Auth forgot password" />
                     </button>
                 )}
 
@@ -169,7 +170,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                         setMode('sign-in');
                         setStatus({ type: 'idle', message: '' });
                     }} className="w-fit text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 transition-colors hover:text-[#1C1C1C]">
-                        Back To Login
+                        <EditableText contentKey="auth.back_to_login" fallback="Back To Login" editorLabel="Auth back to login" />
                     </button>
                 )}
 
@@ -178,7 +179,13 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 )}
 
                 <button disabled={isSubmitting || !supabase} className={`mt-2 h-14 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.24em] text-xs font-medium transition-colors hover:bg-black ${(isSubmitting || !supabase) ? 'opacity-60' : ''}`}>
-                    {isSubmitting ? 'Working...' : mode === 'sign-in' ? 'Enter Account' : mode === 'recovery' ? 'Send Reset Email' : 'Create Account'}
+                    {isSubmitting
+                        ? <EditableText contentKey="auth.submit.working" fallback="Working..." editorLabel="Auth submit working" />
+                        : mode === 'sign-in'
+                            ? <EditableText contentKey="auth.submit.enter_account" fallback="Enter Account" editorLabel="Auth submit enter account" />
+                            : mode === 'recovery'
+                                ? <EditableText contentKey="auth.submit.send_reset_email" fallback="Send Reset Email" editorLabel="Auth submit send reset email" />
+                                : <EditableText contentKey="auth.submit.create_account" fallback="Create Account" editorLabel="Auth submit create account" />}
                 </button>
             </form>
         </div>

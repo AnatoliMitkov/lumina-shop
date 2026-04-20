@@ -196,6 +196,13 @@ create table if not exists public.contact_inquiries (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.site_copy_entries (
+  key text primary key,
+  value text not null default '',
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.discount_codes (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
@@ -236,6 +243,7 @@ create table if not exists public.affiliate_codes (
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists contact_inquiries_user_id_idx on public.contact_inquiries (user_id);
 create index if not exists contact_inquiries_created_at_idx on public.contact_inquiries (created_at desc);
+create index if not exists site_copy_entries_updated_at_idx on public.site_copy_entries (updated_at desc);
 alter table public.discount_codes add column if not exists shipping_benefit text not null default 'none' check (shipping_benefit in ('none', 'sender_covers', 'receiver_covers'));
 create index if not exists discount_codes_code_idx on public.discount_codes (code);
 create index if not exists discount_codes_active_idx on public.discount_codes (is_active, starts_at, ends_at);
@@ -245,6 +253,7 @@ create index if not exists affiliate_codes_active_idx on public.affiliate_codes 
 drop trigger if exists carts_set_updated_at on public.carts;
 drop trigger if exists profiles_set_updated_at on public.profiles;
 drop trigger if exists contact_inquiries_set_updated_at on public.contact_inquiries;
+drop trigger if exists site_copy_entries_set_updated_at on public.site_copy_entries;
 drop trigger if exists discount_codes_set_updated_at on public.discount_codes;
 drop trigger if exists affiliate_codes_set_updated_at on public.affiliate_codes;
 drop trigger if exists payments_set_updated_at on public.payments;
@@ -278,6 +287,11 @@ before update on public.contact_inquiries
 for each row
 execute function public.set_updated_at();
 
+create trigger site_copy_entries_set_updated_at
+before update on public.site_copy_entries
+for each row
+execute function public.set_updated_at();
+
 create trigger discount_codes_set_updated_at
 before update on public.discount_codes
 for each row
@@ -297,6 +311,7 @@ alter table public.carts enable row level security;
 alter table public.orders enable row level security;
 alter table public.profiles enable row level security;
 alter table public.contact_inquiries enable row level security;
+alter table public.site_copy_entries enable row level security;
 alter table public.discount_codes enable row level security;
 alter table public.affiliate_codes enable row level security;
 alter table public.payments enable row level security;
@@ -312,6 +327,10 @@ drop policy if exists "Admins can update all orders" on public.orders;
 drop policy if exists "Users can view own contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can view all contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can update all contact inquiries" on public.contact_inquiries;
+drop policy if exists "Public can view site copy entries" on public.site_copy_entries;
+drop policy if exists "Admins can insert site copy entries" on public.site_copy_entries;
+drop policy if exists "Admins can update site copy entries" on public.site_copy_entries;
+drop policy if exists "Admins can delete site copy entries" on public.site_copy_entries;
 drop policy if exists "Admins can view all discount codes" on public.discount_codes;
 drop policy if exists "Admins can insert all discount codes" on public.discount_codes;
 drop policy if exists "Admins can update all discount codes" on public.discount_codes;
@@ -414,6 +433,59 @@ using (
   )
 )
 with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Public can view site copy entries"
+on public.site_copy_entries
+for select
+to anon, authenticated
+using (true);
+
+create policy "Admins can insert site copy entries"
+on public.site_copy_entries
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can update site copy entries"
+on public.site_copy_entries
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can delete site copy entries"
+on public.site_copy_entries
+for delete
+to authenticated
+using (
   exists (
     select 1
     from public.profiles
