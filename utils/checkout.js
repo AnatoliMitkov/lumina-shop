@@ -343,6 +343,19 @@ export function buildOrderDeliverySummary(order = {}) {
 }
 
 export function buildOrderAddressSummary(order = {}) {
+    const deliveryMethod = normalizeDeliveryMethod(order?.shipping_scope, order?.delivery_method);
+    const officeParts = [order?.shipping_office_label, order?.shipping_office_code].filter(Boolean);
+    const locationParts = [
+        order?.shipping_city,
+        order?.shipping_region,
+        order?.shipping_postal_code,
+        order?.shipping_country,
+    ].filter(Boolean);
+
+    if (deliveryMethod.endsWith('_office') && (officeParts.length > 0 || locationParts.length > 0)) {
+        return [...officeParts, ...locationParts].join(', ');
+    }
+
     const addressParts = [
         order?.shipping_address_line1,
         order?.shipping_address_line2,
@@ -355,8 +368,6 @@ export function buildOrderAddressSummary(order = {}) {
     if (addressParts.length > 0) {
         return addressParts.join(', ');
     }
-
-    const officeParts = [order?.shipping_office_label, order?.shipping_office_code].filter(Boolean);
 
     if (officeParts.length > 0) {
         return officeParts.join(' / ');
@@ -409,6 +420,12 @@ export function buildOrderShippingSummary(order = {}) {
 }
 
 export function buildOrderShippingMessage(order = {}) {
+    const shippingSource = toText(order?.pricing_snapshot?.shipping_source, 32);
+
+    if (shippingSource === 'threshold') {
+        return '';
+    }
+
     return toText(order?.pricing_snapshot?.shipping_message, 240);
 }
 
