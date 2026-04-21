@@ -380,13 +380,27 @@ body {
 }
 
 .storefront-home-display {
-    font-size: clamp(4rem, 11vw, 8rem);
+    font-size: clamp(3.55rem, 9.8vw, 8rem);
     line-height: 0.92;
     letter-spacing: -0.05em;
+    max-width: 100%;
+    text-wrap: balance;
 }
 
 .storefront-home-shift {
     margin-left: clamp(0rem, 4vw, 3.5rem);
+}
+
+@media (max-width: 767px) {
+    .storefront-home-display {
+        font-size: clamp(3rem, 13.6vw, 4.7rem);
+        line-height: 0.88;
+        letter-spacing: -0.045em;
+    }
+
+    .storefront-home-shift {
+        margin-left: 0;
+    }
 }
 
 .storefront-hero-display {

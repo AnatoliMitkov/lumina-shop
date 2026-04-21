@@ -16,6 +16,8 @@ import {
     sortProducts,
 } from '../utils/products';
 
+const MOBILE_ARCHIVE_MEDIA_QUERY = '(max-width: 767px)';
+
 function buildSearchString(product) {
     return [
         product.name,
@@ -209,7 +211,7 @@ function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
     }, [delayMs, value]);
 
     return (
-        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-3 md:p-5 flex flex-col gap-1.5 md:gap-2.5">
+        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 flex min-h-[5.75rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/50 p-3 md:min-h-[8.25rem] md:p-5">
             <p className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
             <p className="storefront-stat-display font-serif text-2xl md:text-[2.65rem] font-light leading-none text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
         </div>
@@ -233,7 +235,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
 
     return (
         <article
-            className="collection-product-card group relative flex flex-col gap-3 md:gap-5 opacity-100 transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="collection-product-card group relative mx-auto flex w-full max-w-[min(90vw,28rem)] flex-col gap-3 opacity-100 transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:max-w-none md:gap-5"
             style={cardStyle}
             onMouseEnter={onHoverStart}
             onMouseLeave={onHoverEnd}
@@ -281,9 +283,12 @@ export default function CollectionsArchive({ products = [] }) {
     const [cardsPerRow, setCardsPerRow] = useState(3);
     const [focusedProductId, setFocusedProductId] = useState(null);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [isMobileViewport, setIsMobileViewport] = useState(false);
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
-    const tabletColumns = Math.min(cardsPerRow, 4);
+    const mobileColumns = Math.max(1, Math.min(cardsPerRow, 4));
+    const tabletColumns = Math.max(1, Math.min(cardsPerRow, 4));
     const desktopColumns = Math.max(cardsPerRow, 2);
+    const cardsPerRowOptions = isMobileViewport ? [1, 2, 4] : [2, 3, 4, 6, 12];
     const normalizedProducts = useMemo(() => {
         return sortProducts(products)
             .map((product) => normalizeProductRecord(product))
@@ -318,6 +323,42 @@ export default function CollectionsArchive({ products = [] }) {
             setFocusedProductId(null);
         }
     }, [filteredProducts, focusedProductId]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const mediaQueryList = window.matchMedia(MOBILE_ARCHIVE_MEDIA_QUERY);
+
+        const syncViewport = (matchesMobile) => {
+            setIsMobileViewport(matchesMobile);
+            setCardsPerRow((currentValue) => {
+                const allowedOptions = matchesMobile ? [1, 2, 4] : [2, 3, 4, 6, 12];
+
+                if (allowedOptions.includes(currentValue)) {
+                    return currentValue;
+                }
+
+                return matchesMobile ? 1 : 3;
+            });
+        };
+
+        syncViewport(mediaQueryList.matches);
+
+        const handleChange = (event) => {
+            syncViewport(event.matches);
+        };
+
+        if (typeof mediaQueryList.addEventListener === 'function') {
+            mediaQueryList.addEventListener('change', handleChange);
+            return () => mediaQueryList.removeEventListener('change', handleChange);
+        }
+
+        mediaQueryList.addListener(handleChange);
+
+        return () => mediaQueryList.removeListener(handleChange);
+    }, []);
 
     useEffect(() => {
         if (!isFilterPanelOpen) {
@@ -512,10 +553,10 @@ export default function CollectionsArchive({ products = [] }) {
                                     <EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" />
                                     <select
                                         value={cardsPerRow}
-                                        onChange={(event) => setCardsPerRow(Number(event.target.value) || 3)}
+                                        onChange={(event) => setCardsPerRow(Number(event.target.value) || (isMobileViewport ? 1 : 3))}
                                         className="h-14 rounded-[1.05rem] border border-white/10 bg-white/[0.04] px-4 text-[10px] uppercase tracking-[0.22em] text-white outline-none transition-colors focus:border-white/24"
                                     >
-                                        {[2, 3, 4, 6, 12].map((option) => (
+                                        {cardsPerRowOptions.map((option) => (
                                             <option key={option} value={option}>{String(option).padStart(2, '0')}</option>
                                         ))}
                                     </select>
@@ -570,8 +611,9 @@ export default function CollectionsArchive({ products = [] }) {
                 </div>
             ) : (
                 <div
-                    className="grid grid-cols-2 gap-x-4 gap-y-9 md:gap-x-6 md:gap-y-14 md:[grid-template-columns:repeat(var(--archive-columns-tablet),minmax(0,1fr))] xl:[grid-template-columns:repeat(var(--archive-columns-desktop),minmax(0,1fr))]"
+                    className="grid justify-items-center gap-x-4 gap-y-9 [grid-template-columns:repeat(var(--archive-columns-mobile),minmax(0,1fr))] md:gap-x-6 md:gap-y-14 md:[grid-template-columns:repeat(var(--archive-columns-tablet),minmax(0,1fr))] xl:[grid-template-columns:repeat(var(--archive-columns-desktop),minmax(0,1fr))]"
                     style={{
+                        '--archive-columns-mobile': mobileColumns,
                         '--archive-columns-tablet': tabletColumns,
                         '--archive-columns-desktop': desktopColumns,
                     }}

@@ -837,14 +837,13 @@ export default function ClientEngine({ children }) {
                         </div>
 
                         <div className="mt-4 grid grid-cols-1 gap-2 text-[11px] uppercase tracking-[0.24em]">
-                            {categoryMenuItems.map((category, index) => (
+                            {categoryMenuItems.map((category) => (
                                 <a
                                     key={category}
                                     href={buildCollectionsHref({ category })}
-                                    className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-[#F1F1F1] transition-colors hover:bg-white/[0.11]"
+                                    className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-[#F1F1F1] transition-colors hover:bg-white/[0.11]"
                                 >
                                     <span>{category}</span>
-                                    <span className="text-[#F1F1F1]/30">{String(index + 1).padStart(2, '0')}</span>
                                 </a>
                             ))}
                         </div>
@@ -877,26 +876,25 @@ export default function ClientEngine({ children }) {
 
                             <div className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ${isCollectionsSubmenuOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'}`}>
                                 <div className="min-h-0 flex flex-col gap-2 pl-4">
-                                    <a href="/collections" onClick={handleMobileNavClose} className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"><span><EditableText contentKey="shell.mobile_menu.view_all_collections" fallback="View All Collections" editorLabel="Mobile menu view all collections" /></span><span className="text-white/24">00</span></a>
-                                    {categoryMenuItems.map((category, index) => (
+                                    <a href="/collections" onClick={handleMobileNavClose} className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"><span><EditableText contentKey="shell.mobile_menu.view_all_collections" fallback="View All Collections" editorLabel="Mobile menu view all collections" /></span></a>
+                                    {categoryMenuItems.map((category) => (
                                         <a
                                             key={category}
                                             href={buildCollectionsHref({ category })}
                                             onClick={handleMobileNavClose}
-                                            className="hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"
+                                            className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"
                                         >
                                             <span>{category}</span>
-                                            <span className="text-white/24">{String(index + 1).padStart(2, '0')}</span>
                                         </a>
                                     ))}
                                 </div>
                             </div>
                         </div>
 
-                        <a href="/spotlight" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span><span className="text-white/26">02</span></a>
-                        <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></span><span className="text-white/26">03</span></a>
-                        <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></span><span className="text-white/26">04</span></a>
-                        <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></span><span className="text-white/26">{String(cartItems.length).padStart(2, '0')}</span></a>
+                        <a href="/spotlight" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span></a>
+                        <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></span></a>
+                        <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></span></a>
+                        <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></span></a>
                     </div>
                 </div>
             </div>
@@ -925,7 +923,7 @@ export default function ClientEngine({ children }) {
                             </div>
                         </div>
 
-                        <div className="flex flex-col">
+                        <div className="col-start-1 row-start-3 flex flex-col md:col-start-auto md:row-start-auto">
                             <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback="Client" editorLabel="Footer client title" /></span>
                             <div className="flex flex-col gap-3">
                                 <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
@@ -935,9 +933,9 @@ export default function ClientEngine({ children }) {
                             </div>
                         </div>
 
-                        <div className="col-span-2 md:col-span-1 flex flex-col">
+                        <div className="col-start-2 row-start-2 row-span-2 flex flex-col border-l border-white/10 pl-4 text-right md:col-span-1 md:col-start-auto md:row-start-auto md:row-span-1 md:border-l-0 md:pl-0 md:text-left">
                             <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
-                            <div className="flex flex-col gap-2.5 normal-case tracking-normal text-sm font-normal text-white/55">
+                            <div className="flex h-full flex-col gap-2.5 normal-case tracking-normal text-sm font-normal text-white/55 md:h-auto">
                                 <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback="Ruse, Bulgaria" editorLabel="Footer location" /></p>
                                 <p><EditableText contentKey="shell.footer.atelier_name" fallback="Styling by VA Atelier" editorLabel="Footer atelier name" /></p>
                                 <p className="hidden md:block"><EditableText contentKey="shell.footer.atelier_copy" fallback="Editorial spotlight and personal support for signature pieces" editorLabel="Footer atelier copy" /></p>
