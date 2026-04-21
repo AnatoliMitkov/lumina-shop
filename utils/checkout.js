@@ -38,7 +38,7 @@ const deliveryMethodOptionsByScope = {
         {
             value: 'speedy_office',
             label: 'Speedy Office Pickup',
-            copy: 'Structure ready for Speedy office selection and map integration later.',
+            copy: 'Pick up from a Speedy office in Bulgaria.',
         },
         {
             value: 'econt_address',
@@ -48,7 +48,7 @@ const deliveryMethodOptionsByScope = {
         {
             value: 'econt_office',
             label: 'ECONT Office Pickup',
-            copy: 'Structure ready for ECONT office selection and map integration later.',
+            copy: 'Pick up from an ECONT office in Bulgaria.',
         },
     ],
     worldwide: [
@@ -113,8 +113,8 @@ export function normalizeDeliveryMethod(shippingScope, value) {
     return matchingOption?.value || options[0]?.value || 'worldwide_quote';
 }
 
-function hasOfficeDeliveryDetails({ shippingCity = '', shippingOfficeLabel = '', shippingOfficeCode = '' } = {}) {
-    return Boolean(toText(shippingCity, 120) && (toText(shippingOfficeLabel, 160) || toText(shippingOfficeCode, 80)));
+function hasOfficeDeliveryDetails({ shippingCity = '', shippingOfficeLabel = '' } = {}) {
+    return Boolean(toText(shippingCity, 120) && toText(shippingOfficeLabel, 160));
 }
 
 function hasAddressDeliveryDetails({ shippingCountry = '', shippingCity = '', shippingAddressLine1 = '' } = {}) {

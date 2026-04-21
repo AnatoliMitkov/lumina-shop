@@ -139,8 +139,6 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const [shippingRegion, setShippingRegion] = useState('');
     const [shippingPostalCode, setShippingPostalCode] = useState('');
     const [shippingAddressLine1, setShippingAddressLine1] = useState('');
-    const [shippingAddressLine2, setShippingAddressLine2] = useState('');
-    const [shippingOfficeCode, setShippingOfficeCode] = useState('');
     const [shippingOfficeLabel, setShippingOfficeLabel] = useState('');
     const [shippingMapUrl, setShippingMapUrl] = useState('');
     const [discountCode, setDiscountCode] = useState('');
@@ -156,7 +154,6 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
             shippingCity: '',
             shippingAddressLine1: '',
             shippingOfficeLabel: '',
-            shippingOfficeCode: '',
         },
     }));
     const [pricingStatus, setPricingStatus] = useState('idle');
@@ -218,7 +215,6 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         shippingCity,
         shippingAddressLine1,
         shippingOfficeLabel,
-        shippingOfficeCode,
     };
     const shippingAmount = pricingPreview.shippingAmount;
     const discountAmount = pricingPreview.discountAmount;
@@ -321,7 +317,6 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
         shippingAddressLine1,
         shippingCity,
         shippingCountry,
-        shippingOfficeCode,
         shippingOfficeLabel,
         shippingScope,
         structuredCheckoutReady,
@@ -343,8 +338,6 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
             shippingRegion,
             shippingPostalCode,
             shippingAddressLine1,
-            shippingAddressLine2,
-            shippingOfficeCode,
             shippingOfficeLabel,
             shippingMapUrl,
             subtotal: orderSubtotal,
@@ -559,32 +552,17 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         </label>
 
                         {needsCustomAddress && (
-                            <>
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.custom_address" fallback="Custom Address" editorLabel="Checkout custom address label" /> : <EditableText contentKey="checkout.delivery.address_line_one" fallback="Address Line 1" editorLabel="Checkout address line one label" />}
-                                    <input value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                                </label>
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.address_details" fallback="Address Details" editorLabel="Checkout address details label" /> : <EditableText contentKey="checkout.delivery.address_line_two" fallback="Address Line 2" editorLabel="Checkout address line two label" />}
-                                    <input value={shippingAddressLine2} onChange={(event) => setShippingAddressLine2(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                                </label>
-                            </>
+                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
+                                {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.custom_address" fallback="Delivery Address" editorLabel="Checkout custom address label" /> : <EditableText contentKey="checkout.delivery.address_line_one" fallback="Address Line 1" editorLabel="Checkout address line one label" />}
+                                <input value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            </label>
                         )}
 
                         {requiresOfficeDetails && (
-                            <>
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
-                                    <EditableText contentKey="checkout.delivery.office_label" fallback="Office Name / Label" editorLabel="Checkout office label" />
-                                    <input value={shippingOfficeLabel} onChange={(event) => setShippingOfficeLabel(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                                </label>
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                                    <EditableText contentKey="checkout.delivery.office_code" fallback="Office Code" editorLabel="Checkout office code label" />
-                                    <input value={shippingOfficeCode} onChange={(event) => setShippingOfficeCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                                </label>
-                                <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62 md:col-span-1">
-                                    <EditableText contentKey="checkout.delivery.office_notice" fallback="Speedy and ECONT office-map integration will plug into these fields once the carrier credentials and verified office endpoints are ready, so the checkout stays stable instead of guessing against undocumented APIs." editorLabel="Checkout office notice" />
-                                </div>
-                            </>
+                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
+                                <EditableText contentKey="checkout.delivery.office_label" fallback="Pickup Office" editorLabel="Checkout office label" />
+                                <input value={shippingOfficeLabel} onChange={(event) => setShippingOfficeLabel(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            </label>
                         )}
 
                         {shippingScope === 'worldwide' && (
@@ -745,7 +723,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.summary.title" fallback="Selection Review" editorLabel="Checkout summary title" /></h3>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                             <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.pieces" fallback="Pieces" editorLabel="Checkout summary pieces" /></p>
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{cartItems.length}</p>
@@ -754,7 +732,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.savings" fallback="Savings" editorLabel="Checkout summary savings" /></p>
                             <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatCurrency(discountAmount)}</p>
                         </div>
-                        <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
+                        <div className="col-span-2 border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 sm:col-span-1">
                             <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="checkout.summary.shipping" fallback="Shipping" editorLabel="Checkout summary shipping" /></p>
                             <p className="font-serif text-xl font-light leading-tight text-[#1C1C1C]">{shippingDisplayValue}</p>
                         </div>

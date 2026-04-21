@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import EditableMediaAsset from './EditableMediaAsset';
 import { detectEditableMediaKind } from './media-kind';
 import { createDefaultMediaSettings, resolveSiteCopyMediaEntry, serializeSiteCopyMediaEntry } from '../../utils/site-copy';
+import { PRODUCT_STORAGE_BUCKET } from '../../utils/products';
+import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../../utils/supabase/client';
 
 const SiteCopyContext = createContext(null);
 
@@ -18,6 +20,71 @@ function PencilIcon() {
 
 function clamp(value, minValue, maxValue) {
     return Math.min(Math.max(value, minValue), maxValue);
+}
+
+const MEDIA_PRESET_OPTIONS = [
+    {
+        key: 'hero',
+        label: 'Hero',
+        copy: 'Immersive cover framing with a little extra scale.',
+        settings: {
+            fitDesktop: 'cover',
+            fitMobile: 'cover',
+            positionDesktop: { x: 50, y: 38 },
+            positionMobile: { x: 50, y: 34 },
+            scaleDesktop: 1.06,
+            scaleMobile: 1.14,
+        },
+    },
+    {
+        key: 'editorial-plate',
+        label: 'Editorial Plate',
+        copy: 'Contained framing for collages and portrait-heavy compositions.',
+        settings: {
+            fitDesktop: 'contain',
+            fitMobile: 'contain',
+            positionDesktop: { x: 50, y: 50 },
+            positionMobile: { x: 50, y: 50 },
+            scaleDesktop: 0.94,
+            scaleMobile: 0.9,
+        },
+    },
+    {
+        key: 'full-bleed',
+        label: 'Full Bleed',
+        copy: 'Clean edge-to-edge framing with centered focus.',
+        settings: {
+            fitDesktop: 'cover',
+            fitMobile: 'cover',
+            positionDesktop: { x: 50, y: 50 },
+            positionMobile: { x: 50, y: 50 },
+            scaleDesktop: 1,
+            scaleMobile: 1,
+        },
+    },
+    {
+        key: 'portrait-crop',
+        label: 'Portrait Crop',
+        copy: 'Balanced framing for tall portrait images inside wide slots.',
+        settings: {
+            fitDesktop: 'contain',
+            fitMobile: 'cover',
+            positionDesktop: { x: 50, y: 28 },
+            positionMobile: { x: 50, y: 24 },
+            scaleDesktop: 1,
+            scaleMobile: 1.08,
+        },
+    },
+];
+
+function slugifySiteCopyKey(value = 'site-media') {
+    const normalizedValue = String(value || 'site-media')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+
+    return normalizedValue || 'site-media';
 }
 
 function MediaPreviewSurface({ label, viewport, mediaConfig, previewKind, onUpdatePosition }) {
@@ -119,10 +186,13 @@ function SiteCopyEditor({
     draftTextValue,
     draftMediaValue,
     isSaving,
+    isUploadingMedia,
+    uploadFeedback,
     saveError,
     onCancel,
     onTextChange,
     onMediaChange,
+    onMediaUpload,
     onSave,
 }) {
     const [activeViewport, setActiveViewport] = useState('desktop');
@@ -162,11 +232,14 @@ function SiteCopyEditor({
     const activeViewportFit = resolvedDraftMediaValue?.[viewportKeyMap.fit] || 'cover';
     const activeViewportScale = resolvedDraftMediaValue?.[viewportKeyMap.scale] || 1;
     const defaultViewportSettings = createDefaultMediaSettings(activeEntry.defaultMediaSettings || {});
+    const uploadFeedbackClassName = uploadFeedback?.type === 'error' ? 'text-red-300' : 'text-emerald-300';
 
     return (
-        <div className="fixed inset-0 z-[260] flex items-end justify-center bg-[#1C1C1C]/55 p-4 backdrop-blur-sm sm:items-center">
-            <div className={`w-full rounded-[1.8rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-6 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:p-7 ${isMediaEntry ? 'max-w-6xl' : 'max-w-2xl'}`}>
-                <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+        <div className="fixed inset-0 z-[260] flex items-end justify-center p-4 backdrop-blur-sm sm:items-center">
+            <button type="button" aria-label="Close editor" onClick={onCancel} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
+
+            <div className={`relative flex w-full max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.55rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:max-h-[calc(100vh-3rem)] sm:p-7 ${isMediaEntry ? 'max-w-6xl' : 'max-w-2xl'}`}>
+                <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 pb-5">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : 'Inline Copy Editor'}</p>
                         <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white">{activeEntry.label}</h3>
@@ -181,26 +254,40 @@ function SiteCopyEditor({
                     </button>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-4">
+                <div data-lenis-prevent-wheel className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1">
                     {isMediaEntry ? (
                         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_22rem]">
                             <div className="flex flex-col gap-5">
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                                    Media URL
-                                    <input
-                                        type="text"
-                                        value={resolvedDraftMediaValue?.src || ''}
-                                        onChange={(event) => {
-                                            const nextSource = event.target.value;
-                                            updateMediaDraft((currentMediaValue) => ({
-                                                ...currentMediaValue,
-                                                src: nextSource,
-                                            }));
-                                        }}
-                                        className="h-14 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
-                                        placeholder="https://example.com/image.jpg or /banner.jpg"
-                                    />
-                                </label>
+                                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10.5rem]">
+                                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                                        Media URL
+                                        <input
+                                            type="text"
+                                            value={resolvedDraftMediaValue?.src || ''}
+                                            onChange={(event) => {
+                                                const nextSource = event.target.value;
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    src: nextSource,
+                                                }));
+                                            }}
+                                            className="h-14 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
+                                            placeholder="https://example.com/image.jpg or /banner.jpg"
+                                        />
+                                    </label>
+
+                                    <label className={`flex cursor-pointer flex-col justify-end gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48 ${isUploadingMedia ? 'opacity-60' : ''}`}>
+                                        Upload File
+                                        <span className={`flex h-14 items-center justify-center rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors ${isUploadingMedia ? '' : 'hover:bg-white/[0.08] hover:text-white'}`}>
+                                            {isUploadingMedia ? 'Uploading' : 'Select File'}
+                                        </span>
+                                        <input type="file" accept="image/*,video/*" className="hidden" onChange={onMediaUpload} disabled={isUploadingMedia} />
+                                    </label>
+                                </div>
+
+                                {uploadFeedback?.type !== 'idle' && (
+                                    <p className={`text-sm leading-relaxed ${uploadFeedbackClassName}`}>{uploadFeedback.message}</p>
+                                )}
 
                                 <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 md:p-5">
                                     <div className="flex flex-col gap-2 border-b border-white/8 pb-4 md:flex-row md:items-center md:justify-between">
@@ -251,6 +338,32 @@ function SiteCopyEditor({
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Adjustments</p>
                                     <span className="text-[10px] uppercase tracking-[0.24em] text-white/32">Precise Controls</span>
+                                </div>
+
+                                <div className="mt-5 flex flex-col gap-3 border-b border-white/8 pb-5">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Presets</p>
+                                        <span className="text-[10px] uppercase tracking-[0.24em] text-white/32">Starting Points</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                        {MEDIA_PRESET_OPTIONS.map((preset) => (
+                                            <button
+                                                key={preset.key}
+                                                type="button"
+                                                onClick={() => {
+                                                    updateMediaDraft((currentMediaValue) => ({
+                                                        ...(currentMediaValue || {}),
+                                                        ...preset.settings,
+                                                    }));
+                                                }}
+                                                className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-colors hover:bg-white/[0.07]"
+                                            >
+                                                <span className="block text-[10px] uppercase tracking-[0.24em] text-white/72">{preset.label}</span>
+                                                <span className="mt-2 block text-[11px] leading-relaxed text-white/45 normal-case tracking-normal">{preset.copy}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
@@ -426,24 +539,24 @@ function SiteCopyEditor({
                     )}
 
                     {saveError && <p className="text-sm leading-relaxed text-red-300">{saveError}</p>}
+                </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className="hover-target rounded-full border border-white/12 bg-white/5 px-5 py-3 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSave}
-                            disabled={isSaving}
-                            className={`hover-target rounded-full bg-[#EFE7DA] px-6 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors ${isSaving ? 'opacity-60' : 'hover:bg-white'}`}
-                        >
-                            {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : 'Save Text'}
-                        </button>
-                    </div>
+                <div className="mt-5 flex shrink-0 flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="hover-target rounded-full border border-white/12 bg-white/5 px-5 py-3 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onSave}
+                        disabled={isSaving || isUploadingMedia}
+                        className={`hover-target rounded-full bg-[#EFE7DA] px-6 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors ${isSaving || isUploadingMedia ? 'opacity-60' : 'hover:bg-white'}`}
+                    >
+                        {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : 'Save Text'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -458,6 +571,8 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const [draftTextValue, setDraftTextValue] = useState('');
     const [draftMediaValue, setDraftMediaValue] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+    const [uploadFeedback, setUploadFeedback] = useState({ type: 'idle', message: '' });
     const [saveError, setSaveError] = useState('');
     const hoverClearTimeoutRef = useRef(null);
 
@@ -502,6 +617,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
     const openEditor = useCallback((entry) => {
         setActiveEntry(entry);
+        setIsUploadingMedia(false);
         if (entry.entryType === 'media') {
             setDraftMediaValue(resolveSiteCopyMediaEntry(
                 Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback,
@@ -513,6 +629,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
             setDraftTextValue(Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback);
             setDraftMediaValue(null);
         }
+        setUploadFeedback({ type: 'idle', message: '' });
         setSaveError('');
     }, [entries]);
 
@@ -554,8 +671,68 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         }, 120);
     }, [isAdmin, isEditMode]);
 
+    const handleMediaUpload = useCallback(async (event) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!activeEntry || activeEntry.entryType !== 'media') {
+            event.target.value = '';
+            return;
+        }
+
+        setIsUploadingMedia(true);
+        setUploadFeedback({ type: 'idle', message: '' });
+
+        try {
+            if (!isSupabaseConfigured()) {
+                throw new Error('Supabase browser upload is not configured in this environment yet.');
+            }
+
+            const supabase = createBrowserSupabaseClient();
+            const extension = file.name.split('.').pop()?.toLowerCase() || (file.type.startsWith('video/') ? 'mp4' : 'jpg');
+            const filePath = `site-copy/${slugifySiteCopyKey(activeEntry.key)}-${Date.now()}.${extension}`;
+            const { error } = await supabase.storage.from(PRODUCT_STORAGE_BUCKET).upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: file.type || undefined,
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            const { data } = supabase.storage.from(PRODUCT_STORAGE_BUCKET).getPublicUrl(filePath);
+            const uploadedUrl = data?.publicUrl;
+
+            if (!uploadedUrl) {
+                throw new Error('Upload completed, but the public URL could not be resolved.');
+            }
+
+            setDraftMediaValue((currentMediaValue) => resolveSiteCopyMediaEntry(
+                {
+                    ...(currentMediaValue || {}),
+                    src: uploadedUrl,
+                },
+                activeEntry.fallback,
+                activeEntry.defaultMediaSettings || {},
+            ));
+            setUploadFeedback({
+                type: 'success',
+                message: file.type.startsWith('video/') ? 'Video uploaded to Supabase Storage.' : 'Media uploaded to Supabase Storage.',
+            });
+        } catch (error) {
+            setUploadFeedback({ type: 'error', message: error.message || 'Unable to upload this media file.' });
+        } finally {
+            event.target.value = '';
+            setIsUploadingMedia(false);
+        }
+    }, [activeEntry]);
+
     const saveActiveEntry = useCallback(async () => {
-        if (!activeEntry || isSaving) {
+        if (!activeEntry || isSaving || isUploadingMedia) {
             return;
         }
 
@@ -584,12 +761,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                 [activeEntry.key]: data.entry?.value ?? nextValue,
             }));
             setActiveEntry(null);
+            setUploadFeedback({ type: 'idle', message: '' });
         } catch (error) {
             setSaveError(error.message || 'Unable to save this entry right now.');
         } finally {
             setIsSaving(false);
         }
-    }, [activeEntry, draftMediaValue, draftTextValue, isSaving]);
+    }, [activeEntry, draftMediaValue, draftTextValue, isSaving, isUploadingMedia]);
 
     const hoverButtonStyle = hoveredEntry?.rect
         ? {
@@ -653,13 +831,18 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                         draftTextValue={draftTextValue}
                         draftMediaValue={draftMediaValue}
                         isSaving={isSaving}
+                        isUploadingMedia={isUploadingMedia}
+                        uploadFeedback={uploadFeedback}
                         saveError={saveError}
                         onCancel={() => {
                             setActiveEntry(null);
+                            setIsUploadingMedia(false);
+                            setUploadFeedback({ type: 'idle', message: '' });
                             setSaveError('');
                         }}
                         onTextChange={setDraftTextValue}
                         onMediaChange={setDraftMediaValue}
+                        onMediaUpload={handleMediaUpload}
                         onSave={saveActiveEntry}
                     />
                 </>

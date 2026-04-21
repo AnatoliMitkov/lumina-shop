@@ -192,11 +192,10 @@ export async function POST(request) {
     if (
       checkout.delivery.deliveryMethod.endsWith('_office')
       && !checkout.delivery.shippingOfficeLabel
-      && !checkout.delivery.shippingOfficeCode
     ) {
       const response = NextResponse.json(
         {
-          error: 'Please provide the pickup office details before submitting the order.',
+          error: 'Please provide the pickup office before submitting the order.',
         },
         { status: 400 }
       );

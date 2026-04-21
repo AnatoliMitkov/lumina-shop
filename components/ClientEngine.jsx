@@ -901,24 +901,24 @@ export default function ClientEngine({ children }) {
                 </div>
             </div>
 
-            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[30rem] md:mb-[18rem] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
+            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[24rem] md:mb-[18rem] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 <div id="smooth-content">
                     {children}
                 </div>
             </div>
 
-            <footer className="fixed bottom-0 left-0 w-full h-[30rem] md:h-[18rem] z-0 bg-[#1C1C1C] text-[#EFECE8] px-6 md:px-8 xl:px-10 py-5">
-                <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-5 md:gap-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8 md:gap-x-16 md:gap-y-8 text-xs uppercase tracking-[0.15em] font-medium">
-                        <div className="flex flex-col gap-4 max-w-sm">
-                            <h3 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
-                            <p className="text-xs md:text-sm tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback="Beautiful People Smile More" editorLabel="Footer slogan" /></p>
-                            <p className="text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Footer brand copy" /></p>
+            <footer className="fixed bottom-0 left-0 w-full h-[24rem] md:h-[18rem] z-0 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 py-5">
+                <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 md:grid-cols-4 md:gap-x-16 md:gap-y-8 text-[11px] md:text-xs uppercase tracking-[0.15em] font-medium">
+                        <div className="col-span-2 flex flex-col gap-3 max-w-sm">
+                            <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
+                            <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback="Beautiful People Smile More" editorLabel="Footer slogan" /></p>
+                            <p className="hidden md:block text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Footer brand copy" /></p>
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.explore_title" fallback="Explore" editorLabel="Footer explore title" /></span>
-                            <div className="flex flex-col gap-4">
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.explore_title" fallback="Explore" editorLabel="Footer explore title" /></span>
+                            <div className="flex flex-col gap-3">
                                 <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.home" fallback="Home" editorLabel="Footer Home label" /></a>
                                 <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></a>
                                 <a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
@@ -926,8 +926,8 @@ export default function ClientEngine({ children }) {
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback="Client" editorLabel="Footer client title" /></span>
-                            <div className="flex flex-col gap-4">
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback="Client" editorLabel="Footer client title" /></span>
+                            <div className="flex flex-col gap-3">
                                 <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
                                 <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
                                 <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.contact_form" fallback="Contact Form" editorLabel="Footer contact form label" /></a>
@@ -935,41 +935,41 @@ export default function ClientEngine({ children }) {
                             </div>
                         </div>
 
-                        <div className="flex flex-col">
-                            <span className="mb-4 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
-                            <div className="flex flex-col gap-4 normal-case tracking-normal text-sm font-normal text-white/55">
+                        <div className="col-span-2 md:col-span-1 flex flex-col">
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
+                            <div className="flex flex-col gap-2.5 normal-case tracking-normal text-sm font-normal text-white/55">
                                 <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback="Ruse, Bulgaria" editorLabel="Footer location" /></p>
                                 <p><EditableText contentKey="shell.footer.atelier_name" fallback="Styling by VA Atelier" editorLabel="Footer atelier name" /></p>
-                                <p><EditableText contentKey="shell.footer.atelier_copy" fallback="Editorial spotlight and personal support for signature pieces" editorLabel="Footer atelier copy" /></p>
+                                <p className="hidden md:block"><EditableText contentKey="shell.footer.atelier_copy" fallback="Editorial spotlight and personal support for signature pieces" editorLabel="Footer atelier copy" /></p>
                             </div>
                         </div>
                     </div>
 
-                        <div className="flex flex-col gap-4 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 md:flex-row md:items-center md:justify-between">
-                        <p><EditableText contentKey="shell.footer.copyright" fallback="© 2026 The VA Store." editorLabel="Footer copyright" /></p>
-                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center md:justify-start">
+                    <div className="grid gap-3 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 md:flex md:items-center md:justify-between">
+                        <p className="text-center md:text-left"><EditableText contentKey="shell.footer.copyright" fallback="© 2026 The VA Store." editorLabel="Footer copyright" /></p>
+                        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center md:justify-start">
                                 <a href="/privacy-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.privacy_policy" fallback="Privacy Policy" editorLabel="Footer privacy policy label" /></a>
                                 <a href="/cookie-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.cookie_policy" fallback="Cookie Policy" editorLabel="Footer cookie policy label" /></a>
                                 <a href="https://www.instagram.com/va.storeofficial/" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.instagram" fallback="Instagram" editorLabel="Footer Instagram label" /></a>
                                 <a href="https://www.facebook.com/profile.php?id=61584052437151" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.facebook" fallback="Facebook" editorLabel="Footer Facebook label" /></a>
                                 <a href="https://www.tiktok.com/@2hotbyva" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.tiktok" fallback="TikTok" editorLabel="Footer TikTok label" /></a>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback="Page Motion" editorLabel="Footer page motion label" /></span>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={hasMounted ? isPageMotionEnabled : true}
-                                    aria-label={hasMounted && !isPageMotionEnabled ? 'Turn page motion on' : 'Turn page motion off'}
-                                    onClick={togglePageMotion}
-                                    className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-white/72 transition-colors hover:bg-white/[0.08]"
-                                >
-                                    <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
-                                        <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
-                                    </span>
-                                    <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
-                                </button>
-                            </div>
+                        </div>
+                        <div className="mx-auto flex items-center justify-center gap-3 md:mx-0">
+                            <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback="Page Motion" editorLabel="Footer page motion label" /></span>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={hasMounted ? isPageMotionEnabled : true}
+                                aria-label={hasMounted && !isPageMotionEnabled ? 'Turn page motion on' : 'Turn page motion off'}
+                                onClick={togglePageMotion}
+                                className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-white/72 transition-colors hover:bg-white/[0.08]"
+                            >
+                                <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
+                                    <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
+                                </span>
+                                <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
+                            </button>
+                        </div>
                         <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
                     </div>
                 </div>

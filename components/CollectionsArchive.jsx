@@ -70,12 +70,19 @@ function resolveFilterValue(value, options = []) {
     return options.find((option) => option.toLowerCase() === normalizedValue) || 'All';
 }
 
-function FilterButton({ label, isActive, onClick }) {
+function FilterButton({ label, isActive, onClick, theme = 'light' }) {
+    const activeClassName = theme === 'dark'
+        ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]'
+        : 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]';
+    const inactiveClassName = theme === 'dark'
+        ? 'border-white/10 bg-white/[0.04] text-white/62 hover:border-white/24 hover:text-white'
+        : 'border-[#1C1C1C]/12 bg-white/60 text-[#1C1C1C]/58 hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]';
+
     return (
         <button
             type="button"
             onClick={onClick}
-            className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.24em] transition-colors ${isActive ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/12 bg-white/60 text-[#1C1C1C]/58 hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]'}`}
+            className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.24em] transition-colors ${isActive ? activeClassName : inactiveClassName}`}
         >
             {label}
         </button>
@@ -202,10 +209,9 @@ function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
     }, [delayMs, value]);
 
     return (
-        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-4 md:p-5 flex flex-col gap-2.5">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
-            <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
-            <p className="text-xs md:text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={copyKey} fallback={copy} editorLabel={`${label} stat copy`} /></p>
+        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-3 md:p-5 flex flex-col gap-1.5 md:gap-2.5">
+            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
+            <p className="storefront-stat-display font-serif text-2xl md:text-[2.65rem] font-light leading-none text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
         </div>
     );
 }
@@ -227,37 +233,37 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
 
     return (
         <article
-            className="collection-product-card group relative flex flex-col gap-4 md:gap-5 opacity-100 transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="collection-product-card group relative flex flex-col gap-3 md:gap-5 opacity-100 transition-[transform,opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={cardStyle}
             onMouseEnter={onHoverStart}
             onMouseLeave={onHoverEnd}
             onFocusCapture={onHoverStart}
             onBlurCapture={onHoverEnd}
         >
-            <div className="pointer-events-none absolute inset-x-5 top-6 bottom-24 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
+            <div className="pointer-events-none absolute inset-x-3 top-4 bottom-20 -z-10 rounded-[1.4rem] md:inset-x-5 md:top-6 md:bottom-24 md:rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
 
             <a href={href} className="transition-link w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text="Inspect">
                 <img className={`w-full h-full object-cover transition-transform duration-[1.8s] ease-out ${isFocused ? 'scale-[1.08]' : 'group-hover:scale-[1.04]'}`} src={image} alt={product.name} />
             </a>
 
-            <div className="collection-card-copy flex flex-col gap-3 transition-[transform,opacity] duration-500 ease-out">
-                <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                    <span className={`rounded-full border px-3 py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.collection}</span>
-                    <span className={`rounded-full border px-3 py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.category}</span>
+            <div className="collection-card-copy flex flex-col gap-2.5 md:gap-3 transition-[transform,opacity] duration-500 ease-out">
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] uppercase tracking-[0.18em] md:tracking-[0.22em] text-[#1C1C1C]/42">
+                    <span className={`rounded-full border px-2.5 py-1.5 md:px-3 md:py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.collection}</span>
+                    <span className={`hidden sm:inline-flex rounded-full border px-3 py-2 transition-colors duration-300 ${isFocused ? 'border-[#1C1C1C]/18 bg-white text-[#1C1C1C]' : 'border-[#1C1C1C]/10 bg-white/60'}`}>{product.category}</span>
                 </div>
 
-                <div className="flex items-end justify-between gap-4">
-                    <div>
-                        <a href={href} className="transition-link font-serif text-xl md:text-2xl xl:text-[1.75rem] font-light leading-[0.94] uppercase tracking-[0.06em] hover-target [overflow-wrap:anywhere]">{product.name}</a>
-                        {product.subtitle && <p className="mt-3 max-w-md text-sm leading-relaxed text-[#1C1C1C]/58">{product.subtitle}</p>}
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-4">
+                    <div className="min-w-0">
+                        <a href={href} className="transition-link font-serif text-[1rem] sm:text-[1.1rem] md:text-2xl xl:text-[1.75rem] font-light leading-[1.02] md:leading-[0.94] uppercase tracking-[0.05em] md:tracking-[0.06em] hover-target [overflow-wrap:anywhere]">{product.name}</a>
+                        {product.subtitle && <p className="mt-2 hidden max-w-md text-sm leading-relaxed text-[#1C1C1C]/58 md:block">{product.subtitle}</p>}
                     </div>
 
-                    <p className="shrink-0 text-sm uppercase tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
+                    <p className="shrink-0 text-xs md:text-sm uppercase tracking-[0.18em] md:tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
                 </div>
 
-                <div className="flex items-center justify-between gap-4 border-t border-[#1C1C1C]/10 pt-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">
+                <div className="flex flex-col gap-1.5 border-t border-[#1C1C1C]/10 pt-3 text-[9px] md:flex-row md:items-center md:justify-between md:gap-4 md:pt-4 md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.24em] text-[#1C1C1C]/45">
                     <span>{product.inventory_count > 0 ? `${product.inventory_count} ready` : 'Made to order'}</span>
-                    <span>{product.lead_time_days} day lead time</span>
+                    <span className="hidden sm:inline">{product.lead_time_days} day lead time</span>
                 </div>
             </div>
         </article>
@@ -274,6 +280,7 @@ export default function CollectionsArchive({ products = [] }) {
     const [searchValue, setSearchValue] = useState('');
     const [cardsPerRow, setCardsPerRow] = useState(3);
     const [focusedProductId, setFocusedProductId] = useState(null);
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
     const tabletColumns = Math.min(cardsPerRow, 4);
     const desktopColumns = Math.max(cardsPerRow, 2);
@@ -290,7 +297,6 @@ export default function CollectionsArchive({ products = [] }) {
     }, [normalizedProducts]);
     const activeCollection = resolveFilterValue(searchParams.get('collection'), collectionOptions);
     const activeCategory = resolveFilterValue(searchParams.get('category'), categoryOptions);
-    const featuredProducts = normalizedProducts.filter((product) => product.featured).slice(0, 5);
     const searchPlaceholder = siteCopy ? siteCopy.resolveText('collections.filters.search_placeholder', 'Search by collection, category, mood, or name') : 'Search by collection, category, mood, or name';
     const filteredProducts = normalizedProducts.filter((product) => {
         const matchesCollection = activeCollection === 'All' || product.collection === activeCollection;
@@ -299,11 +305,37 @@ export default function CollectionsArchive({ products = [] }) {
 
         return matchesCollection && matchesCategory && matchesSearch;
     });
+    const hasActiveFilters = activeCollection !== 'All' || activeCategory !== 'All' || Boolean(searchValue);
+    const activeFilterCount = [activeCollection !== 'All', activeCategory !== 'All', Boolean(searchValue)].filter(Boolean).length;
+    const activeFilterLabels = [
+        activeCollection !== 'All' ? activeCollection : '',
+        activeCategory !== 'All' ? activeCategory : '',
+        searchValue ? `Search: ${searchValue}` : '',
+    ].filter(Boolean);
+
     useEffect(() => {
         if (!filteredProducts.some((product) => (product.id || product.slug) === focusedProductId)) {
             setFocusedProductId(null);
         }
     }, [filteredProducts, focusedProductId]);
+
+    useEffect(() => {
+        if (!isFilterPanelOpen) {
+            return undefined;
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setIsFilterPanelOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isFilterPanelOpen]);
 
     useEffect(() => {
         const archive = archiveRef.current;
@@ -398,70 +430,137 @@ export default function CollectionsArchive({ products = [] }) {
 
     return (
         <div ref={archiveRef}>
-            <section className="mb-12 md:mb-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+            <section className="mb-7 md:mb-16 grid grid-cols-3 gap-2 md:gap-5">
                 <StatCard label="Pieces" labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." copyKey="collections.stats.pieces.copy" />
                 <StatCard label="Collections" labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} copy="Distinct storylines shaping the archive into easier visual paths." copyKey="collections.stats.collections.copy" />
                 <StatCard label="Categories" labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} copy="Focused entry points for shoppers who already know the silhouette they want." copyKey="collections.stats.categories.copy" />
             </section>
 
-            <section className="mb-10 md:mb-12 flex flex-col gap-5 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-5 md:p-6">
-                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-                    <div className="max-w-2xl">
-                        <p className="text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
-                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="collections.filters.copy" fallback="Move through the archive by collection or silhouette, then narrow further with search if you already know the mood, name, or finish you want." editorLabel="Collections filter copy" /></p>
+            <section className="mb-8 md:mb-10 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-4 md:p-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
+                        <p className="mt-3 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
+                            {String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} ready to browse
+                            {activeCollection !== 'All' ? ` / ${activeCollection}` : ''}
+                            {activeCategory !== 'All' ? ` / ${activeCategory}` : ''}
+                        </p>
                     </div>
 
-                    <div className="flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-end">
-                        <label className="flex min-w-0 flex-1 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                            <EditableText contentKey="collections.filters.search_label" fallback="Search Pieces" editorLabel="Collections search label" />
-                            <input
-                                value={searchValue}
-                                onChange={(event) => setSearchValue(event.target.value)}
-                                placeholder={searchPlaceholder}
-                                className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
-                            />
-                        </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {hasActiveFilters && (
+                            <button type="button" onClick={handleReset} className="hover-target rounded-full border border-[#1C1C1C]/12 bg-white/70 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/62 transition-colors hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]">
+                                <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
+                            </button>
+                        )}
 
-                        <label className="flex w-full md:w-44 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                            <EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" />
-                            <select
-                                value={cardsPerRow}
-                                onChange={(event) => setCardsPerRow(Number(event.target.value) || 3)}
-                                className="h-13 border border-[#1C1C1C]/12 bg-white/75 px-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
-                            >
-                                {[2, 3, 4, 6, 12].map((option) => (
-                                    <option key={option} value={option}>{String(option).padStart(2, '0')}</option>
-                                ))}
-                            </select>
-                        </label>
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                    {collectionOptions.map((option) => (
-                        <FilterButton key={option} label={option} isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
-                    ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2 border-t border-[#1C1C1C]/10 pt-4">
-                    {categoryOptions.map((option) => (
-                        <FilterButton key={option} label={option} isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
-                    ))}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42">
-                    <p>
-                        {String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible across {String(cardsPerRow).padStart(2, '0')} columns
-                        {activeCollection !== 'All' ? ` / ${activeCollection}` : ''}
-                        {activeCategory !== 'All' ? ` / ${activeCategory}` : ''}
-                    </p>
-                    {(activeCollection !== 'All' || activeCategory !== 'All' || searchValue) && (
-                        <button type="button" onClick={handleReset} className="hover-target border border-[#1C1C1C]/12 bg-white/60 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/58 transition-colors hover:text-[#1C1C1C]">
-                            <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
+                        <button
+                            type="button"
+                            onClick={() => setIsFilterPanelOpen(true)}
+                            className="hover-target inline-flex items-center gap-3 rounded-full border border-[#1C1C1C] bg-[#1C1C1C] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#EFECE8] transition-colors hover:bg-black"
+                        >
+                            <EditableText contentKey="collections.filters.open_panel" fallback="Search & Filter" editorLabel="Collections open filter panel" />
+                            <span className="rounded-full border border-white/12 bg-white/10 px-2 py-1 text-[9px] leading-none text-white/78">{String(activeFilterCount).padStart(2, '0')}</span>
                         </button>
-                    )}
+                    </div>
                 </div>
+
+                {activeFilterLabels.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {activeFilterLabels.map((label) => (
+                            <span key={label} className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-[#1C1C1C]/62">
+                                {label}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </section>
+
+            {isFilterPanelOpen && (
+                <div className="fixed inset-0 z-[140] flex items-end justify-center p-4 backdrop-blur-sm md:items-center">
+                    <button type="button" aria-label="Close filter panel" onClick={() => setIsFilterPanelOpen(false)} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
+
+                    <div className="relative flex w-full max-w-4xl max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-[rgba(12,12,14,0.95)] text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] md:max-h-[calc(100vh-3rem)]" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 md:px-6">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
+                                <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white"><EditableText contentKey="collections.filters.title" fallback="Archive Controls" editorLabel="Collections filter modal title" /></h3>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setIsFilterPanelOpen(false)}
+                                className="hover-target rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
+                            >
+                                Close
+                            </button>
+                        </div>
+
+                        <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
+                            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem]">
+                                <label className="flex min-w-0 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
+                                    <EditableText contentKey="collections.filters.search_label" fallback="Search Pieces" editorLabel="Collections search label" />
+                                    <input
+                                        value={searchValue}
+                                        onChange={(event) => setSearchValue(event.target.value)}
+                                        placeholder={searchPlaceholder}
+                                        className="h-14 rounded-[1.05rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/24"
+                                    />
+                                </label>
+
+                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
+                                    <EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" />
+                                    <select
+                                        value={cardsPerRow}
+                                        onChange={(event) => setCardsPerRow(Number(event.target.value) || 3)}
+                                        className="h-14 rounded-[1.05rem] border border-white/10 bg-white/[0.04] px-4 text-[10px] uppercase tracking-[0.22em] text-white outline-none transition-colors focus:border-white/24"
+                                    >
+                                        {[2, 3, 4, 6, 12].map((option) => (
+                                            <option key={option} value={option}>{String(option).padStart(2, '0')}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div className="mt-6 flex flex-col gap-6">
+                                <section>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.collection_title" fallback="Collections" editorLabel="Collections filter collection title" /></p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {collectionOptions.map((option) => (
+                                            <FilterButton key={option} label={option} theme="dark" isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
+                                        ))}
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.category_title" fallback="Categories" editorLabel="Collections filter category title" /></p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {categoryOptions.map((option) => (
+                                            <FilterButton key={option} label={option} theme="dark" isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
+                                        ))}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 text-[10px] uppercase tracking-[0.24em] text-white/42 sm:flex-row sm:items-center sm:justify-between md:px-6">
+                            <p>{String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible now</p>
+
+                            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                {hasActiveFilters && (
+                                    <button type="button" onClick={handleReset} className="hover-target rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/66 transition-colors hover:bg-white/[0.08] hover:text-white">
+                                        <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
+                                    </button>
+                                )}
+
+                                <button type="button" onClick={() => setIsFilterPanelOpen(false)} className="hover-target rounded-full bg-[#EFE7DA] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors hover:bg-white">
+                                    View Pieces
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {filteredProducts.length === 0 ? (
                 <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-8 md:p-10 flex flex-col gap-5">
@@ -471,7 +570,7 @@ export default function CollectionsArchive({ products = [] }) {
                 </div>
             ) : (
                 <div
-                    className="grid grid-cols-1 gap-x-6 gap-y-12 md:gap-y-14 md:[grid-template-columns:repeat(var(--archive-columns-tablet),minmax(0,1fr))] xl:[grid-template-columns:repeat(var(--archive-columns-desktop),minmax(0,1fr))]"
+                    className="grid grid-cols-2 gap-x-4 gap-y-9 md:gap-x-6 md:gap-y-14 md:[grid-template-columns:repeat(var(--archive-columns-tablet),minmax(0,1fr))] xl:[grid-template-columns:repeat(var(--archive-columns-desktop),minmax(0,1fr))]"
                     style={{
                         '--archive-columns-tablet': tabletColumns,
                         '--archive-columns-desktop': desktopColumns,
