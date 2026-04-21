@@ -5,7 +5,7 @@ import EditableText from './site-copy/EditableText';
 
 function SizeMeasurementsTable({ rows = [] }) {
     return (
-        <div className="overflow-x-auto rounded-sm border border-[#1C1C1C]/10 bg-white/82">
+        <div className="min-w-0 overflow-x-auto rounded-sm border border-[#1C1C1C]/10 bg-white/82" style={{ WebkitOverflowScrolling: 'touch' }}>
             <table className="min-w-[760px] w-full border-collapse text-left text-sm text-[#1C1C1C]/74">
                 <thead>
                     <tr className="bg-[#F5F1EB] text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/52">

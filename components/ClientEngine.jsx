@@ -9,6 +9,14 @@ import Lenis from 'lenis';
 import { useCart } from './CartProvider';
 import EditableText from './site-copy/EditableText';
 import { formatCustomMeasurementSummary } from '../utils/cart';
+import {
+    PAGE_MOTION_STORAGE_KEY,
+    PAGE_REVEAL_COMPLETE_EVENT,
+    REDUCED_MOTION_QUERY,
+    dispatchPageMotionChange,
+    dispatchPageRevealComplete,
+    resolvePageMotionEnabled,
+} from '../utils/page-motion';
 import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
 import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
@@ -17,30 +25,6 @@ gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
 
 const baseCursorClassName = 'hidden md:flex fixed top-0 left-0 relative rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 justify-center items-center text-white text-[10px] uppercase font-medium text-opacity-0 select-none';
-const PAGE_MOTION_STORAGE_KEY = 'lumina-page-motion';
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
-function resolvePageMotionEnabled() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-        return true;
-    }
-
-    try {
-        const storedPreference = window.localStorage.getItem(PAGE_MOTION_STORAGE_KEY);
-
-        if (storedPreference === 'on') {
-            return true;
-        }
-
-        if (storedPreference === 'off') {
-            return false;
-        }
-    } catch {
-        // Ignore storage failures and fall back to system preference.
-    }
-
-    return !window.matchMedia(REDUCED_MOTION_QUERY).matches;
-}
 
 function syncPageMotionAttribute(isEnabled) {
     if (typeof document === 'undefined') {
@@ -270,6 +254,7 @@ export default function ClientEngine({ children }) {
         setHasMounted(true);
         setIsPageMotionEnabled(nextMotionEnabled);
         syncPageMotionAttribute(nextMotionEnabled);
+        dispatchPageMotionChange(nextMotionEnabled);
     }, []);
 
     useEffect(() => {
@@ -442,6 +427,7 @@ export default function ClientEngine({ children }) {
 
         setIsPageMotionEnabled(nextMotionEnabled);
         syncPageMotionAttribute(nextMotionEnabled);
+        dispatchPageMotionChange(nextMotionEnabled);
 
         try {
             window.localStorage.setItem(PAGE_MOTION_STORAGE_KEY, nextMotionEnabled ? 'on' : 'off');
@@ -450,8 +436,7 @@ export default function ClientEngine({ children }) {
         }
 
         if (!nextMotionEnabled && typeof window !== 'undefined') {
-            window.__luminaLastRevealPathname = pathname;
-            window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
+            dispatchPageRevealComplete(pathname);
         }
     };
 
@@ -507,7 +492,12 @@ export default function ClientEngine({ children }) {
                 const bounds = activeTarget.getBoundingClientRect();
                 const centerX = bounds.left + (bounds.width / 2);
                 const centerY = bounds.top + (bounds.height / 2);
-                const attraction = activeTarget.classList.contains('view-img') ? 0.04 : 0.12;
+                const cursorAttract = Number.parseFloat(activeTarget.getAttribute('data-cursor-attract') || '');
+                const attraction = Number.isFinite(cursorAttract)
+                    ? cursorAttract
+                    : activeTarget.classList.contains('view-img')
+                        ? 0.04
+                        : 0.12;
 
                 targetX += (centerX - e.clientX) * attraction;
                 targetY += (centerY - e.clientY) * attraction;
@@ -524,7 +514,9 @@ export default function ClientEngine({ children }) {
             if (target) {
                 hoverTargetRef.current = target;
 
-                if (target.classList.contains('view-img')) {
+                const shouldUseLabelCursor = target.classList.contains('view-img') || target.getAttribute('data-cursor-mode') === 'label';
+
+                if (shouldUseLabelCursor) {
                     const cursorText = target.getAttribute('data-cursor-text') || 'View';
                     cursor.classList.remove('hovered');
                     cursor.classList.add('view-mode');
@@ -626,10 +618,7 @@ export default function ClientEngine({ children }) {
                       opacity: 1,
                       duration: transitionTimings.navDuration,
                       onComplete: () => {
-                          if (typeof window !== 'undefined') {
-                              window.__luminaLastRevealPathname = pathname;
-                              window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
-                          }
+                          dispatchPageRevealComplete(pathname);
                       },
                   },
                   "-=0.5"
@@ -642,10 +631,7 @@ export default function ClientEngine({ children }) {
             gsap.set('.hero-sub', { opacity: 1 });
             gsap.set('#nav', { opacity: 1 });
 
-            if (typeof window !== 'undefined') {
-                window.__luminaLastRevealPathname = pathname;
-                window.dispatchEvent(new CustomEvent('lumina:page-reveal-complete', { detail: { pathname } }));
-            }
+            dispatchPageRevealComplete(pathname);
         }
 
         hasPlayedInitialLoadRef.current = true;

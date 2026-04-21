@@ -19,6 +19,58 @@ const DEFAULT_MEDIA_SETTINGS = Object.freeze({
     scaleMobile: 1,
 });
 
+export const SITE_COPY_RICH_TEXT_KIND = 'site-copy-rich-text-v1';
+
+export const SITE_COPY_RICH_TEXT_BLOCK_TYPE_OPTIONS = Object.freeze([
+    { value: 'paragraph', label: 'Paragraph' },
+    { value: 'heading1', label: 'H1' },
+    { value: 'heading2', label: 'H2' },
+    { value: 'heading3', label: 'H3' },
+    { value: 'quote', label: 'Quote' },
+    { value: 'bullet-list', label: 'Bullet List' },
+    { value: 'numbered-list', label: 'Numbered List' },
+]);
+
+export const SITE_COPY_RICH_TEXT_SIZE_OPTIONS = Object.freeze([
+    { value: 'xs', label: 'XS' },
+    { value: 'sm', label: 'SM' },
+    { value: 'body', label: 'Body' },
+    { value: 'lg', label: 'LG' },
+    { value: 'xl', label: 'XL' },
+    { value: 'display', label: 'Display' },
+]);
+
+export const SITE_COPY_RICH_TEXT_ALIGN_OPTIONS = Object.freeze([
+    { value: 'left', label: 'Left' },
+    { value: 'center', label: 'Center' },
+    { value: 'right', label: 'Right' },
+    { value: 'justify', label: 'Justify' },
+]);
+
+export const SITE_COPY_RICH_TEXT_COLOR_SWATCHES = Object.freeze([
+    '#EFECE8',
+    '#FFFFFF',
+    '#D9CBB9',
+    '#D7B56D',
+    '#A78B65',
+    '#7F8EA3',
+    '#5C4B43',
+    '#1C1C1C',
+]);
+
+const RICH_TEXT_BLOCK_TYPES = new Set(SITE_COPY_RICH_TEXT_BLOCK_TYPE_OPTIONS.map((option) => option.value));
+const RICH_TEXT_SIZE_VALUES = new Set(SITE_COPY_RICH_TEXT_SIZE_OPTIONS.map((option) => option.value));
+const RICH_TEXT_ALIGN_VALUES = new Set(SITE_COPY_RICH_TEXT_ALIGN_OPTIONS.map((option) => option.value));
+const RICH_TEXT_TYPE_DEFAULT_SIZES = Object.freeze({
+    paragraph: 'body',
+    heading1: 'display',
+    heading2: 'xl',
+    heading3: 'lg',
+    quote: 'lg',
+    'bullet-list': 'body',
+    'numbered-list': 'body',
+});
+
 function isPlainObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -52,6 +104,156 @@ function parsePossibleJsonObject(value) {
     } catch {
         return null;
     }
+}
+
+function normalizeRichTextType(value) {
+    return RICH_TEXT_BLOCK_TYPES.has(value) ? value : 'paragraph';
+}
+
+function normalizeRichTextSize(value, type = 'paragraph') {
+    if (RICH_TEXT_SIZE_VALUES.has(value)) {
+        return value;
+    }
+
+    return RICH_TEXT_TYPE_DEFAULT_SIZES[normalizeRichTextType(type)] || 'body';
+}
+
+function normalizeRichTextAlign(value) {
+    return RICH_TEXT_ALIGN_VALUES.has(value) ? value : 'left';
+}
+
+function normalizeRichTextColor(value) {
+    const normalizedValue = toTrimmedString(value);
+
+    if (!normalizedValue) {
+        return '';
+    }
+
+    return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(normalizedValue) ? normalizedValue : '';
+}
+
+function normalizeRichTextText(value) {
+    if (typeof value === 'string') {
+        return value.replace(/\r\n?/g, '\n').trimEnd();
+    }
+
+    if (value == null) {
+        return '';
+    }
+
+    return String(value).replace(/\r\n?/g, '\n').trimEnd();
+}
+
+function normalizeRichTextBoolean(value) {
+    return value === true;
+}
+
+function normalizeRichTextBlockId(value, index = 0) {
+    const normalizedValue = toTrimmedString(value);
+    return normalizedValue || `block-${index + 1}`;
+}
+
+function parseSiteCopyRichTextDocument(value) {
+    const parsedValue = isPlainObject(value) ? value : parsePossibleJsonObject(value);
+
+    if (!isPlainObject(parsedValue) || parsedValue.kind !== SITE_COPY_RICH_TEXT_KIND) {
+        return null;
+    }
+
+    return createSiteCopyRichTextDocument(parsedValue.blocks);
+}
+
+function normalizeRichTextFallback(fallback) {
+    const parsedDocument = parseSiteCopyRichTextDocument(fallback);
+
+    if (parsedDocument) {
+        return parsedDocument;
+    }
+
+    if (isPlainObject(fallback) && Array.isArray(fallback.blocks)) {
+        return createSiteCopyRichTextDocument(fallback.blocks);
+    }
+
+    if (Array.isArray(fallback)) {
+        return createSiteCopyRichTextDocument(fallback);
+    }
+
+    if (typeof fallback === 'string' && fallback.trim()) {
+        return createSiteCopyRichTextDocument([{ text: fallback }]);
+    }
+
+    return createSiteCopyRichTextDocument();
+}
+
+export function createSiteCopyRichTextBlock(overrides = {}, index = 0) {
+    const type = normalizeRichTextType(overrides.type);
+
+    return {
+        id: normalizeRichTextBlockId(overrides.id, index),
+        type,
+        text: normalizeRichTextText(overrides.text),
+        align: normalizeRichTextAlign(overrides.align),
+        size: normalizeRichTextSize(overrides.size, type),
+        color: normalizeRichTextColor(overrides.color),
+        bold: normalizeRichTextBoolean(overrides.bold),
+        italic: normalizeRichTextBoolean(overrides.italic),
+        underline: normalizeRichTextBoolean(overrides.underline),
+    };
+}
+
+export function createSiteCopyRichTextDocument(blocks = [{}]) {
+    const sourceBlocks = Array.isArray(blocks) && blocks.length > 0 ? blocks : [{}];
+
+    return {
+        kind: SITE_COPY_RICH_TEXT_KIND,
+        version: 1,
+        blocks: sourceBlocks.map((block, index) => createSiteCopyRichTextBlock(block, index)),
+    };
+}
+
+export function isSiteCopyRichTextValue(value) {
+    return Boolean(parseSiteCopyRichTextDocument(value));
+}
+
+export function resolveSiteCopyRichTextEntry(value, fallback = '') {
+    const fallbackDocument = normalizeRichTextFallback(fallback);
+    const parsedDocument = parseSiteCopyRichTextDocument(value);
+
+    if (parsedDocument) {
+        return parsedDocument;
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+        const seedBlock = fallbackDocument.blocks[0] || createSiteCopyRichTextBlock();
+
+        return createSiteCopyRichTextDocument([
+            {
+                ...seedBlock,
+                text: normalizeRichTextText(value),
+            },
+        ]);
+    }
+
+    return fallbackDocument;
+}
+
+export function serializeSiteCopyRichTextEntry(value, fallback = '') {
+    return JSON.stringify(resolveSiteCopyRichTextEntry(value, fallback));
+}
+
+export function extractSiteCopyPlainText(value, fallback = '') {
+    const parsedDocument = parseSiteCopyRichTextDocument(value);
+
+    if (!parsedDocument) {
+        return typeof value === 'string' ? value : fallback;
+    }
+
+    const flattenedText = parsedDocument.blocks
+        .map((block) => normalizeRichTextText(block.text))
+        .filter(Boolean)
+        .join('\n\n');
+
+    return flattenedText || fallback;
 }
 
 function clampNumber(value, minValue, maxValue, fallbackValue) {

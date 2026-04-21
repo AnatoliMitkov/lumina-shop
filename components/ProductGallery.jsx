@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 
 function formatIndex(value) {
     return String(value).padStart(2, '0');
@@ -10,9 +10,18 @@ export default function ProductGallery({ productName, collection, category, gall
     const images = gallery.filter(Boolean);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [lightboxZoom, setLightboxZoom] = useState(1);
+    const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
+    const lightboxGestureRef = useRef({ type: 'none' });
+    const lightboxZoomRef = useRef(1);
+    const lightboxPanRef = useRef({ x: 0, y: 0 });
 
     const handleCloseLightbox = () => {
         setIsLightboxOpen(false);
+        setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
+        lightboxZoomRef.current = 1;
+        lightboxPanRef.current = { x: 0, y: 0 };
     };
 
     useEffect(() => {
@@ -121,6 +130,84 @@ export default function ProductGallery({ productName, collection, category, gall
     const handleLightboxPointerLeave = (event) => {
         event.currentTarget.style.setProperty('--product-lightbox-origin-x', '50%');
         event.currentTarget.style.setProperty('--product-lightbox-origin-y', '50%');
+    };
+
+    const handleLightboxStep = (direction) => {
+        setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
+        lightboxZoomRef.current = 1;
+        lightboxPanRef.current = { x: 0, y: 0 };
+        handleStep(direction);
+    };
+
+    const handleLightboxTouchStart = (event) => {
+        const touches = event.touches;
+        if (touches.length === 2) {
+            const dx = touches[1].clientX - touches[0].clientX;
+            const dy = touches[1].clientY - touches[0].clientY;
+            lightboxGestureRef.current = {
+                type: 'pinch',
+                startDist: Math.hypot(dx, dy),
+                startScale: lightboxZoomRef.current,
+                startPanX: lightboxPanRef.current.x,
+                startPanY: lightboxPanRef.current.y,
+            };
+        } else if (touches.length === 1) {
+            if (lightboxZoomRef.current > 1.01) {
+                lightboxGestureRef.current = {
+                    type: 'pan',
+                    startX: touches[0].clientX,
+                    startY: touches[0].clientY,
+                    startPanX: lightboxPanRef.current.x,
+                    startPanY: lightboxPanRef.current.y,
+                };
+            } else {
+                lightboxGestureRef.current = {
+                    type: 'swipe',
+                    startX: touches[0].clientX,
+                    startY: touches[0].clientY,
+                };
+            }
+        }
+    };
+
+    const handleLightboxTouchMove = (event) => {
+        const gesture = lightboxGestureRef.current;
+        if (gesture.type === 'pinch' && event.touches.length === 2) {
+            const dx = event.touches[1].clientX - event.touches[0].clientX;
+            const dy = event.touches[1].clientY - event.touches[0].clientY;
+            const dist = Math.hypot(dx, dy);
+            const nextScale = Math.min(5, Math.max(1, gesture.startScale * (dist / gesture.startDist)));
+            lightboxZoomRef.current = nextScale;
+            setLightboxZoom(nextScale);
+        } else if (gesture.type === 'pan' && event.touches.length === 1) {
+            const dx = event.touches[0].clientX - gesture.startX;
+            const dy = event.touches[0].clientY - gesture.startY;
+            const nextPan = { x: gesture.startPanX + dx, y: gesture.startPanY + dy };
+            lightboxPanRef.current = nextPan;
+            setLightboxPan(nextPan);
+        }
+    };
+
+    const handleLightboxTouchEnd = (event) => {
+        const gesture = lightboxGestureRef.current;
+        if (gesture.type === 'swipe' && hasMultipleImages) {
+            const touch = event.changedTouches[0];
+            if (touch) {
+                const dx = touch.clientX - gesture.startX;
+                const dy = touch.clientY - gesture.startY;
+                if (Math.abs(dx) > 52 && Math.abs(dx) > Math.abs(dy)) {
+                    handleLightboxStep(dx > 0 ? -1 : 1);
+                }
+            }
+        }
+        if (lightboxZoomRef.current <= 1.01) {
+            lightboxZoomRef.current = 1;
+            lightboxPanRef.current = { x: 0, y: 0 };
+            setLightboxZoom(1);
+            setLightboxPan({ x: 0, y: 0 });
+        }
+        lightboxGestureRef.current = { type: 'none' };
     };
 
     return (
@@ -238,14 +325,20 @@ export default function ProductGallery({ productName, collection, category, gall
                             </button>
                         </div>
 
-                        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-4 overflow-hidden pt-1 md:pt-2 xl:grid-cols-[minmax(0,1fr)_18rem] xl:grid-rows-1 xl:gap-5">
-                            <div className="product-lightbox-stage relative min-h-0 overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080808]/88">
+                        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden pt-1 md:pt-2 xl:grid-cols-[minmax(0,1fr)_18rem] xl:grid-rows-1 xl:gap-5">
+                            <div
+                                className="product-lightbox-stage relative min-h-0 overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#080808]/88"
+                                style={{ touchAction: 'none' }}
+                                onTouchStart={handleLightboxTouchStart}
+                                onTouchMove={handleLightboxTouchMove}
+                                onTouchEnd={handleLightboxTouchEnd}
+                            >
                                 {hasMultipleImages && (
                                     <>
-                                        <button type="button" onClick={() => handleStep(-1)} className="hover-target absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-black/28 text-base text-white/78 transition-colors hover:bg-white hover:text-[#121211]">
+                                        <button type="button" onClick={() => handleLightboxStep(-1)} className="hover-target absolute left-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-black/28 text-base text-white/78 transition-colors hover:bg-white hover:text-[#121211]">
                                             ←
                                         </button>
-                                        <button type="button" onClick={() => handleStep(1)} className="hover-target absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-black/28 text-base text-white/78 transition-colors hover:bg-white hover:text-[#121211]">
+                                        <button type="button" onClick={() => handleLightboxStep(1)} className="hover-target absolute right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/12 bg-black/28 text-base text-white/78 transition-colors hover:bg-white hover:text-[#121211]">
                                             →
                                         </button>
                                     </>
@@ -256,13 +349,24 @@ export default function ProductGallery({ productName, collection, category, gall
                                     onMouseMove={handleLightboxPointerMove}
                                     onMouseLeave={handleLightboxPointerLeave}
                                 >
-                                    <div className="product-lightbox-frame-shell flex h-full w-full items-center justify-center">
-                                        <img key={`lightbox-${activeImage}`} src={activeImage} alt={`${productName} fullscreen ${activeIndex + 1}`} className="product-lightbox-frame h-auto max-h-full w-auto max-w-full object-contain" />
+                                    <div className="product-lightbox-frame-shell flex h-full w-full items-center justify-center overflow-hidden">
+                                        <img
+                                            key={`lightbox-${activeImage}`}
+                                            src={activeImage}
+                                            alt={`${productName} fullscreen ${activeIndex + 1}`}
+                                            className="product-lightbox-frame h-auto max-h-full w-auto max-w-full object-contain select-none"
+                                            draggable={false}
+                                            style={{
+                                                transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
+                                                transformOrigin: 'center center',
+                                                willChange: lightboxZoom !== 1 ? 'transform' : 'auto',
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex min-h-0 max-h-[18rem] flex-col gap-4 overflow-hidden xl:max-h-none">
+                            <div className="hidden xl:flex min-h-0 flex-col gap-4 overflow-hidden xl:max-h-none">
                                 <div className="shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.05] px-5 py-5 text-white">
                                     <p className="text-[10px] uppercase tracking-[0.3em] text-white/45 mb-3">Frame Notes</p>
                                     <div className="flex flex-col gap-2 text-sm leading-relaxed text-white/72">

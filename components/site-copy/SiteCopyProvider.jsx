@@ -2,8 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import EditableMediaAsset from './EditableMediaAsset';
+import SiteCopyRichTextEditor from './SiteCopyRichTextEditor';
 import { detectEditableMediaKind } from './media-kind';
-import { createDefaultMediaSettings, resolveSiteCopyMediaEntry, serializeSiteCopyMediaEntry } from '../../utils/site-copy';
+import {
+    createDefaultMediaSettings,
+    extractSiteCopyPlainText,
+    resolveSiteCopyMediaEntry,
+    resolveSiteCopyRichTextEntry,
+    serializeSiteCopyMediaEntry,
+    serializeSiteCopyRichTextEntry,
+} from '../../utils/site-copy';
 import { PRODUCT_STORAGE_BUCKET } from '../../utils/products';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../../utils/supabase/client';
 
@@ -20,6 +28,17 @@ function PencilIcon() {
 
 function clamp(value, minValue, maxValue) {
     return Math.min(Math.max(value, minValue), maxValue);
+}
+
+function areSiteCopyEntryMapsEqual(leftEntries = {}, rightEntries = {}) {
+    const leftKeys = Object.keys(leftEntries || {});
+    const rightKeys = Object.keys(rightEntries || {});
+
+    if (leftKeys.length !== rightKeys.length) {
+        return false;
+    }
+
+    return leftKeys.every((key) => leftEntries[key] === rightEntries[key]);
 }
 
 const MEDIA_PRESET_OPTIONS = [
@@ -184,6 +203,7 @@ function MediaPreviewSurface({ label, viewport, mediaConfig, previewKind, onUpda
 function SiteCopyEditor({
     activeEntry,
     draftTextValue,
+    draftRichTextValue,
     draftMediaValue,
     isSaving,
     isUploadingMedia,
@@ -191,6 +211,7 @@ function SiteCopyEditor({
     saveError,
     onCancel,
     onTextChange,
+    onRichTextChange,
     onMediaChange,
     onMediaUpload,
     onSave,
@@ -208,6 +229,7 @@ function SiteCopyEditor({
     }
 
     const isMediaEntry = activeEntry.entryType === 'media';
+    const isRichTextEntry = activeEntry.entryType === 'rich-text';
     const resolvedDraftMediaValue = isMediaEntry
         ? resolveSiteCopyMediaEntry(draftMediaValue, activeEntry.fallback, activeEntry.defaultMediaSettings || {})
         : null;
@@ -233,15 +255,18 @@ function SiteCopyEditor({
     const activeViewportScale = resolvedDraftMediaValue?.[viewportKeyMap.scale] || 1;
     const defaultViewportSettings = createDefaultMediaSettings(activeEntry.defaultMediaSettings || {});
     const uploadFeedbackClassName = uploadFeedback?.type === 'error' ? 'text-red-300' : 'text-emerald-300';
+    const modalWidthClassName = isMediaEntry || isRichTextEntry
+        ? 'max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2.5rem)] 2xl:max-w-[1560px]'
+        : 'max-w-2xl';
 
     return (
         <div className="fixed inset-0 z-[260] flex items-end justify-center p-4 backdrop-blur-sm sm:items-center">
             <button type="button" aria-label="Close editor" onClick={onCancel} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
 
-            <div className={`relative flex w-full max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.55rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:max-h-[calc(100vh-3rem)] sm:p-7 ${isMediaEntry ? 'max-w-6xl' : 'max-w-2xl'}`}>
+            <div className={`relative flex w-full max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.55rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] selection:bg-[#EFE7DA] selection:text-[#121214] sm:max-h-[calc(100vh-3rem)] sm:p-7 ${modalWidthClassName}`}>
                 <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 pb-5">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : 'Inline Copy Editor'}</p>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : isRichTextEntry ? 'Semantic Copy Editor' : 'Inline Copy Editor'}</p>
                         <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white">{activeEntry.label}</h3>
                         <p className="mt-3 text-sm leading-relaxed text-white/62">Key: {activeEntry.key}</p>
                     </div>
@@ -526,6 +551,12 @@ function SiteCopyEditor({
                                 </div>
                             </div>
                         </div>
+                    ) : isRichTextEntry ? (
+                        <SiteCopyRichTextEditor
+                            activeEntry={activeEntry}
+                            draftValue={draftRichTextValue}
+                            onChange={onRichTextChange}
+                        />
                     ) : (
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
                             Visible Text
@@ -555,7 +586,7 @@ function SiteCopyEditor({
                         disabled={isSaving || isUploadingMedia}
                         className={`hover-target rounded-full bg-[#EFE7DA] px-6 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors ${isSaving || isUploadingMedia ? 'opacity-60' : 'hover:bg-white'}`}
                     >
-                        {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : 'Save Text'}
+                        {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : isRichTextEntry ? 'Save Content' : 'Save Text'}
                     </button>
                 </div>
             </div>
@@ -569,15 +600,22 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const [hoveredEntry, setHoveredEntry] = useState(null);
     const [activeEntry, setActiveEntry] = useState(null);
     const [draftTextValue, setDraftTextValue] = useState('');
+    const [draftRichTextValue, setDraftRichTextValue] = useState(null);
     const [draftMediaValue, setDraftMediaValue] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const [uploadFeedback, setUploadFeedback] = useState({ type: 'idle', message: '' });
     const [saveError, setSaveError] = useState('');
     const hoverClearTimeoutRef = useRef(null);
+    const lastInitialEntriesRef = useRef(initialEntries);
 
     useEffect(() => {
-        setEntries(initialEntries);
+        if (areSiteCopyEntryMapsEqual(lastInitialEntriesRef.current, initialEntries)) {
+            return;
+        }
+
+        setEntries((currentEntries) => (areSiteCopyEntryMapsEqual(currentEntries, initialEntries) ? currentEntries : initialEntries));
+        lastInitialEntriesRef.current = initialEntries;
     }, [initialEntries]);
 
     useEffect(() => {
@@ -596,11 +634,16 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
     const resolveText = useCallback((key, fallback) => {
         if (Object.prototype.hasOwnProperty.call(entries, key)) {
-            return entries[key];
+            return extractSiteCopyPlainText(entries[key], fallback);
         }
 
         return fallback;
     }, [entries]);
+
+    const resolveRichTextEntry = useCallback((key, fallback) => resolveSiteCopyRichTextEntry(
+        Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
+        fallback,
+    ), [entries]);
 
     const resolveMedia = useCallback((key, fallback) => {
         return resolveSiteCopyMediaEntry(
@@ -625,8 +668,19 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                 entry.defaultMediaSettings || {},
             ));
             setDraftTextValue('');
+            setDraftRichTextValue(null);
+        } else if (entry.entryType === 'rich-text') {
+            setDraftRichTextValue(resolveSiteCopyRichTextEntry(
+                Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback,
+                entry.fallback,
+            ));
+            setDraftTextValue('');
+            setDraftMediaValue(null);
         } else {
-            setDraftTextValue(Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback);
+            setDraftTextValue(Object.prototype.hasOwnProperty.call(entries, entry.key)
+                ? extractSiteCopyPlainText(entries[entry.key], entry.fallback)
+                : entry.fallback);
+            setDraftRichTextValue(null);
             setDraftMediaValue(null);
         }
         setUploadFeedback({ type: 'idle', message: '' });
@@ -742,7 +796,9 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         try {
             const nextValue = activeEntry.entryType === 'media'
                 ? serializeSiteCopyMediaEntry(draftMediaValue, activeEntry.defaultMediaSettings || {})
-                : draftTextValue;
+                : activeEntry.entryType === 'rich-text'
+                    ? serializeSiteCopyRichTextEntry(draftRichTextValue, activeEntry.fallback)
+                    : draftTextValue;
             const response = await fetch('/api/admin/site-copy', {
                 method: 'PATCH',
                 headers: {
@@ -767,7 +823,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         } finally {
             setIsSaving(false);
         }
-    }, [activeEntry, draftMediaValue, draftTextValue, isSaving, isUploadingMedia]);
+    }, [activeEntry, draftMediaValue, draftRichTextValue, draftTextValue, isSaving, isUploadingMedia]);
 
     const hoverButtonStyle = hoveredEntry?.rect
         ? {
@@ -780,12 +836,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         isAdmin,
         isEditMode,
         resolveText,
+        resolveRichTextEntry,
         resolveMedia,
         resolveMediaEntry,
         openEditor,
         registerHoverTarget,
         clearHoverTarget,
-    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveText]);
+    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveRichTextEntry, resolveText]);
 
     return (
         <SiteCopyContext.Provider value={value}>
@@ -829,6 +886,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                     <SiteCopyEditor
                         activeEntry={activeEntry}
                         draftTextValue={draftTextValue}
+                        draftRichTextValue={draftRichTextValue}
                         draftMediaValue={draftMediaValue}
                         isSaving={isSaving}
                         isUploadingMedia={isUploadingMedia}
@@ -836,11 +894,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                         saveError={saveError}
                         onCancel={() => {
                             setActiveEntry(null);
+                            setDraftRichTextValue(null);
                             setIsUploadingMedia(false);
                             setUploadFeedback({ type: 'idle', message: '' });
                             setSaveError('');
                         }}
                         onTextChange={setDraftTextValue}
+                        onRichTextChange={setDraftRichTextValue}
                         onMediaChange={setDraftMediaValue}
                         onMediaUpload={handleMediaUpload}
                         onSave={saveActiveEntry}

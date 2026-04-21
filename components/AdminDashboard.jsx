@@ -344,10 +344,10 @@ function buildManagedOptionList(seedOptions = [], values = []) {
         return normalizedSeedOptions;
     }
 
-    const seedOptionSet = new Set(normalizedSeedOptions);
-    const seededMatches = normalizedSeedOptions.filter((option) => normalizedValues.includes(option));
+    const seedOptionSet = new Set(normalizedSeedOptions.map((option) => option.toLowerCase()));
+    const seededMatches = normalizedSeedOptions.filter((option) => normalizedValues.some((value) => value.toLowerCase() === option.toLowerCase()));
     const customMatches = normalizedValues
-        .filter((option) => !seedOptionSet.has(option))
+        .filter((option) => !seedOptionSet.has(option.toLowerCase()))
         .sort((leftOption, rightOption) => leftOption.localeCompare(rightOption));
 
     return [...seededMatches, ...customMatches];
@@ -1015,12 +1015,10 @@ export default function AdminDashboard({
     const categoryOptions = buildManagedOptionList(PRODUCT_CATEGORY_OPTIONS, [
         ...products.map((product) => product.category),
         draft.category,
-        bulkEditDraft.category,
     ]);
     const collectionOptions = buildManagedOptionList(PRODUCT_COLLECTION_OPTIONS, [
         ...products.map((product) => product.collection),
         draft.collection,
-        bulkEditDraft.collection,
     ]);
     const previewProduct = normalizeProductRecord({
         ...draft,

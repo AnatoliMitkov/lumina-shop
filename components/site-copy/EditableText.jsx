@@ -29,6 +29,7 @@ export default function EditableText({
             key: contentKey,
             label: editorLabel || contentKey,
             fallback,
+            entryType: 'text',
             multiline,
             element: textRef.current,
         });
@@ -45,6 +46,7 @@ export default function EditableText({
             key: contentKey,
             label: editorLabel || contentKey,
             fallback,
+            entryType: 'text',
             multiline,
             element: textRef.current,
         });

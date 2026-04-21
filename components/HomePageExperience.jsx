@@ -3,11 +3,12 @@
 import EditableMediaAsset from './site-copy/EditableMediaAsset';
 import EditableMedia from './site-copy/EditableMedia';
 import EditableMediaFrame from './site-copy/EditableMediaFrame';
+import EditableRichText from './site-copy/EditableRichText';
 import EditableText from './site-copy/EditableText';
 import { detectEditableMediaKind } from './site-copy/media-kind';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { buildProductHref, formatProductCurrency, resolveStorefrontGallery } from '../utils/storefront-products';
-import { resolveSiteCopyMediaEntry } from '../utils/site-copy';
+import { createSiteCopyRichTextDocument, resolveSiteCopyMediaEntry } from '../utils/site-copy';
 import { SPOTLIGHT_PATH } from '../utils/site-routes';
 
 const containMediaDefaults = {
@@ -24,12 +25,55 @@ const coverMediaDefaults = {
     scaleMobile: 1,
 };
 
+const storyBackdropMediaDefaults = {
+    fitDesktop: 'cover',
+    fitMobile: 'cover',
+    positionDesktop: { x: 72, y: 50 },
+    positionMobile: { x: 58, y: 50 },
+    scaleDesktop: 1.04,
+    scaleMobile: 1.08,
+};
+
+const storyTitleFallback = createSiteCopyRichTextDocument([
+    {
+        type: 'heading2',
+        size: 'display',
+        text: 'Elevating traditional craftsmanship into avant-garde fashion.',
+    },
+]);
+
+const storyCopyFallback = createSiteCopyRichTextDocument([
+    {
+        type: 'paragraph',
+        size: 'sm',
+        text: 'Every silhouette begins as a study in tension, line, and hand-knotting discipline. The atelier treats slow craft as structure, turning traditional techniques into an editorial language that feels directional rather than nostalgic.',
+    },
+]);
+
+const storyTitleSizeClassNames = {
+    display: 'storefront-section-display',
+    xl: 'text-4xl md:text-5xl xl:text-6xl',
+    lg: 'text-3xl md:text-4xl xl:text-5xl',
+    body: 'text-2xl md:text-3xl xl:text-4xl',
+    sm: 'text-xl md:text-2xl xl:text-3xl',
+    xs: 'text-lg md:text-xl xl:text-2xl',
+};
+
+const storyCopySizeClassNames = {
+    xs: 'text-xs md:text-sm',
+    sm: 'text-sm md:text-base',
+    body: 'text-base md:text-lg',
+    lg: 'text-lg md:text-xl',
+    xl: 'text-xl md:text-2xl',
+    display: 'text-2xl md:text-4xl',
+};
+
 const categoryShowcaseItems = [
     {
         key: 'atelier-archive',
         title: 'Atelier Archive',
         label: 'Signature Collection',
-        href: '/collections',
+        href: '/collections?collection=Evening+Structures',
         image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1800',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
@@ -37,7 +81,7 @@ const categoryShowcaseItems = [
         key: 'evening-structures',
         title: 'Evening Structures',
         label: 'New Depth',
-        href: '/collections',
+        href: '/collections?collection=Signature+Weaves',
         image: 'https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=1400',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
@@ -45,7 +89,7 @@ const categoryShowcaseItems = [
         key: 'private-commission',
         title: 'Private Commission',
         label: 'By Appointment',
-        href: SPOTLIGHT_PATH,
+        href: '/collections?collection=Atelier+Archive',
         image: 'https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1800',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
@@ -247,32 +291,54 @@ export default function HomePageExperience({ featuredProducts = [] }) {
             </section>
 
             <section className="w-full px-6 md:px-12 pb-20 md:pb-24 bg-[#EFECE8]">
-                <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-2 bg-[#121211] text-[#EFECE8] overflow-hidden">
-                    <div className="flex items-center px-6 md:px-10 xl:px-14 py-12 md:py-14 xl:py-16">
+                <div className="relative max-w-[1800px] mx-auto min-h-[30rem] overflow-hidden bg-[#121211] text-[#EFECE8] md:min-h-[34rem] xl:min-h-[38rem]">
+                    <EditableMedia
+                        contentKey="home.brand.image"
+                        fallback="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
+                        editorLabel="Home brand background media"
+                        alt="Styling by VA atelier detail"
+                        wrapperClassName="absolute inset-0"
+                        className="h-full w-full object-cover"
+                        defaultMediaSettings={storyBackdropMediaDefaults}
+                        onError={(event) => {
+                            event.target.style.display = 'none';
+                        }}
+                    />
+
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,10,0.74)_0%,rgba(10,10,10,0.52)_42%,rgba(10,10,10,0.28)_100%)] md:hidden"></div>
+                    <div className="absolute inset-0 hidden md:block bg-[linear-gradient(90deg,rgba(10,10,10,0.94)_0%,rgba(10,10,10,0.86)_30%,rgba(10,10,10,0.62)_50%,rgba(10,10,10,0.18)_72%,rgba(10,10,10,0)_100%)]"></div>
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0)_28%,rgba(0,0,0,0.38)_100%)]"></div>
+
+                    <div className="relative z-[1] flex min-h-[30rem] items-center px-6 py-12 md:min-h-[34rem] md:px-10 md:py-14 xl:min-h-[38rem] xl:px-14 xl:py-16">
                         <div className="max-w-2xl flex flex-col gap-8">
                             <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/40"><EditableText contentKey="home.brand.eyebrow" fallback="Brand Ethos" editorLabel="Home brand ethos eyebrow" /></p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.08em] leading-[0.92]"><EditableText contentKey="home.brand.title" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Home brand ethos title" /></h2>
-                            <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-white/62"><EditableText contentKey="home.brand.copy" fallback="Every silhouette begins as a study in tension, line, and hand-knotting discipline. The atelier treats slow craft as structure, turning traditional techniques into an editorial language that feels directional rather than nostalgic." editorLabel="Home brand ethos copy" /></p>
-                            <a href={SPOTLIGHT_PATH} className="reveal-text opacity-0 translate-y-8 inline-flex w-max items-center gap-3 border border-white/12 px-8 py-4 text-[10px] uppercase tracking-[0.26em] font-medium text-white transition-colors hover:bg-white hover:text-[#121211]">
-                                <EditableText contentKey="home.brand.cta" fallback="Enter The Spotlight" editorLabel="Home brand CTA" />
-                            </a>
+                            <EditableRichText
+                                contentKey="home.brand.title"
+                                fallback={storyTitleFallback}
+                                editorLabel="Home brand ethos title"
+                                className="reveal-text opacity-0 translate-y-8"
+                                blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.92] text-[#EFECE8]"
+                                blockClassNames={{
+                                    quote: 'font-serif font-light italic tracking-[0.04em] leading-[1.02] text-[#EFECE8]/86 border-l border-white/20 pl-5',
+                                    'bullet-list': 'font-serif font-light tracking-[0.08em] leading-[1.02] text-[#EFECE8] list-disc pl-6',
+                                    'numbered-list': 'font-serif font-light tracking-[0.08em] leading-[1.02] text-[#EFECE8] list-decimal pl-6',
+                                }}
+                                sizeClassNames={storyTitleSizeClassNames}
+                            />
+                            <EditableRichText
+                                contentKey="home.brand.copy"
+                                fallback={storyCopyFallback}
+                                editorLabel="Home brand ethos copy"
+                                className="reveal-text opacity-0 translate-y-8 max-w-xl"
+                                blockBaseClassName="leading-relaxed text-white/72"
+                                blockClassNames={{
+                                    quote: 'border-l border-white/20 pl-5 italic text-white/82',
+                                    'bullet-list': 'text-white/72 list-disc pl-5 space-y-2',
+                                    'numbered-list': 'text-white/72 list-decimal pl-5 space-y-2',
+                                }}
+                                sizeClassNames={storyCopySizeClassNames}
+                            />
                         </div>
-                    </div>
-
-                    <div className="relative h-[18rem] md:h-[22rem] lg:h-auto lg:min-h-[24rem] overflow-hidden view-img bg-[#1C1C1C]">
-                        <EditableMedia
-                            contentKey="home.brand.image"
-                            fallback="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
-                            editorLabel="Home brand image"
-                            alt="Styling by VA atelier detail"
-                            wrapperClassName="absolute inset-0"
-                            className="h-full w-full object-contain p-3 md:p-4"
-                            defaultMediaSettings={containMediaDefaults}
-                            onError={(event) => {
-                                event.target.style.display = 'none';
-                            }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-l from-black/10 via-transparent to-black/45"></div>
                     </div>
                 </div>
             </section>

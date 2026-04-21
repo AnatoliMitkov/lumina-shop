@@ -7,12 +7,87 @@ import { useGSAP } from '@gsap/react';
 import EditableMedia from '../../components/site-copy/EditableMedia';
 import EditableText from '../../components/site-copy/EditableText';
 import { useSiteCopy } from '../../components/site-copy/SiteCopyProvider';
+import {
+    PAGE_MOTION_CHANGE_EVENT,
+    REDUCED_MOTION_QUERY,
+    resolvePageMotionEnabled,
+} from '../../utils/page-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
 
+const SCENE_SPACING = 1.22;
+const SCENE_TRANSITION_END = 0.96;
+
 function formatLookCount(count) {
-    return `${count} look${count === 1 ? '' : 's'}`;
+    const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+    return `${safeCount} look${safeCount === 1 ? '' : 's'}`;
+}
+
+function formatSequenceNumber(index) {
+    return String(Math.max(index, 0) + 1).padStart(2, '0');
+}
+
+function resolvePaletteCopy(palettes = []) {
+    const values = Array.isArray(palettes)
+        ? palettes.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 3)
+        : [];
+
+    return values.length > 0 ? values.join(' / ') : 'Onyx / Gold';
+}
+
+function resolveCategoryCopy(categories = []) {
+    const values = Array.isArray(categories)
+        ? categories.map((value) => String(value || '').trim()).filter(Boolean).slice(0, 3)
+        : [];
+
+    return values.length > 0 ? values.join(' / ') : 'Atelier silhouettes';
+}
+
+function usePageMotionState() {
+    // Start with true (server-safe default) to avoid hydration mismatch.
+    // Real value is read from localStorage/media query only after mount.
+    const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(true);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        // Sync to real preference on mount
+        setIsPageMotionEnabled(resolvePageMotionEnabled());
+
+        const mediaQueryList = window.matchMedia(REDUCED_MOTION_QUERY);
+
+        const syncMotionState = (event) => {
+            if (typeof event?.detail?.isEnabled === 'boolean') {
+                setIsPageMotionEnabled(event.detail.isEnabled);
+                return;
+            }
+
+            setIsPageMotionEnabled(resolvePageMotionEnabled());
+        };
+
+        window.addEventListener(PAGE_MOTION_CHANGE_EVENT, syncMotionState);
+
+        if (typeof mediaQueryList.addEventListener === 'function') {
+            mediaQueryList.addEventListener('change', syncMotionState);
+        } else {
+            mediaQueryList.addListener(syncMotionState);
+        }
+
+        return () => {
+            window.removeEventListener(PAGE_MOTION_CHANGE_EVENT, syncMotionState);
+
+            if (typeof mediaQueryList.removeEventListener === 'function') {
+                mediaQueryList.removeEventListener('change', syncMotionState);
+            } else {
+                mediaQueryList.removeListener(syncMotionState);
+            }
+        };
+    }, []);
+
+    return isPageMotionEnabled;
 }
 
 function CollectionFrameImage({
@@ -49,243 +124,376 @@ function CollectionFrameImage({
     );
 }
 
-function RunwayWindowCard({ collection, index, isActive = false, onPreview }) {
-    const cardRef = useRef(null);
-    const glareRef = useRef(null);
-
-    useEffect(() => {
-        const card = cardRef.current;
-        const glare = glareRef.current;
-
-        if (!card || !glare || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-            return undefined;
-        }
-
-        const handlePointerMove = (event) => {
-            const bounds = card.getBoundingClientRect();
-            const pointerX = (event.clientX - bounds.left) / bounds.width;
-            const pointerY = (event.clientY - bounds.top) / bounds.height;
-            const rotateY = (pointerX - 0.5) * 12;
-            const rotateX = (0.5 - pointerY) * 10;
-
-            gsap.to(card, {
-                rotateX,
-                rotateY,
-                y: -8,
-                duration: 0.42,
-                ease: 'power3.out',
-                overwrite: 'auto',
-            });
-
-            gsap.to(glare, {
-                xPercent: (pointerX - 0.5) * 26,
-                yPercent: (pointerY - 0.5) * 26,
-                opacity: 0.92,
-                duration: 0.42,
-                ease: 'power3.out',
-                overwrite: 'auto',
-            });
-        };
-
-        const handlePointerLeave = () => {
-            gsap.to(card, {
-                rotateX: 0,
-                rotateY: 0,
-                y: 0,
-                duration: 0.7,
-                ease: 'power3.out',
-                overwrite: 'auto',
-            });
-
-            gsap.to(glare, {
-                xPercent: 0,
-                yPercent: 0,
-                opacity: 0.58,
-                duration: 0.7,
-                ease: 'power3.out',
-                overwrite: 'auto',
-            });
-        };
-
-        card.addEventListener('pointermove', handlePointerMove);
-        card.addEventListener('pointerleave', handlePointerLeave);
-
-        return () => {
-            card.removeEventListener('pointermove', handlePointerMove);
-            card.removeEventListener('pointerleave', handlePointerLeave);
-        };
-    }, []);
-
+function EditorialMetricCard({ label, value, detail }) {
     return (
-        <a
-            href={collection.href}
-            className="transition-link group block h-full hover-target"
-            data-cursor-text="Open Window"
-            onMouseEnter={() => onPreview?.(collection)}
-            onFocus={() => onPreview?.(collection)}
-            style={{ perspective: '1200px' }}
-        >
-            <article
-                ref={cardRef}
-                data-runway-card
-                className={`relative h-full overflow-hidden rounded-[2rem] border bg-[rgba(12,12,14,0.78)] text-[#F6F0E7] transition-shadow duration-500 ${isActive ? 'border-[#D5B97E]/34 shadow-[0_32px_100px_rgba(213,185,126,0.16)]' : 'border-[#D5B97E]/18 shadow-[0_30px_80px_rgba(0,0,0,0.38)]'} ${index === 0 ? 'md:min-h-[34rem]' : 'md:min-h-[28rem]'}`}
-                style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
-            >
-                <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02)_28%,rgba(0,0,0,0.05)_60%,rgba(213,185,126,0.08)_100%)]"></div>
-                <div className="absolute inset-[1px] rounded-[calc(2rem-1px)] border border-white/8"></div>
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(255,239,207,0.18),rgba(255,239,207,0)_34%),linear-gradient(180deg,rgba(0,0,0,0.04),rgba(0,0,0,0.48))]"></div>
-                <div ref={glareRef} className="pointer-events-none absolute inset-[-14%] bg-[radial-gradient(circle_at_center,rgba(255,242,214,0.22),rgba(255,242,214,0)_54%)] mix-blend-screen" style={{ opacity: 0.58 }}></div>
-
-                <div className={`relative overflow-hidden ${index === 0 ? 'aspect-[16/10]' : 'aspect-[4/5]'}`} style={{ transform: 'translateZ(42px)' }}>
-                    <CollectionFrameImage
-                        collection={collection}
-                        frameIndex={index === 0 ? 0 : 1}
-                        fallbackFrameIndex={0}
-                        alt={collection.name}
-                        className="h-full w-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.05]"
-                        wrapperClassName="h-full w-full"
-                        editorLabel={`${collection.name} runway card image`}
-                    />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.15)_38%,rgba(0,0,0,0.72))]"></div>
-                </div>
-
-                <div className="relative flex h-full flex-col gap-4 px-5 pb-5 pt-4 md:px-6 md:pb-6 md:pt-5" style={{ transform: 'translateZ(54px)' }}>
-                    <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.28em] text-[#E7D8BB]/58">
-                        <span>{index === 0 ? <EditableText contentKey="spotlight.runway_cards.lead_window" fallback="Lead Window" editorLabel="Spotlight lead window label" /> : `Window ${String(index + 1).padStart(2, '0')}`}</span>
-                        <span>{formatLookCount(collection.lookCount)}</span>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                        <h3 className="font-serif text-[2.2rem] font-light uppercase tracking-[0.06em] leading-[0.9] text-[#F8F2E8] md:text-[2.75rem] [overflow-wrap:anywhere]">{collection.name}</h3>
-                        <p className="text-sm leading-relaxed text-white/70">{collection.intro}</p>
-                    </div>
-
-                    <div className="mt-auto flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#E7D8BB]/58">
-                        {collection.categories.slice(0, 3).map((category) => (
-                            <span key={category} className="rounded-full border border-[#D5B97E]/18 bg-white/[0.04] px-3 py-2 text-[#F3E9D6]">
-                                {category}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </article>
-        </a>
+        <div className="rounded-[1.7rem] border border-black/10 bg-white/[0.48] p-4 backdrop-blur-xl md:p-5">
+            <p className="text-[9px] uppercase tracking-[0.28em] text-black/42">{label}</p>
+            <p className="mt-4 font-sans text-[1.4rem] font-medium uppercase leading-[0.9] tracking-[-0.04em] text-black/88 [overflow-wrap:anywhere]">{value}</p>
+            {detail ? <p className="mt-3 text-xs leading-relaxed text-black/54">{detail}</p> : null}
+        </div>
     );
 }
 
-function AvenueRunwayStage({ activeCollection, collections = [], onPreview }) {
-    const sceneCollections = collections.slice(0, 4);
-    const statChips = [
-        `${formatLookCount(activeCollection.lookCount)}`,
-        activeCollection.featuredCount > 0 ? `${activeCollection.featuredCount} featured` : null,
-        ...activeCollection.categories.slice(0, 2),
-    ].filter(Boolean);
-    const windowPlacements = [
-        { top: '4%', right: '18%', width: '54%', scale: 0.52, opacity: 0.22, rotateY: -18 },
-        { top: '19%', right: '12%', width: '60%', scale: 0.66, opacity: 0.34, rotateY: -14 },
-        { top: '43%', right: '6%', width: '72%', scale: 0.84, opacity: 0.64, rotateY: -10 },
-        { top: '68%', right: '9%', width: '60%', scale: 0.7, opacity: 0.3, rotateY: -14 },
-    ];
+function splitSceneTitle(title, fallbackSecondary = 'Window') {
+    const words = String(title || '').trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+        return ['Editorial', fallbackSecondary];
+    }
+
+    if (words.length === 1) {
+        return [words[0], fallbackSecondary];
+    }
+
+    const midpoint = Math.ceil(words.length / 2);
+    return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')];
+}
+
+function buildGhostLines(primary, secondary, tertiary) {
+    const values = [primary, secondary, tertiary, 'The House']
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+
+    return values.slice(0, 4);
+}
+
+function firstSentence(text = '') {
+    const s = String(text || '').trim();
+    const match = s.match(/^.+?[.!?](?:\s|$)/);
+    return match ? match[0].trim() : s;
+}
+
+function buildSpotlightScenes(collections = [], collectionCount = 0, categoryCount = 0) {
+    const leadCollection = collections[0] || null;
+    const featuredCollections = collections.slice(0, 3);
+
+    if (!leadCollection) {
+        return [];
+    }
+
+    const [openingTop, openingBottom] = splitSceneTitle('Fifth Avenue', 'House');
+
+    const openingScene = {
+        key: 'opening',
+        type: 'opening',
+        navLabel: 'Opening',
+        eyebrow: 'Editorial Entrance / Fifth Avenue',
+        marker: '01 / Motion Field',
+        titleLines: [openingTop, openingBottom],
+        ghostLines: ['Fifth', 'Avenue', 'Stages', 'The House'],
+        washClass: 'bg-[radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.44),rgba(255,255,255,0)_30%),radial-gradient(circle_at_72%_34%,rgba(252,222,204,0.26),rgba(252,222,204,0)_32%),linear-gradient(180deg,rgba(245,242,237,0.68),rgba(238,235,230,0)_62%)]',
+        collection: leadCollection,
+        mediaFrameIndex: 1,
+        summary: '5th Avenue should behave more like a motion poster than a luxury landing page: giant type, one central window, and just enough movement to keep the image alive.',
+        sideTitle: 'Soft light. Giant type. One active window.',
+        sideCopy: [
+            'The new direction is flatter, cleaner, and more typographic. Motion should frame the collection instead of performing around it.',
+            'That keeps the page closer to an interactive editorial poster and farther from a segmented luxury microsite.',
+        ],
+        chips: [
+            'The VA Store',
+            leadCollection.name,
+            resolvePaletteCopy(leadCollection.palettes),
+        ],
+        ctaPrimary: {
+            label: 'Enter Collection',
+            href: leadCollection.href,
+            cursorText: 'Enter Collection',
+        },
+        ctaSecondary: {
+            label: 'View Archive',
+            href: '/collections',
+            cursorText: 'View Archive',
+        },
+        metrics: [
+            { label: 'Lead Collection', value: leadCollection.name, detail: 'The anchor window that sets the tone for the route.' },
+            { label: 'Collections', value: String(Math.max(collectionCount, 1)).padStart(2, '0'), detail: 'The sequence stays concise instead of stacking endlessly down the page.' },
+            { label: 'Categories', value: String(Math.max(categoryCount, 1)).padStart(2, '0'), detail: 'Selection stays curated while the archive remains broad.' },
+            { label: 'Palette', value: resolvePaletteCopy(leadCollection.palettes), detail: 'The lighting language for the opening view.' },
+        ],
+    };
+
+    const collectionScenes = featuredCollections.map((collection, index) => {
+        const [titleTop, titleBottom] = splitSceneTitle(collection.name, 'Collection');
+
+        return {
+            key: `collection-${collection.name}`,
+            type: 'collection',
+            navLabel: collection.name,
+            eyebrow: `Window ${formatSequenceNumber(index)} / Collection Focus`,
+            marker: `${formatSequenceNumber(index + 1)} / Scene`,
+            titleLines: [titleTop, titleBottom],
+            ghostLines: buildGhostLines(titleTop, titleBottom, resolvePaletteCopy(collection.palettes).split(' / ')[0]),
+            washClass: 'bg-[radial-gradient(circle_at_52%_26%,rgba(255,255,255,0.54),rgba(255,255,255,0)_24%),radial-gradient(circle_at_62%_36%,rgba(250,214,196,0.34),rgba(250,214,196,0)_28%),linear-gradient(180deg,rgba(247,250,255,0.18),rgba(221,229,243,0)_72%)]',
+            collection,
+            mediaFrameIndex: 0,
+            chips: [
+                formatLookCount(collection.lookCount),
+                resolvePaletteCopy(collection.palettes),
+                resolveCategoryCopy(collection.categories),
+            ],
+            summary: collection.story,
+            detailCopy: collection.intro,
+            note: collection.note,
+            ctaPrimary: {
+                label: 'Enter Collection',
+                href: collection.href,
+                cursorText: 'Enter Window',
+            },
+            ctaSecondary: {
+                label: 'View Archive',
+                href: '/collections',
+                cursorText: 'View Archive',
+            },
+            metrics: [
+                { label: 'Lead Piece', value: collection.leadProductName },
+                { label: 'Palette', value: resolvePaletteCopy(collection.palettes) },
+                { label: 'Categories', value: resolveCategoryCopy(collection.categories) },
+            ],
+        };
+    });
+
+    const archiveCollection = featuredCollections[featuredCollections.length - 1] || leadCollection;
+    const archiveScene = {
+        key: 'archive',
+        type: 'archive',
+        navLabel: 'Archive',
+        eyebrow: 'Final Frame / Archive',
+        marker: `${formatSequenceNumber(collectionScenes.length + 1)} / Exit`,
+        titleLines: ['Open', 'Archive'],
+        ghostLines: buildGhostLines('Open', 'Archive', archiveCollection.name),
+        washClass: 'bg-[radial-gradient(circle_at_24%_30%,rgba(250,214,196,0.28),rgba(250,214,196,0)_24%),radial-gradient(circle_at_72%_24%,rgba(255,255,255,0.52),rgba(255,255,255,0)_26%),linear-gradient(180deg,rgba(247,250,255,0.14),rgba(221,229,243,0)_72%)]',
+        collection: archiveCollection,
+        mediaFrameIndex: 0,
+        chips: [
+            `${Math.max(collectionCount, 1)} collections`,
+            `${Math.max(categoryCount, 1)} categories`,
+            'Full archive',
+        ],
+        summary: 'The motion field resolves into one clean exit. The collection spotlight should end with a direct path into the archive rather than dropping into a long stack of more sections.',
+        detailCopy: 'This final frame should feel like the end of a sequence, not the beginning of another page layout.',
+        note: 'Once the sequence lands, archive access becomes the clearest next action.',
+        ctaPrimary: {
+            label: 'View Archive',
+            href: '/collections',
+            cursorText: 'Open Archive',
+        },
+        ctaSecondary: {
+            label: 'Enter Selected',
+            href: leadCollection.href,
+            cursorText: 'Enter Selected',
+        },
+        metrics: [
+            { label: 'Selected Window', value: leadCollection.name },
+            { label: 'Lead Piece', value: leadCollection.leadProductName },
+            { label: 'Palette', value: resolvePaletteCopy(leadCollection.palettes) },
+        ],
+    };
+
+    return [openingScene, ...collectionScenes, archiveScene];
+}
+
+function resolveTimelineDuration(sceneCount) {
+    if (sceneCount <= 1) {
+        return 0;
+    }
+
+    return ((sceneCount - 2) * SCENE_SPACING) + SCENE_TRANSITION_END;
+}
+
+function resolveSceneStopTime(sceneIndex, sceneCount) {
+    const duration = resolveTimelineDuration(sceneCount);
+
+    if (sceneIndex <= 0 || duration <= 0) {
+        return 0;
+    }
+
+    if (sceneIndex >= sceneCount - 1) {
+        return duration;
+    }
+
+    return Math.min((sceneIndex * SCENE_SPACING) - 0.18, duration);
+}
+
+function SceneNavigator({ scenes = [], activeSceneIndex = 0, onSelect }) {
+    if (scenes.length <= 1) {
+        return null;
+    }
 
     return (
-        <div className="relative min-h-[34rem] rounded-[2.4rem] border border-[#D5B97E]/14 bg-[rgba(10,10,12,0.92)] p-4 shadow-[0_40px_110px_rgba(0,0,0,0.5)] sm:min-h-[40rem] md:p-6">
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(140deg,rgba(255,255,255,0.08),rgba(255,255,255,0.015)_26%,rgba(0,0,0,0.08)_56%,rgba(213,185,126,0.08)_100%)]"></div>
-            <div className="pointer-events-none absolute inset-[1px] rounded-[calc(2.4rem-1px)] border border-white/8"></div>
+        <>
+            <div className="absolute right-5 top-1/2 z-[30] hidden -translate-y-1/2 flex-col gap-2 lg:flex">
+                {scenes.map((scene, index) => {
+                    const isActive = index === activeSceneIndex;
 
-            <div className="relative h-full overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_16%_12%,rgba(255,243,220,0.08),rgba(255,243,220,0)_22%),radial-gradient(circle_at_74%_10%,rgba(213,185,126,0.12),rgba(213,185,126,0)_30%),linear-gradient(180deg,rgba(34,32,29,0.94)_0%,rgba(16,16,18,0.98)_42%,rgba(5,5,6,1)_100%)]">
-                <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:6rem_6rem] [mask-image:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.18)_35%,rgba(0,0,0,0.72)_100%)]"></div>
-                <div data-avenue-facade className="pointer-events-none absolute bottom-0 left-[-8%] top-[6%] w-[34%] border-r border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01)_14%,rgba(10,10,12,0.94)_60%,rgba(0,0,0,1)_100%)]" style={{ clipPath: 'polygon(0 0, 88% 6%, 72% 100%, 0 100%)' }}></div>
-                <div data-avenue-facade className="pointer-events-none absolute bottom-0 right-[-10%] top-[2%] w-[42%] border-l border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.015)_12%,rgba(14,14,16,0.94)_58%,rgba(0,0,0,1)_100%)]" style={{ clipPath: 'polygon(28% 0, 100% 0, 100% 100%, 6% 100%)' }}></div>
-                <div data-avenue-road className="pointer-events-none absolute bottom-[-12%] left-[23%] h-[60%] w-[54%] opacity-90" style={{ clipPath: 'polygon(18% 0, 82% 0, 100% 100%, 0 100%)', backgroundImage: 'linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0)_22%,rgba(0,0,0,0.38)_100%), repeating-linear-gradient(180deg, rgba(255,245,223,0.22) 0 12px, rgba(255,245,223,0) 12px 48px)', backgroundSize: '100% 100%, 100% 180px' }}></div>
-                <div className="pointer-events-none absolute bottom-[18%] left-[31%] h-[2px] w-[38%] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,240,215,0.4),rgba(255,255,255,0))]"></div>
-                <div className="pointer-events-none absolute left-[33%] top-[12%] h-[34%] w-[24%] rounded-full bg-[radial-gradient(circle,rgba(255,241,216,0.2),rgba(255,241,216,0)_76%)] blur-3xl"></div>
-
-                <div className="absolute inset-x-4 top-4 z-[2] flex items-start justify-between gap-4 sm:inset-x-6 sm:top-6">
-                    <div className="max-w-[16rem] rounded-[1.35rem] border border-white/10 bg-[rgba(10,10,12,0.52)] p-4 backdrop-blur-xl">
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#D5B97E]/58"><EditableText contentKey="spotlight.stage.pov.eyebrow" fallback="Fifth Avenue POV" editorLabel="Spotlight POV eyebrow" /></p>
-                        <p className="mt-3 text-sm leading-relaxed text-white/72"><EditableText contentKey="spotlight.stage.pov.copy" fallback="The left side is now the street itself: a lit window, a placard at the base, and passing windows that let the scene pivot toward any collection you choose." editorLabel="Spotlight POV copy" /></p>
-                    </div>
-
-                    <div className="hidden max-w-[18rem] flex-wrap justify-end gap-2 md:flex">
-                        {statChips.map((chip) => (
-                            <span key={chip} className="rounded-full border border-white/10 bg-[rgba(10,10,12,0.48)] px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-[#F1E4C5] backdrop-blur-xl">
-                                {chip}
+                    return (
+                        <button
+                            key={scene.key}
+                            type="button"
+                            onClick={() => onSelect(index)}
+                            className="hover-target group flex items-center justify-end gap-3 text-right"
+                            data-cursor-mode="label"
+                            data-cursor-text={scene.navLabel}
+                            data-cursor-attract="0.1"
+                            aria-pressed={isActive}
+                        >
+                            <span className={`font-sans text-[9px] uppercase tracking-[0.3em] transition-colors ${isActive ? 'text-black/86' : 'text-black/34 group-hover:text-black/58'}`}>
+                                {scene.navLabel}
                             </span>
-                        ))}
-                    </div>
+                            <span className={`block h-px w-10 transition-all ${isActive ? 'bg-black/86' : 'bg-black/20 group-hover:bg-black/48'}`}></span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="absolute inset-x-5 bottom-5 z-[30] flex gap-2 overflow-x-auto pb-1 lg:hidden">
+                {scenes.map((scene, index) => {
+                    const isActive = index === activeSceneIndex;
+
+                    return (
+                        <button
+                            key={scene.key}
+                            type="button"
+                            onClick={() => onSelect(index)}
+                            className={`hover-target shrink-0 rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] backdrop-blur-xl transition-colors ${isActive ? 'border-black/18 bg-white/[0.84] text-black/88' : 'border-black/10 bg-white/[0.42] text-black/50'}`}
+                            data-cursor-mode="label"
+                            data-cursor-text={scene.navLabel}
+                            data-cursor-attract="0.1"
+                            aria-pressed={isActive}
+                        >
+                            {scene.navLabel}
+                        </button>
+                    );
+                })}
+            </div>
+        </>
+    );
+}
+
+function OpeningSceneLayer({ scene }) {
+    return (
+        <div className="relative h-full overflow-hidden">
+            <div data-scene-wash className={`pointer-events-none absolute inset-0 ${scene.washClass}`}></div>
+
+            {/* Top metadata bar */}
+            <div className="absolute inset-x-6 top-8 z-[7] flex items-start justify-between lg:inset-x-10 lg:top-10">
+                <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.38em] text-black/38">
+                    <EditableText contentKey="spotlight.hero.eyebrow" fallback={scene.eyebrow} editorLabel="Spotlight hero eyebrow" />
+                </p>
+                <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.38em] text-black/26">{scene.marker}</p>
+            </div>
+
+            {/* Editorial image — tall portrait, floats right, no glass card */}
+            <div
+                data-scene-media
+                className="absolute right-[5%] top-[10%] z-[5] w-[28%] overflow-hidden rounded-[1.8rem] shadow-[0_32px_80px_rgba(12,12,12,0.1)]"
+                style={{ aspectRatio: '3/4' }}
+            >
+                <CollectionFrameImage
+                    collection={scene.collection}
+                    frameIndex={scene.mediaFrameIndex}
+                    fallbackFrameIndex={0}
+                    alt={scene.collection.name}
+                    className="h-full w-full object-cover"
+                    wrapperClassName="h-full w-full"
+                    editorLabel={`${scene.collection.name} opening scene image`}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(240,237,232,0.18),transparent_18%,transparent_72%,rgba(12,12,12,0.22)_100%)]"></div>
+                <div className="absolute inset-x-5 bottom-5 text-[9px] uppercase tracking-[0.38em] text-white/58">{scene.collection.name}</div>
+            </div>
+
+            {/* Oversized title — motion poster centerpiece */}
+            <div data-scene-heading className="absolute bottom-[22%] left-0 z-[3] w-full">
+                <div className="overflow-hidden pl-6 lg:pl-10">
+                    <h1 className="hero-title block font-sans text-[18vw] font-medium uppercase leading-[0.82] tracking-[-0.07em] text-[#0c0c0c] translate-y-full">
+                        {scene.titleLines[0]}
+                    </h1>
                 </div>
-
-                <div data-active-window className="absolute bottom-[14%] left-[6%] top-[16%] z-[2] w-[46%] min-w-[15rem] max-w-[25rem]">
-                    <div className="pointer-events-none absolute left-[18%] top-[-3%] h-[18%] w-[56%] rounded-full bg-[radial-gradient(circle,rgba(255,245,223,0.34),rgba(255,245,223,0)_74%)] blur-3xl"></div>
-                    <div className="absolute inset-0 rounded-[1.9rem] border border-[#D5B97E]/18 bg-[rgba(15,15,18,0.86)] shadow-[0_32px_100px_rgba(0,0,0,0.48)]"></div>
-                    <div className="absolute inset-[1px] rounded-[calc(1.9rem-1px)] border border-white/10"></div>
-                    <div className="absolute inset-[1.1rem] overflow-hidden rounded-[1.45rem] border border-white/12 bg-[rgba(8,8,10,0.72)]">
-                        <div className="pointer-events-none absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02)_12%,rgba(255,255,255,0)_26%,rgba(255,255,255,0.06)_48%,rgba(255,255,255,0)_72%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_24%,rgba(0,0,0,0.16)_52%,rgba(0,0,0,0.78)_100%)]"></div>
-                        <div className="pointer-events-none absolute inset-0 z-[3] bg-[radial-gradient(circle_at_var(--spotlight-x)_var(--spotlight-y),rgba(255,244,220,0.34),rgba(255,244,220,0.1)_18%,rgba(255,244,220,0)_46%)]"></div>
-                        <CollectionFrameImage
-                            key={`${activeCollection.name}-window`}
-                            collection={activeCollection}
-                            frameIndex={0}
-                            alt={activeCollection.name}
-                            className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out"
-                            wrapperClassName="h-full w-full"
-                            editorLabel={`${activeCollection.name} stage window image`}
-                        />
-                    </div>
-
-                    <div data-window-placard className="absolute inset-x-3 bottom-3 z-[4]">
-                        <a href={activeCollection.href} className="transition-link hover-target block rounded-[1.45rem] border border-[#D5B97E]/18 bg-[rgba(12,12,14,0.84)] px-5 py-4 text-[#F1F1F1] shadow-[0_18px_60px_rgba(0,0,0,0.34)] backdrop-blur-2xl transition-colors hover:bg-[rgba(16,16,18,0.92)]" data-cursor-text="Enter Window">
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-[#D5B97E]/58"><EditableText contentKey="spotlight.stage.window_placard" fallback="Window Placard" editorLabel="Spotlight window placard" /></p>
-                            <p className="mt-3 font-serif text-[1.6rem] font-light uppercase leading-[0.92] text-[#F8F2E8] [overflow-wrap:anywhere]">{activeCollection.name}</p>
-                            <div className="mt-3 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.22em] text-white/62">
-                                <span>{activeCollection.leadProductName}</span>
-                                <span className="text-[#D5B97E]"><EditableText contentKey="spotlight.cta.enter_collection" fallback="Enter Collection" editorLabel="Spotlight enter collection CTA" /></span>
-                            </div>
-                        </a>
-                    </div>
+                <div className="overflow-hidden pl-6 lg:pl-10">
+                    <h1 className="hero-title block font-sans text-[18vw] font-medium uppercase leading-[0.82] tracking-[-0.07em] text-[#0c0c0c] translate-y-full">
+                        {scene.titleLines[1]}
+                    </h1>
                 </div>
+            </div>
 
-                <div className="absolute bottom-[12%] right-[5%] top-[16%] hidden w-[38%] min-w-[13rem] sm:block">
-                    {sceneCollections.map((collection, index) => {
-                        const placement = windowPlacements[index] || windowPlacements[windowPlacements.length - 1];
-                        const isCurrentWindow = collection.name === activeCollection.name;
-
-                        return (
-                            <button
-                                key={collection.name}
-                                type="button"
-                                data-avenue-window-card
-                                onMouseEnter={() => onPreview?.(collection)}
-                                onFocus={() => onPreview?.(collection)}
-                                className={`group absolute overflow-hidden rounded-[1.45rem] border text-left backdrop-blur-xl transition-[border-color,box-shadow,transform,opacity] duration-500 ${isCurrentWindow ? 'border-[#D5B97E]/30 shadow-[0_18px_60px_rgba(213,185,126,0.12)]' : 'border-white/10 shadow-[0_18px_50px_rgba(0,0,0,0.28)]'}`}
-                                style={{ top: placement.top, right: placement.right, width: placement.width, opacity: placement.opacity, transform: `scale(${placement.scale}) rotateY(${placement.rotateY}deg)` }}
-                            >
-                                <div className="aspect-[4/5] overflow-hidden bg-[#090909]">
-                                    <CollectionFrameImage
-                                        collection={collection}
-                                        frameIndex={1}
-                                        fallbackFrameIndex={0}
-                                        alt={collection.name}
-                                        className="h-full w-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.05]"
-                                        wrapperClassName="h-full w-full"
-                                        editorLabel={`${collection.name} avenue window image`}
-                                    />
-                                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0)_22%,rgba(0,0,0,0.2)_54%,rgba(0,0,0,0.8)_100%)]"></div>
-                                </div>
-                                <div className="absolute inset-x-0 bottom-0 p-3">
-                                    <div className="rounded-[1rem] border border-white/10 bg-[rgba(10,10,12,0.62)] px-3 py-3 backdrop-blur-xl">
-                                        <p className="text-[9px] uppercase tracking-[0.24em] text-[#D5B97E]/54">Window {String(index + 1).padStart(2, '0')}</p>
-                                        <p className="mt-2 font-serif text-[1.05rem] font-light uppercase leading-[0.92] text-[#F8F2E8] [overflow-wrap:anywhere]">{collection.name}</p>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
+            {/* Bottom strip — brief tagline + CTAs */}
+            <div data-scene-copy className="absolute inset-x-6 bottom-[4.5rem] z-[7] flex items-end justify-between gap-6 opacity-0 lg:inset-x-10 lg:bottom-10">
+                <div className="flex max-w-[32ch] flex-col gap-2">
+                    <p className="text-[9px] uppercase tracking-[0.46em] text-black/30">
+                        <EditableText contentKey="spotlight.hero.tagline" fallback={scene.sideTitle} editorLabel="Spotlight hero tagline" />
+                    </p>
+                    <p className="text-sm leading-relaxed text-black/44">
+                        <EditableText contentKey="spotlight.hero.copy" fallback={scene.summary} editorLabel="Spotlight hero copy" />
+                    </p>
                 </div>
+                <div className="flex shrink-0 flex-col items-end gap-3">
+                    <a href={scene.ctaPrimary.href} className="transition-link hover-target inline-flex items-center justify-center rounded-full border border-black/88 bg-[#0c0c0c] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-white transition-colors hover:bg-black/80" data-cursor-mode="label" data-cursor-text={scene.ctaPrimary.cursorText} data-cursor-attract="0.12" data-magnetic data-magnetic-strength="14"><span data-magnetic-inner><EditableText contentKey="spotlight.cta.enter_collection" fallback={scene.ctaPrimary.label} editorLabel="Spotlight enter collection CTA" /></span></a>
+                    <a href={scene.ctaSecondary.href} className="transition-link hover-target inline-flex items-center justify-center rounded-full border border-black/12 bg-transparent px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-black/56 transition-colors hover:border-black/28 hover:text-black/80" data-cursor-mode="label" data-cursor-text={scene.ctaSecondary.cursorText} data-cursor-attract="0.12" data-magnetic data-magnetic-strength="14"><span data-magnetic-inner><EditableText contentKey="spotlight.cta.view_archive" fallback={scene.ctaSecondary.label} editorLabel="Spotlight view archive CTA" /></span></a>
+                </div>
+            </div>
+        </div>
+    );
+}
 
-                <div className="absolute bottom-5 left-6 right-6 z-[2] flex flex-col gap-3 md:right-[42%]">
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#D5B97E]/52"><EditableText contentKey="spotlight.selected_window.eyebrow" fallback="Selected Window" editorLabel="Spotlight selected window eyebrow" /></p>
-                    <p className="max-w-[22rem] text-sm leading-relaxed text-white/68">{activeCollection.story}</p>
+function FocusSceneLayer({ scene, isCompactViewport = false, isFinale = false }) {
+    const titleSizeClass = isCompactViewport
+        ? 'text-[12vw]'
+        : 'text-[14vw]';
+
+    return (
+        <div className="relative h-full overflow-hidden">
+            <div data-scene-wash className={`pointer-events-none absolute inset-0 ${scene.washClass}`}></div>
+
+            {/* Top metadata bar */}
+            <div className="absolute inset-x-6 top-8 z-[7] flex items-start justify-between lg:inset-x-10 lg:top-10">
+                <p className="text-[10px] uppercase tracking-[0.38em] text-black/38">{scene.eyebrow}</p>
+                <p className="text-[10px] uppercase tracking-[0.38em] text-black/26">{scene.marker}</p>
+            </div>
+
+            {/* Portrait image — free-floating right anchor, no card shell */}
+            <div
+                data-scene-media
+                className="absolute right-[5%] top-[8%] z-[5] w-[26%] overflow-hidden rounded-[1.6rem] shadow-[0_28px_72px_rgba(12,12,12,0.1)]"
+                style={{ aspectRatio: '3/4' }}
+            >
+                <CollectionFrameImage
+                    collection={scene.collection}
+                    frameIndex={scene.mediaFrameIndex}
+                    fallbackFrameIndex={0}
+                    alt={scene.collection.name}
+                    className="h-full w-full object-cover"
+                    wrapperClassName="h-full w-full"
+                    editorLabel={`${scene.collection.name} scrollytelling scene image`}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(240,237,232,0.14),transparent_20%,transparent_70%,rgba(12,12,12,0.2)_100%)]"></div>
+                <div className="absolute inset-x-4 bottom-4 text-[9px] uppercase tracking-[0.38em] text-white/52">{scene.collection.name}</div>
+            </div>
+
+            {/* Oversized title — motion poster centerpiece */}
+            <div data-scene-heading className="absolute bottom-[22%] left-0 z-[3] w-full">
+                <div className="overflow-hidden pl-6 lg:pl-10">
+                    <p className={`block font-sans font-medium uppercase leading-[0.82] tracking-[-0.07em] text-[#0c0c0c] [overflow-wrap:anywhere] ${titleSizeClass}`}>
+                        {scene.titleLines[0]}
+                    </p>
+                </div>
+                <div className="overflow-hidden pl-[5%] lg:pl-[6%]">
+                    <p className={`block font-sans font-medium uppercase leading-[0.82] tracking-[-0.07em] text-[#0c0c0c]/72 [overflow-wrap:anywhere] ${titleSizeClass}`}>
+                        {scene.titleLines[1]}
+                    </p>
+                </div>
+            </div>
+
+            {/* Bottom strip — single sentence + CTAs */}
+            <div data-scene-copy className="absolute inset-x-6 bottom-[4.5rem] z-[7] flex items-end justify-between gap-6 opacity-0 lg:inset-x-10 lg:bottom-10">
+                <div className="flex max-w-[36ch] flex-col gap-2">
+                    <p className="text-[9px] uppercase tracking-[0.46em] text-black/30">
+                        {isFinale ? 'Archive Access' : 'Selected Window'}
+                    </p>
+                    <p className="text-sm leading-relaxed text-black/44">{firstSentence(scene.summary)}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-3">
+                    <a href={scene.ctaPrimary.href} className="transition-link hover-target inline-flex items-center justify-center rounded-full border border-black/88 bg-[#0c0c0c] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-white transition-colors hover:bg-black/80" data-cursor-mode="label" data-cursor-text={scene.ctaPrimary.cursorText} data-cursor-attract="0.12" data-magnetic data-magnetic-strength="14"><span data-magnetic-inner>{scene.ctaPrimary.label}</span></a>
+                    <a href={scene.ctaSecondary.href} className="transition-link hover-target inline-flex items-center justify-center rounded-full border border-black/12 bg-transparent px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-black/56 transition-colors hover:border-black/28 hover:text-black/80" data-cursor-mode="label" data-cursor-text={scene.ctaSecondary.cursorText} data-cursor-attract="0.12" data-magnetic data-magnetic-strength="14"><span data-magnetic-inner>{scene.ctaSecondary.label}</span></a>
                 </div>
             </div>
         </div>
@@ -294,69 +502,87 @@ function AvenueRunwayStage({ activeCollection, collections = [], onPreview }) {
 
 export default function SpotlightRunwayExperience({ collections = [] }) {
     const pageRef = useRef(null);
-    const spotlightRef = useRef(null);
-    const leadCollection = collections[0] || null;
-    const [activeCollectionName, setActiveCollectionName] = useState(leadCollection?.name || '');
-    const supportingCollections = collections.slice(1, 4);
-    const runwayCollections = collections.slice(0, 6);
-    const categoryCount = new Set(collections.flatMap((collection) => collection.categories || []).filter(Boolean)).size;
+    const scrollSectionRef = useRef(null);
+    const viewportRef = useRef(null);
+    const activeSceneIndexRef = useRef(0);
+    const isPageMotionEnabled = usePageMotionState();
     const collectionCount = collections.length;
-    const activeCollection = collections.find((collection) => collection.name === activeCollectionName) || leadCollection;
+    const categoryCount = new Set(collections.flatMap((collection) => collection.categories || []).filter(Boolean)).size;
+    const scenes = buildSpotlightScenes(collections, collectionCount, categoryCount);
+    const [activeSceneIndex, setActiveSceneIndex] = useState(0);
+    const [isCompactViewport, setIsCompactViewport] = useState(false);
+    const sceneCount = scenes.length;
+    const timelineDuration = resolveTimelineDuration(sceneCount);
+    const virtualHeight = `${Math.max(sceneCount * 115, 420)}vh`;
 
     useEffect(() => {
-        setActiveCollectionName(leadCollection?.name || '');
-    }, [leadCollection?.name]);
-
-    useEffect(() => {
-        const page = pageRef.current;
-
-        if (!page || !activeCollection) {
+        if (typeof window === 'undefined') {
             return undefined;
         }
 
-        const activeWindow = page.querySelector('[data-active-window]');
-        const windowPlacard = page.querySelector('[data-window-placard]');
+        const syncViewportDensity = () => {
+            setIsCompactViewport(window.innerHeight < 780);
+        };
 
-        if (!activeWindow || !windowPlacard) {
-            return undefined;
+        syncViewportDensity();
+        window.addEventListener('resize', syncViewportDensity);
+
+        return () => window.removeEventListener('resize', syncViewportDensity);
+    }, []);
+
+    useEffect(() => {
+        setActiveSceneIndex(0);
+        activeSceneIndexRef.current = 0;
+    }, [collectionCount, categoryCount]);
+
+    useEffect(() => {
+        if (activeSceneIndex >= sceneCount) {
+            const nextIndex = Math.max(sceneCount - 1, 0);
+            setActiveSceneIndex(nextIndex);
+            activeSceneIndexRef.current = nextIndex;
+        }
+    }, [activeSceneIndex, sceneCount]);
+
+    const handleSceneSelect = (sceneIndex) => {
+        const safeIndex = Math.min(Math.max(sceneIndex, 0), Math.max(sceneCount - 1, 0));
+
+        if (isPageMotionEnabled && scrollSectionRef.current) {
+            const bounds = scrollSectionRef.current.getBoundingClientRect();
+            const sectionTop = window.scrollY + bounds.top;
+            const scrollRange = Math.max(scrollSectionRef.current.offsetHeight - window.innerHeight, 0);
+            const progress = timelineDuration <= 0 ? 0 : resolveSceneStopTime(safeIndex, sceneCount) / timelineDuration;
+
+            window.scrollTo({
+                top: sectionTop + (scrollRange * progress),
+                behavior: 'smooth',
+            });
+
+            return;
         }
 
-        gsap.killTweensOf([activeWindow, windowPlacard]);
-        gsap.fromTo(
-            [activeWindow, windowPlacard],
-            { autoAlpha: 0.72, y: 14 },
-            {
-                autoAlpha: 1,
-                y: 0,
-                duration: 0.42,
-                ease: 'power2.out',
-                stagger: 0.04,
-                overwrite: 'auto',
-            }
-        );
-
-        return () => gsap.killTweensOf([activeWindow, windowPlacard]);
-    }, [activeCollection]);
-
-    const handleCollectionPreview = (collection) => {
-        if (collection?.name) {
-            setActiveCollectionName(collection.name);
-        }
+        activeSceneIndexRef.current = safeIndex;
+        setActiveSceneIndex(safeIndex);
     };
 
     useEffect(() => {
-        const page = pageRef.current;
+        const surface = viewportRef.current;
 
-        if (!page) {
+        if (!surface) {
+            return undefined;
+        }
+
+        if (!isPageMotionEnabled) {
+            surface.style.setProperty('--spotlight-x', '54%');
+            surface.style.setProperty('--spotlight-y', '32%');
             return undefined;
         }
 
         let frameId = null;
-        let nextSpotlightPosition = { x: 68, y: 24 };
+        let nextSpotlightPosition = { x: 54, y: 32 };
 
         const applySpotlightPosition = () => {
-            page.style.setProperty('--spotlight-x', `${nextSpotlightPosition.x}%`);
-            page.style.setProperty('--spotlight-y', `${nextSpotlightPosition.y}%`);
+            surface.style.setProperty('--spotlight-x', `${nextSpotlightPosition.x}%`);
+            surface.style.setProperty('--spotlight-y', `${nextSpotlightPosition.y}%`);
             frameId = null;
         };
 
@@ -367,7 +593,7 @@ export default function SpotlightRunwayExperience({ collections = [] }) {
         };
 
         const handlePointerMove = (event) => {
-            const bounds = page.getBoundingClientRect();
+            const bounds = surface.getBoundingClientRect();
             nextSpotlightPosition = {
                 x: ((event.clientX - bounds.left) / bounds.width) * 100,
                 y: ((event.clientY - bounds.top) / bounds.height) * 100,
@@ -377,291 +603,347 @@ export default function SpotlightRunwayExperience({ collections = [] }) {
         };
 
         const handlePointerLeave = () => {
-            nextSpotlightPosition = { x: 68, y: 24 };
+            nextSpotlightPosition = { x: 54, y: 32 };
             requestSpotlightUpdate();
         };
 
-        page.addEventListener('pointermove', handlePointerMove);
-        page.addEventListener('pointerleave', handlePointerLeave);
+        surface.addEventListener('pointermove', handlePointerMove);
+        surface.addEventListener('pointerleave', handlePointerLeave);
 
         return () => {
-            page.removeEventListener('pointermove', handlePointerMove);
-            page.removeEventListener('pointerleave', handlePointerLeave);
+            surface.removeEventListener('pointermove', handlePointerMove);
+            surface.removeEventListener('pointerleave', handlePointerLeave);
 
             if (frameId != null) {
                 window.cancelAnimationFrame(frameId);
             }
         };
-    }, []);
+    }, [isPageMotionEnabled]);
 
-    useGSAP(() => {
+    useEffect(() => {
         const page = pageRef.current;
 
-        if (!page) {
+        if (!page || isPageMotionEnabled) {
             return undefined;
         }
 
+        gsap.set(
+            page.querySelectorAll('[data-scene-layer], [data-scene-ghost], [data-scene-heading], [data-scene-media], [data-scene-copy], [data-scene-meta], [data-magnetic], [data-magnetic-inner]'),
+            { clearProps: 'opacity,transform,filter,clipPath,y,x,scale,rotate' }
+        );
+
+        return undefined;
+    }, [isPageMotionEnabled, sceneCount]);
+
+    useGSAP(() => {
+        const page = pageRef.current;
+        const scrollSection = scrollSectionRef.current;
+        const viewport = viewportRef.current;
+
+        if (!page || !scrollSection || !viewport || sceneCount === 0 || !isPageMotionEnabled) {
+            return undefined;
+        }
+
+        const cleanupFns = [];
+
         const ctx = gsap.context(() => {
-            gsap.utils.toArray('[data-avenue-facade]').forEach((facade, index) => {
-                gsap.to(facade, {
-                    yPercent: index === 0 ? -8 : -12,
-                    xPercent: index === 0 ? -2 : 3,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: spotlightRef.current,
-                        start: 'top bottom',
-                        end: 'bottom top',
-                        scrub: true,
-                    },
-                });
-            });
+            gsap.utils.toArray('[data-magnetic]').forEach((element) => {
+                const magneticTarget = element;
+                const magneticInner = element.querySelector('[data-magnetic-inner]') || element;
+                const magneticStrength = Number.parseFloat(element.getAttribute('data-magnetic-strength') || '14');
+                const innerStrength = magneticStrength * 0.42;
+                const xTo = gsap.quickTo(magneticTarget, 'x', { duration: 0.34, ease: 'power3.out' });
+                const yTo = gsap.quickTo(magneticTarget, 'y', { duration: 0.34, ease: 'power3.out' });
+                const innerXTo = magneticInner === magneticTarget ? null : gsap.quickTo(magneticInner, 'x', { duration: 0.44, ease: 'power3.out' });
+                const innerYTo = magneticInner === magneticTarget ? null : gsap.quickTo(magneticInner, 'y', { duration: 0.44, ease: 'power3.out' });
 
-            gsap.utils.toArray('[data-avenue-road]').forEach((road) => {
-                gsap.to(road, {
-                    backgroundPosition: '50% 110%',
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: spotlightRef.current,
-                        start: 'top bottom',
-                        end: 'bottom top',
-                        scrub: true,
-                    },
-                });
-            });
+                const handlePointerMove = (event) => {
+                    const bounds = magneticTarget.getBoundingClientRect();
+                    const relativeX = event.clientX - (bounds.left + (bounds.width / 2));
+                    const relativeY = event.clientY - (bounds.top + (bounds.height / 2));
+                    const offsetX = (relativeX / bounds.width) * magneticStrength;
+                    const offsetY = (relativeY / bounds.height) * magneticStrength;
 
-            gsap.utils.toArray('[data-avenue-window-card]').forEach((card, index) => {
-                gsap.fromTo(
-                    card,
-                    { yPercent: -8 - (index * 5) },
-                    {
-                        yPercent: 16 + (index * 8),
-                        ease: 'none',
-                        scrollTrigger: {
-                            trigger: spotlightRef.current,
-                            start: 'top bottom',
-                            end: 'bottom top',
-                            scrub: true,
-                        },
+                    xTo(offsetX);
+                    yTo(offsetY);
+
+                    if (innerXTo && innerYTo) {
+                        innerXTo(offsetX * innerStrength);
+                        innerYTo(offsetY * innerStrength);
                     }
-                );
+                };
+
+                const handlePointerLeave = () => {
+                    xTo(0);
+                    yTo(0);
+
+                    if (innerXTo && innerYTo) {
+                        innerXTo(0);
+                        innerYTo(0);
+                    }
+                };
+
+                magneticTarget.addEventListener('pointermove', handlePointerMove);
+                magneticTarget.addEventListener('pointerleave', handlePointerLeave);
+
+                cleanupFns.push(() => {
+                    magneticTarget.removeEventListener('pointermove', handlePointerMove);
+                    magneticTarget.removeEventListener('pointerleave', handlePointerLeave);
+                });
             });
 
-            gsap.utils.toArray('[data-runway-card]').forEach((card, index) => {
-                gsap.fromTo(
-                    card,
-                    { y: 56, autoAlpha: 0 },
-                    {
+            const sceneLayers = gsap.utils.toArray('[data-scene-layer]');
+            const layerEntries = sceneLayers.map((layer, index) => ({
+                layer,
+                index,
+                ghost: layer.querySelector('[data-scene-ghost]'),
+                heading: layer.querySelector('[data-scene-heading]'),
+                media: layer.querySelector('[data-scene-media]'),
+                copy: layer.querySelector('[data-scene-copy]'),
+                meta: layer.querySelector('[data-scene-meta]'),
+            }));
+
+            layerEntries.forEach(({ layer, index, ghost, heading, media, copy, meta }) => {
+                gsap.set(layer, {
+                    autoAlpha: index === 0 ? 1 : 0,
+                    pointerEvents: index === 0 ? 'auto' : 'none',
+                });
+
+                if (ghost) {
+                    gsap.set(ghost, {
+                        autoAlpha: index === 0 ? 1 : 0,
+                        yPercent: index === 0 ? 0 : 14,
+                        scale: index === 0 ? 1 : 0.9,
+                        filter: index === 0 ? 'blur(0px)' : 'blur(18px)',
+                    });
+                }
+
+                if (heading) {
+                    gsap.set(heading, {
+                        autoAlpha: index === 0 ? 1 : 0,
+                        yPercent: index === 0 ? 0 : 18,
+                        scale: index === 0 ? 1 : 0.92,
+                        filter: index === 0 ? 'blur(0px)' : 'blur(12px)',
+                    });
+                }
+
+                if (media) {
+                    gsap.set(media, {
+                        autoAlpha: index === 0 ? 1 : 0,
+                        yPercent: index === 0 ? 0 : 8,
+                        scale: index === 0 ? 1 : 0.94,
+                        clipPath: index === 0 ? 'inset(0% 0% 0% 0% round 2.3rem)' : 'inset(12% 14% 12% 14% round 2.3rem)',
+                    });
+                }
+
+                if (copy) {
+                    gsap.set(copy, {
+                        autoAlpha: index === 0 ? 1 : 0,
+                        y: index === 0 ? 0 : 24,
+                    });
+                }
+
+                if (meta) {
+                    gsap.set(meta, {
+                        autoAlpha: index === 0 ? 1 : 0,
+                        y: index === 0 ? 0 : 24,
+                    });
+                }
+            });
+
+            const masterTimeline = gsap.timeline({
+                defaults: { ease: 'power3.inOut' },
+                scrollTrigger: {
+                    trigger: scrollSection,
+                    start: 'top top',
+                    end: 'bottom bottom',
+                    scrub: 1.2,
+                    pin: viewport,
+                    pinSpacing: false,
+                    anticipatePin: 1,
+                    invalidateOnRefresh: true,
+                    onUpdate: (self) => {
+                        const currentTime = self.progress * timelineDuration;
+                        const nextIndex = scenes.reduce((closestIndex, _, sceneIndex) => {
+                            const closestDistance = Math.abs(resolveSceneStopTime(closestIndex, sceneCount) - currentTime);
+                            const sceneDistance = Math.abs(resolveSceneStopTime(sceneIndex, sceneCount) - currentTime);
+
+                            return sceneDistance < closestDistance ? sceneIndex : closestIndex;
+                        }, 0);
+
+                        if (nextIndex !== activeSceneIndexRef.current) {
+                            activeSceneIndexRef.current = nextIndex;
+                            setActiveSceneIndex(nextIndex);
+                        }
+                    },
+                },
+            });
+
+            layerEntries.forEach((entry, index) => {
+                if (index >= layerEntries.length - 1) {
+                    return;
+                }
+
+                const nextEntry = layerEntries[index + 1];
+                const position = index * SCENE_SPACING;
+
+                masterTimeline.set(nextEntry.layer, { autoAlpha: 1, pointerEvents: 'auto' }, position + 0.1);
+
+                if (entry.ghost) {
+                    masterTimeline.to(entry.ghost, {
+                        yPercent: -10,
+                        scale: 1.06,
+                        filter: 'blur(10px)',
+                        autoAlpha: 0,
+                        duration: 0.42,
+                    }, position);
+                }
+
+                if (entry.heading) {
+                    masterTimeline.to(entry.heading, {
+                        yPercent: -8,
+                        scale: 1.04,
+                        filter: 'blur(8px)',
+                        autoAlpha: 0,
+                        duration: 0.42,
+                    }, position + 0.02);
+                }
+
+                if (entry.media) {
+                    masterTimeline.to(entry.media, {
+                        yPercent: -3,
+                        scale: 1.02,
+                        clipPath: 'inset(6% 8% 10% 8% round 2.3rem)',
+                        autoAlpha: 0,
+                        duration: 0.44,
+                    }, position + 0.04);
+                }
+
+                if (entry.copy) {
+                    masterTimeline.to(entry.copy, {
+                        y: -12,
+                        autoAlpha: 0,
+                        duration: 0.36,
+                    }, position + 0.06);
+                }
+
+                if (entry.meta) {
+                    masterTimeline.to(entry.meta, {
+                        y: 12,
+                        autoAlpha: 0,
+                        duration: 0.36,
+                    }, position + 0.06);
+                }
+
+                if (nextEntry.ghost) {
+                    masterTimeline.fromTo(nextEntry.ghost, {
+                        yPercent: 12,
+                        scale: 0.94,
+                        filter: 'blur(10px)',
+                        autoAlpha: 0,
+                    }, {
+                        yPercent: 0,
+                        scale: 1,
+                        filter: 'blur(0px)',
+                        autoAlpha: 1,
+                        duration: 0.44,
+                    }, position + 0.12);
+                }
+
+                if (nextEntry.heading) {
+                    masterTimeline.fromTo(nextEntry.heading, {
+                        yPercent: 14,
+                        scale: 0.96,
+                        filter: 'blur(8px)',
+                        autoAlpha: 0,
+                    }, {
+                        yPercent: 0,
+                        scale: 1,
+                        filter: 'blur(0px)',
+                        autoAlpha: 1,
+                        duration: 0.46,
+                    }, position + 0.14);
+                }
+
+                if (nextEntry.media) {
+                    masterTimeline.fromTo(nextEntry.media, {
+                        yPercent: 6,
+                        scale: 0.96,
+                        clipPath: 'inset(10% 12% 10% 12% round 2.3rem)',
+                        autoAlpha: 0,
+                    }, {
+                        yPercent: 0,
+                        scale: 1,
+                        clipPath: 'inset(0% 0% 0% 0% round 2.3rem)',
+                        autoAlpha: 1,
+                        duration: 0.50,
+                    }, position + 0.16);
+                }
+
+                if (nextEntry.copy) {
+                    masterTimeline.fromTo(nextEntry.copy, {
+                        y: 16,
+                        autoAlpha: 0,
+                    }, {
                         y: 0,
                         autoAlpha: 1,
-                        duration: 1,
-                        ease: 'power3.out',
-                        scrollTrigger: {
-                            trigger: card,
-                            start: 'top 86%',
-                        },
-                    }
-                );
+                        duration: 0.38,
+                    }, position + 0.20);
+                }
 
-                gsap.to(card, {
-                    yPercent: index % 2 === 0 ? -7 : 7,
-                    ease: 'none',
-                    scrollTrigger: {
-                        trigger: card,
-                        start: 'top bottom',
-                        end: 'bottom top',
-                        scrub: true,
-                    },
-                });
-            });
-
-            gsap.utils.toArray('[data-runway-copy]').forEach((copyBlock) => {
-                gsap.fromTo(
-                    copyBlock,
-                    { y: 42, autoAlpha: 0 },
-                    {
+                if (nextEntry.meta) {
+                    masterTimeline.fromTo(nextEntry.meta, {
+                        y: 16,
+                        autoAlpha: 0,
+                    }, {
                         y: 0,
                         autoAlpha: 1,
-                        duration: 0.96,
-                        ease: 'power3.out',
-                        scrollTrigger: {
-                            trigger: copyBlock,
-                            start: 'top 85%',
-                        },
-                    }
-                );
+                        duration: 0.38,
+                    }, position + 0.22);
+                }
+
+                masterTimeline.set(entry.layer, { autoAlpha: 0, pointerEvents: 'none' }, position + 0.96);
             });
         }, page);
 
-        return () => ctx.revert();
-    }, [collections]);
+        return () => {
+            cleanupFns.forEach((cleanup) => cleanup());
+            ctx.revert();
+        };
+    }, { dependencies: [isPageMotionEnabled, sceneCount] });
 
-    if (!leadCollection) {
+    if (sceneCount === 0) {
         return null;
     }
 
     return (
-        <div
-            ref={pageRef}
-            className="relative overflow-hidden bg-[#050505] text-[#F6F0E7]"
-            style={{
-                '--spotlight-x': '68%',
-                '--spotlight-y': '24%',
-            }}
-        >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_var(--spotlight-x)_var(--spotlight-y),rgba(248,225,177,0.28),rgba(248,225,177,0.12)_12%,rgba(248,225,177,0.05)_28%,rgba(5,5,5,0)_54%)]"></div>
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_14%,rgba(255,240,215,0.08),rgba(255,240,215,0)_24%),radial-gradient(circle_at_84%_18%,rgba(213,185,126,0.1),rgba(213,185,126,0)_26%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.18)_18%,rgba(0,0,0,0.34)_42%,rgba(5,5,5,0)_100%)]"></div>
-            <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:7rem_7rem] [mask-image:linear-gradient(180deg,rgba(0,0,0,0.7),rgba(0,0,0,0.1)_35%,rgba(0,0,0,0.65)_100%)]"></div>
+        <div ref={pageRef} className="relative bg-[#f0ede8] text-[#0c0c0c]">
+            <section ref={scrollSectionRef} className="relative" style={{ height: isPageMotionEnabled ? virtualHeight : '100vh' }}>
+                <div ref={viewportRef} className="relative h-screen overflow-hidden" style={{ '--spotlight-x': '54%', '--spotlight-y': '32%' }}>
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_var(--spotlight-x)_var(--spotlight-y),rgba(250,214,196,0.24),rgba(250,214,196,0.1)_14%,rgba(250,214,196,0.02)_32%,transparent_60%)]"></div>
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_8%,rgba(255,255,255,0.48),transparent_24%),radial-gradient(circle_at_86%_12%,rgba(252,222,204,0.18),transparent_26%),linear-gradient(180deg,rgba(245,242,237,0.98),rgba(240,237,232,0.96)_46%,rgba(238,235,230,0.98)_100%)]"></div>
 
-            <div className="relative mx-auto flex w-full max-w-[1800px] flex-col gap-20 px-5 pb-24 pt-32 sm:px-6 md:px-10 lg:pt-36 xl:px-12 xl:pb-28">
-                <section className="grid grid-cols-1 gap-10 border-b border-white/8 pb-10 xl:grid-cols-[0.96fr_1.04fr] xl:items-end">
-                    <div className="min-w-0">
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.34em] text-[#D5B97E]/55"><EditableText contentKey="spotlight.hero.eyebrow" fallback="Spotlight / Fifth Avenue Walkthrough" editorLabel="Spotlight hero eyebrow" /></p>
-                        <div className="mt-5 overflow-hidden"><h1 className="hero-title font-serif text-[4.2rem] font-light uppercase leading-[0.84] tracking-[0.04em] text-[#F8F2E8] sm:text-[5.6rem] lg:text-[7rem] xl:text-[8.2rem] translate-y-full"><EditableText contentKey="spotlight.hero.title.line_one" fallback="Fifth" editorLabel="Spotlight hero title line one" /></h1></div>
-                        <div className="overflow-hidden"><h1 className="hero-title font-serif text-[4.2rem] font-light uppercase leading-[0.84] tracking-[0.04em] text-[#F8F2E8] sm:text-[5.6rem] lg:text-[7rem] xl:text-[8.2rem] translate-y-full"><EditableText contentKey="spotlight.hero.title.line_two" fallback="Avenue" editorLabel="Spotlight hero title line two" /></h1></div>
-                        <div className="mt-6 flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.28em] text-[#E7D8BB]/58 hero-sub opacity-0">
-                            <span className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-4 py-2"><EditableText contentKey="spotlight.hero.chips.brand" fallback="The VA Store" editorLabel="Spotlight hero brand chip" /></span>
-                            <span className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-4 py-2"><EditableText contentKey="spotlight.hero.chips.spotlight" fallback="Collection Spotlight" editorLabel="Spotlight hero spotlight chip" /></span>
-                            <span className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-4 py-2"><EditableText contentKey="spotlight.hero.chips.lighting" fallback="Museum Lighting" editorLabel="Spotlight hero lighting chip" /></span>
-                        </div>
+                    <SceneNavigator scenes={scenes} activeSceneIndex={activeSceneIndex} onSelect={handleSceneSelect} />
+
+                    <div className="relative h-full">
+                        {scenes.map((scene, index) => {
+                            const visibilityClass = !isPageMotionEnabled
+                                ? index === activeSceneIndex
+                                    ? 'opacity-100 pointer-events-auto'
+                                    : 'opacity-0 pointer-events-none'
+                                : '';
+
+                            return (
+                                <article key={scene.key} data-scene-layer className={`absolute inset-0 transition-opacity duration-300 ${visibilityClass}`}>
+                                    {scene.type === 'opening'
+                                        ? <OpeningSceneLayer scene={scene} />
+                                        : <FocusSceneLayer scene={scene} isCompactViewport={isCompactViewport} isFinale={scene.type === 'archive'} />}
+                                </article>
+                            );
+                        })}
                     </div>
-
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.12fr_0.88fr]">
-                        <div data-runway-copy className="rounded-[2rem] border border-white/8 bg-white/[0.03] px-6 py-6 backdrop-blur-xl">
-                            <p className="hero-sub opacity-0 text-sm leading-relaxed text-white/72 md:text-base"><EditableText contentKey="spotlight.hero.copy" fallback="Spotlight now behaves like a night walk past the house windows: glass showcase depth, volumetric light, controlled motion, and collection cards that open directly into the filtered archive once a window catches you." editorLabel="Spotlight hero copy" /></p>
-                            <p className="hero-sub mt-4 opacity-0 text-[10px] uppercase tracking-[0.3em] text-[#D5B97E]/52"><EditableText contentKey="spotlight.hero.tagline" fallback="Deep blacks. Soft golds. After-dark runway presence." editorLabel="Spotlight hero tagline" /></p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-1">
-                            {[
-                                ['Lead Collection', leadCollection.name],
-                                ['Collections', String(collectionCount).padStart(2, '0')],
-                                ['Categories', String(Math.max(categoryCount, 1)).padStart(2, '0')],
-                            ].map(([label, value]) => (
-                                <div key={label} data-runway-copy className="rounded-[1.6rem] border border-white/8 bg-white/[0.03] px-5 py-5 backdrop-blur-xl">
-                                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#D5B97E]/55">{label}</p>
-                                    <p className="mt-4 font-serif text-[1.9rem] font-light uppercase leading-[0.95] text-[#F8F2E8] [overflow-wrap:anywhere]">{value}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section ref={spotlightRef} className="grid grid-cols-1 gap-8 xl:grid-cols-[1.12fr_0.88fr] xl:items-center">
-                    <AvenueRunwayStage activeCollection={activeCollection} collections={collections} onPreview={handleCollectionPreview} />
-
-                    <div className="flex flex-col gap-5">
-                        <div data-runway-copy className="rounded-[2rem] border border-white/8 bg-white/[0.03] p-6 backdrop-blur-xl md:p-8">
-                            <p className="text-[10px] uppercase tracking-[0.3em] text-[#D5B97E]/55"><EditableText contentKey="spotlight.selected_window.eyebrow" fallback="Selected Window" editorLabel="Spotlight selected window eyebrow" /></p>
-                            <div className="mt-4 overflow-hidden"><h2 className="hero-title font-serif text-[2.7rem] font-light uppercase leading-[0.92] text-[#F8F2E8] md:text-[4.2rem] translate-y-full [overflow-wrap:anywhere]">{activeCollection.name}</h2></div>
-                            <div className="hero-sub mt-5 opacity-0 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#E7D8BB]/58">
-                                <span className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-3 py-2">{formatLookCount(activeCollection.lookCount)}</span>
-                                {activeCollection.featuredCount > 0 && <span className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-3 py-2">{activeCollection.featuredCount} Featured</span>}
-                                {activeCollection.categories.slice(0, 3).map((category) => (
-                                    <span key={category} className="rounded-full border border-[#D5B97E]/16 bg-white/[0.03] px-3 py-2">{category}</span>
-                                ))}
-                            </div>
-                            <p className="hero-sub mt-6 opacity-0 text-sm leading-relaxed text-white/72 md:text-base">{activeCollection.story}</p>
-                            <p className="hero-sub mt-6 opacity-0 border-l border-[#D5B97E]/22 pl-4 font-serif text-lg font-light leading-relaxed text-[#F1E4C5] md:text-xl">"{activeCollection.note}"</p>
-                            <div className="hero-sub mt-7 opacity-0 flex flex-col gap-3 sm:flex-row">
-                                <a href={activeCollection.href} className="transition-link inline-flex items-center justify-center rounded-full border border-[#D5B97E]/24 bg-[#D5B97E] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-[#090909] hover-target transition-colors hover:bg-[#E7D8BB]"><EditableText contentKey="spotlight.cta.enter_collection" fallback="Enter Collection" editorLabel="Spotlight enter collection CTA" /></a>
-                                <a href="/collections" className="transition-link inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-white/82 hover-target transition-colors hover:bg-white/[0.08]"><EditableText contentKey="spotlight.cta.view_archive" fallback="View Archive" editorLabel="Spotlight view archive CTA" /></a>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            {supportingCollections.map((collection) => (
-                                <a key={collection.name} href={collection.href} onMouseEnter={() => handleCollectionPreview(collection)} onFocus={() => handleCollectionPreview(collection)} className={`transition-link group rounded-[1.7rem] border bg-white/[0.03] p-4 backdrop-blur-xl hover-target ${collection.name === activeCollection.name ? 'border-[#D5B97E]/24 shadow-[0_18px_60px_rgba(213,185,126,0.12)]' : 'border-white/8'}`} data-cursor-text="Open Window">
-                                    <div className="overflow-hidden rounded-[1.3rem] border border-white/10 bg-[#111111] aspect-[4/5]">
-                                        <CollectionFrameImage
-                                            collection={collection}
-                                            frameIndex={1}
-                                            fallbackFrameIndex={0}
-                                            alt={collection.name}
-                                            className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out group-hover:scale-[1.04]"
-                                            wrapperClassName="h-full w-full"
-                                            editorLabel={`${collection.name} support card image`}
-                                        />
-                                    </div>
-                                    <div className="mt-4 flex flex-col gap-2">
-                                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#D5B97E]/52">{formatLookCount(collection.lookCount)}</p>
-                                        <p className="font-serif text-[1.55rem] font-light uppercase leading-[0.95] text-[#F8F2E8] [overflow-wrap:anywhere]">{collection.name}</p>
-                                        <p className="text-sm leading-relaxed text-white/66">{collection.intro}</p>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-start">
-                    <div data-runway-copy className="rounded-[2rem] border border-white/8 bg-[rgba(10,10,12,0.78)] p-6 md:p-8 backdrop-blur-xl xl:sticky xl:top-32">
-                        <p className="text-[10px] uppercase tracking-[0.32em] text-[#D5B97E]/55"><EditableText contentKey="spotlight.catwalk.eyebrow" fallback="Collection Catwalk" editorLabel="Spotlight catwalk eyebrow" /></p>
-                        <h2 className="mt-4 font-serif text-[2.4rem] font-light uppercase leading-[0.92] text-[#F8F2E8] md:text-[3.8rem]"><EditableText contentKey="spotlight.catwalk.title" fallback="Walk The House Windows" editorLabel="Spotlight catwalk title" /></h2>
-                        <p className="mt-5 text-sm leading-relaxed text-white/72 md:text-base"><EditableText contentKey="spotlight.catwalk.copy" fallback="Each collection card below behaves like a luxury window on the avenue. The lighting shifts, the cards tilt with the pointer, and the motion stays focused on opening the archive with that collection already selected." editorLabel="Spotlight catwalk copy" /></p>
-                        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            {[
-                                ['Runway Pace', 'Scrollytelling layers move at different speeds to simulate walking past a sequence of storefront windows.'],
-                                ['Museum Light', 'Soft gold gradients and tracked radial light keep the collection feeling curated rather than flat.'],
-                            ].map(([label, copy]) => (
-                                <div key={label} className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-5">
-                                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#D5B97E]/58"><EditableText contentKey={`spotlight.catwalk.cards.${label.toLowerCase().replace(/\s+/g, '_')}.label`} fallback={label} editorLabel={`${label} spotlight card label`} /></p>
-                                    <p className="mt-4 text-sm leading-relaxed text-white/68"><EditableText contentKey={`spotlight.catwalk.cards.${label.toLowerCase().replace(/\s+/g, '_')}.copy`} fallback={copy} editorLabel={`${label} spotlight card copy`} /></p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-white/8 bg-white/[0.03]">
-                            <div className="grid grid-cols-[0.74fr_1fr] items-stretch">
-                                <div className="relative min-h-[14rem] bg-[#0b0b0d]">
-                                    <CollectionFrameImage
-                                        collection={activeCollection}
-                                        frameIndex={1}
-                                        fallbackFrameIndex={0}
-                                        alt={activeCollection.name}
-                                        className="h-full w-full object-cover"
-                                        wrapperClassName="h-full w-full"
-                                        editorLabel={`${activeCollection.name} current focus image`}
-                                    />
-                                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0)_22%,rgba(0,0,0,0.18)_54%,rgba(0,0,0,0.76)_100%)]"></div>
-                                </div>
-                                <div className="flex flex-col justify-between gap-4 p-5">
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#D5B97E]/58"><EditableText contentKey="spotlight.current_focus.eyebrow" fallback="Current Focus" editorLabel="Spotlight current focus eyebrow" /></p>
-                                        <p className="mt-3 font-serif text-[1.8rem] font-light uppercase leading-[0.92] text-[#F8F2E8] [overflow-wrap:anywhere]">{activeCollection.name}</p>
-                                        <p className="mt-3 text-sm leading-relaxed text-white/68">{activeCollection.intro}</p>
-                                    </div>
-                                    <a href={activeCollection.href} className="transition-link inline-flex w-full items-center justify-between rounded-full border border-[#D5B97E]/20 bg-[rgba(12,12,14,0.82)] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#F1F1F1] hover-target transition-colors hover:bg-[rgba(18,18,20,0.92)]">
-                                        <span><EditableText contentKey="spotlight.current_focus.cta" fallback="Step Inside" editorLabel="Spotlight current focus CTA" /></span>
-                                        <span className="text-[#D5B97E]">{String(activeCollection.lookCount).padStart(2, '0')}</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                        {runwayCollections.map((collection, index) => (
-                            <RunwayWindowCard key={collection.name} collection={collection} index={index} isActive={collection.name === activeCollection.name} onPreview={handleCollectionPreview} />
-                        ))}
-                    </div>
-                </section>
-
-                <section className="relative overflow-hidden rounded-[2.2rem] border border-white/8 bg-[rgba(10,10,12,0.82)] p-6 md:p-8 xl:p-10">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,240,215,0.12),rgba(255,240,215,0)_26%),radial-gradient(circle_at_82%_18%,rgba(213,185,126,0.12),rgba(213,185,126,0)_28%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0)_18%,rgba(0,0,0,0.22)_56%,rgba(0,0,0,0.48)_100%)]"></div>
-                    <div className="relative grid grid-cols-1 gap-8 xl:grid-cols-[1fr_0.85fr] xl:items-end">
-                        <div data-runway-copy>
-                            <p className="text-[10px] uppercase tracking-[0.32em] text-[#D5B97E]/55"><EditableText contentKey="spotlight.after_dark.eyebrow" fallback="After Dark" editorLabel="Spotlight after dark eyebrow" /></p>
-                            <h2 className="mt-4 font-serif text-[2.4rem] font-light uppercase leading-[0.92] text-[#F8F2E8] md:text-[4rem]"><EditableText contentKey="spotlight.after_dark.title" fallback="The virtual walk ends where the archive begins." editorLabel="Spotlight after dark title" /></h2>
-                            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-white/72 md:text-base"><EditableText contentKey="spotlight.after_dark.copy" fallback="Choose the selected window for the strongest entrance or move directly into the archive if you already know the silhouette you want. Spotlight is here to make the collections feel cinematic before the product grid takes over." editorLabel="Spotlight after dark copy" /></p>
-                        </div>
-
-                        <div data-runway-copy className="flex flex-col gap-4 sm:flex-row xl:justify-end">
-                            <a href={activeCollection.href} className="transition-link inline-flex items-center justify-center rounded-full border border-[#D5B97E]/24 bg-[#D5B97E] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-[#090909] hover-target transition-colors hover:bg-[#E7D8BB]"><EditableText contentKey="spotlight.after_dark.cta.enter_selected" fallback="Enter Selected Collection" editorLabel="Spotlight after dark enter selected CTA" /></a>
-                            <a href="/collections" className="transition-link inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-7 py-4 text-[10px] uppercase tracking-[0.28em] text-white/82 hover-target transition-colors hover:bg-white/[0.08]"><EditableText contentKey="spotlight.after_dark.cta.view_archive" fallback="View Full Archive" editorLabel="Spotlight after dark view archive CTA" /></a>
-                        </div>
-                    </div>
-                </section>
-            </div>
+                </div>
+            </section>
         </div>
     );
 }
