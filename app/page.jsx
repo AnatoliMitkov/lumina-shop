@@ -1,8 +1,26 @@
 "use client";
 
+import EditableMediaAsset from '../components/site-copy/EditableMediaAsset';
 import EditableMedia from '../components/site-copy/EditableMedia';
+import EditableMediaFrame from '../components/site-copy/EditableMediaFrame';
 import EditableText from '../components/site-copy/EditableText';
+import { detectEditableMediaKind } from '../components/site-copy/media-kind';
 import { useSiteCopy } from '../components/site-copy/SiteCopyProvider';
+import { resolveSiteCopyMediaEntry } from '../utils/site-copy';
+
+const containMediaDefaults = {
+    fitDesktop: 'contain',
+    fitMobile: 'contain',
+    scaleDesktop: 1,
+    scaleMobile: 1,
+};
+
+const coverMediaDefaults = {
+    fitDesktop: 'cover',
+    fitMobile: 'cover',
+    scaleDesktop: 1,
+    scaleMobile: 1,
+};
 
 const categoryShowcaseItems = [
     {
@@ -77,6 +95,19 @@ export default function Home() {
     const siteCopy = useSiteCopy();
     const newsletterPlaceholder = siteCopy ? siteCopy.resolveText('home.newsletter.placeholder', 'Email address') : 'Email address';
     const heroMediaFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
+    const heroMediaSrc = siteCopy ? siteCopy.resolveMedia('home.hero.media.video', heroMediaFallback) : heroMediaFallback;
+    const heroMediaKind = detectEditableMediaKind(heroMediaSrc, 'video');
+    const heroMediaDefaults = heroMediaKind === 'video' ? coverMediaDefaults : containMediaDefaults;
+    const heroMediaEntry = siteCopy
+        ? siteCopy.resolveMediaEntry('home.hero.media.video', heroMediaFallback, heroMediaDefaults)
+        : resolveSiteCopyMediaEntry(heroMediaSrc, heroMediaFallback, heroMediaDefaults);
+    const heroBackdropEntry = {
+        ...heroMediaEntry,
+        fitDesktop: 'cover',
+        fitMobile: 'cover',
+        scaleDesktop: Math.max(heroMediaEntry.scaleDesktop, 1.08),
+        scaleMobile: Math.max(heroMediaEntry.scaleMobile, 1.08),
+    };
 
     return (
         <>
@@ -93,21 +124,55 @@ export default function Home() {
             <section className="relative w-full flex flex-col overflow-hidden" style={{ minHeight: '100svh', height: '100svh' }}>
                 <div className="relative w-full flex items-center justify-center overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
                     <div className="absolute inset-0 z-0 bg-[#1C1C1C]">
-                        <EditableMedia
-                            contentKey="home.hero.media.video"
-                            fallback={heroMediaFallback}
-                            editorLabel="Home hero background media"
-                            mediaKind="video"
-                            wrapperClassName="absolute inset-0"
-                            className="hero-img h-full w-full object-cover opacity-0 scale-125"
-                            onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                            }}
-                            videoProps={{
-                                preload: 'auto',
-                                'aria-hidden': true,
-                            }}
-                        />
+                        {heroMediaKind === 'video' ? (
+                            <EditableMedia
+                                contentKey="home.hero.media.video"
+                                fallback={heroMediaFallback}
+                                editorLabel="Home hero background media"
+                                mediaKind="video"
+                                wrapperClassName="absolute inset-0"
+                                className="hero-img h-full w-full object-cover opacity-0 scale-125"
+                                defaultMediaSettings={coverMediaDefaults}
+                                onError={(event) => {
+                                    event.currentTarget.style.display = 'none';
+                                }}
+                                videoProps={{
+                                    preload: 'auto',
+                                    'aria-hidden': true,
+                                }}
+                            />
+                        ) : (
+                            <EditableMediaFrame
+                                contentKey="home.hero.media.video"
+                                fallback={heroMediaFallback}
+                                editorLabel="Home hero background media"
+                                mediaKind="video"
+                                className="absolute inset-0"
+                                defaultMediaSettings={heroMediaDefaults}
+                            >
+                                <EditableMediaAsset
+                                    source={heroMediaEntry.src}
+                                    alt="Home hero banner background"
+                                    fallbackKind="image"
+                                    mediaConfig={heroBackdropEntry}
+                                    className="hero-img absolute inset-0 h-full w-full opacity-0 blur-[18px] brightness-[0.42] saturate-[0.82]"
+                                    imageProps={{ draggable: false }}
+                                />
+
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),rgba(28,28,28,0)_42%)]"></div>
+
+                                <div className="absolute inset-0 flex items-center justify-center px-3 sm:px-6 md:px-10 xl:px-12">
+                                    <EditableMediaAsset
+                                        source={heroMediaEntry.src}
+                                        alt="Home hero banner"
+                                        fallbackKind="image"
+                                        mediaConfig={heroMediaEntry}
+                                        className="hero-img h-full w-full max-w-[1900px] opacity-0"
+                                        imageProps={{ draggable: false }}
+                                    />
+                                </div>
+                            </EditableMediaFrame>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
                     </div>
 
@@ -162,6 +227,7 @@ export default function Home() {
                                     alt={item.title}
                                     wrapperClassName="absolute inset-0"
                                     className="h-full w-full object-contain p-3 md:p-4 transition-transform duration-[1600ms] ease-out group-hover:scale-[1.02]"
+                                    defaultMediaSettings={containMediaDefaults}
                                     onError={(event) => {
                                         event.target.style.display = 'none';
                                     }}
@@ -200,6 +266,7 @@ export default function Home() {
                                         alt={product.name}
                                         wrapperClassName="absolute inset-0"
                                         className="h-full w-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-0"
+                                        defaultMediaSettings={coverMediaDefaults}
                                         onError={(event) => {
                                             event.target.style.display = 'none';
                                         }}
@@ -211,6 +278,7 @@ export default function Home() {
                                         alt={`${product.name} alternate view`}
                                         wrapperClassName="absolute inset-0"
                                         className="h-full w-full object-cover opacity-0 transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-100"
+                                        defaultMediaSettings={coverMediaDefaults}
                                         onError={(event) => {
                                             event.target.style.display = 'none';
                                         }}
@@ -247,6 +315,7 @@ export default function Home() {
                             alt="Styling by VA atelier detail"
                             wrapperClassName="absolute inset-0"
                             className="h-full w-full object-contain p-3 md:p-4"
+                            defaultMediaSettings={containMediaDefaults}
                             onError={(event) => {
                                 event.target.style.display = 'none';
                             }}

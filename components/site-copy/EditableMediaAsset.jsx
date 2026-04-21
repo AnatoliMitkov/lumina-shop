@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { detectEditableMediaKind } from './media-kind';
+import {
+    buildResponsiveMediaStyle,
+    buildViewportMediaLayoutStyle,
+    buildViewportMediaTransformStyle,
+    resolveSiteCopyMediaEntry,
+} from '../../utils/site-copy';
 
 function callHandler(handler, event) {
     if (typeof handler === 'function') {
@@ -15,6 +21,8 @@ export default function EditableMediaAsset({
     fallbackKind = 'image',
     className = '',
     onError,
+    mediaConfig,
+    viewportMode = 'responsive',
     imageProps = {},
     videoProps = {},
 }) {
@@ -22,6 +30,10 @@ export default function EditableMediaAsset({
     const [hasSwappedKind, setHasSwappedKind] = useState(false);
     const imageErrorHandler = imageProps.onError;
     const videoErrorHandler = videoProps.onError;
+    const normalizedMediaConfig = resolveSiteCopyMediaEntry({
+        ...(mediaConfig || {}),
+        src: source,
+    }, source);
 
     useEffect(() => {
         setResolvedKind(detectEditableMediaKind(source, fallbackKind));
@@ -43,30 +55,56 @@ export default function EditableMediaAsset({
         return null;
     }
 
+    const shellStyle = viewportMode === 'responsive'
+        ? buildResponsiveMediaStyle(normalizedMediaConfig)
+        : buildViewportMediaTransformStyle(normalizedMediaConfig, viewportMode);
+    const mediaLayoutStyle = viewportMode === 'responsive'
+        ? null
+        : buildViewportMediaLayoutStyle(normalizedMediaConfig, viewportMode);
+    const sharedClassName = `${viewportMode === 'responsive' ? 'editable-media-asset-responsive' : ''} ${className}`.trim();
+
     if (resolvedKind === 'video') {
-        const { onError: ignoredOnError, ...restVideoProps } = videoProps;
+        const { onError: ignoredOnError, style: videoStyle, ...restVideoProps } = videoProps;
 
         return (
-            <video
-                key={`${source}:video`}
-                src={source}
-                className={className}
-                onError={(event) => handleMediaError(event, videoErrorHandler)}
-                {...restVideoProps}
-            />
+            <div
+                className={`h-full w-full overflow-hidden ${viewportMode === 'responsive' ? 'editable-media-transform-shell-responsive' : ''}`.trim()}
+                style={shellStyle}
+            >
+                <video
+                    key={`${source}:video`}
+                    src={source}
+                    className={sharedClassName}
+                    style={{
+                        ...(mediaLayoutStyle || {}),
+                        ...videoStyle,
+                    }}
+                    onError={(event) => handleMediaError(event, videoErrorHandler)}
+                    {...restVideoProps}
+                />
+            </div>
         );
     }
 
-    const { onError: ignoredOnError, ...restImageProps } = imageProps;
+    const { onError: ignoredOnError, style: imageStyle, ...restImageProps } = imageProps;
 
     return (
-        <img
-            key={`${source}:image`}
-            src={source}
-            alt={alt}
-            className={className}
-            onError={(event) => handleMediaError(event, imageErrorHandler)}
-            {...restImageProps}
-        />
+        <div
+            className={`h-full w-full overflow-hidden ${viewportMode === 'responsive' ? 'editable-media-transform-shell-responsive' : ''}`.trim()}
+            style={shellStyle}
+        >
+            <img
+                key={`${source}:image`}
+                src={source}
+                alt={alt}
+                className={sharedClassName}
+                style={{
+                    ...(mediaLayoutStyle || {}),
+                    ...imageStyle,
+                }}
+                onError={(event) => handleMediaError(event, imageErrorHandler)}
+                {...restImageProps}
+            />
+        </div>
     );
 }

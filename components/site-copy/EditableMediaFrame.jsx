@@ -14,6 +14,7 @@ export default function EditableMediaFrame({
     editorLabel,
     mediaKind = 'image',
     className = '',
+    defaultMediaSettings,
     children,
 }) {
     const context = useSiteCopy();
@@ -103,6 +104,7 @@ export default function EditableMediaFrame({
             multiline: false,
             entryType: 'media',
             mediaKind,
+            defaultMediaSettings,
             element: mediaRef.current,
         });
     };
@@ -121,6 +123,7 @@ export default function EditableMediaFrame({
             multiline: false,
             entryType: 'media',
             mediaKind,
+            defaultMediaSettings,
             element: mediaRef.current,
         });
     };

@@ -36,6 +36,28 @@ html[data-page-motion='off'] .hero-img {
     transform: none !important;
 }
 
+.editable-media-asset-responsive {
+    object-fit: var(--editable-media-fit-desktop, cover);
+    object-position: var(--editable-media-position-desktop-x, 50%) var(--editable-media-position-desktop-y, 50%);
+}
+
+.editable-media-transform-shell-responsive {
+    transform: scale(var(--editable-media-scale-desktop, 1));
+    transform-origin: var(--editable-media-position-desktop-x, 50%) var(--editable-media-position-desktop-y, 50%);
+}
+
+@media (max-width: 767px) {
+    .editable-media-asset-responsive {
+        object-fit: var(--editable-media-fit-mobile, var(--editable-media-fit-desktop, cover));
+        object-position: var(--editable-media-position-mobile-x, var(--editable-media-position-desktop-x, 50%)) var(--editable-media-position-mobile-y, var(--editable-media-position-desktop-y, 50%));
+    }
+
+    .editable-media-transform-shell-responsive {
+        transform: scale(var(--editable-media-scale-mobile, var(--editable-media-scale-desktop, 1)));
+        transform-origin: var(--editable-media-position-mobile-x, var(--editable-media-position-desktop-x, 50%)) var(--editable-media-position-mobile-y, var(--editable-media-position-desktop-y, 50%));
+    }
+}
+
 html.lenis,
 html.lenis body {
     height: auto;

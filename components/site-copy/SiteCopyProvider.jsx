@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import EditableMediaAsset from './EditableMediaAsset';
 import { detectEditableMediaKind } from './media-kind';
+import { createDefaultMediaSettings, resolveSiteCopyMediaEntry, serializeSiteCopyMediaEntry } from '../../utils/site-copy';
 
 const SiteCopyContext = createContext(null);
 
@@ -19,18 +20,152 @@ function clamp(value, minValue, maxValue) {
     return Math.min(Math.max(value, minValue), maxValue);
 }
 
-function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel, onChange, onSave }) {
+function MediaPreviewSurface({ label, viewport, mediaConfig, previewKind, onUpdatePosition }) {
+    const frameRef = useRef(null);
+    const isDraggingRef = useRef(false);
+    const position = viewport === 'mobile' ? mediaConfig.positionMobile : mediaConfig.positionDesktop;
+    const aspectClassName = viewport === 'mobile' ? 'aspect-[9/16] max-w-[16rem] mx-auto' : 'aspect-[16/10]';
+
+    const updateFromPointer = (event) => {
+        if (!frameRef.current) {
+            return;
+        }
+
+        const bounds = frameRef.current.getBoundingClientRect();
+
+        if (bounds.width <= 0 || bounds.height <= 0) {
+            return;
+        }
+
+        const nextX = ((event.clientX - bounds.left) / bounds.width) * 100;
+        const nextY = ((event.clientY - bounds.top) / bounds.height) * 100;
+
+        onUpdatePosition(viewport, nextX, nextY);
+    };
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.24em] text-white/45">
+                <span>{label}</span>
+                <span>{Math.round(position.x)} / {Math.round(position.y)}</span>
+            </div>
+
+            <div
+                ref={frameRef}
+                className={`relative w-full overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#080808] ${aspectClassName}`}
+                onPointerDown={(event) => {
+                    isDraggingRef.current = true;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    updateFromPointer(event);
+                }}
+                onPointerMove={(event) => {
+                    if (!isDraggingRef.current) {
+                        return;
+                    }
+
+                    updateFromPointer(event);
+                }}
+                onPointerUp={(event) => {
+                    isDraggingRef.current = false;
+                    event.currentTarget.releasePointerCapture?.(event.pointerId);
+                }}
+                onPointerCancel={() => {
+                    isDraggingRef.current = false;
+                }}
+                style={{ touchAction: 'none' }}
+            >
+                {mediaConfig.src ? (
+                    <EditableMediaAsset
+                        source={mediaConfig.src}
+                        alt={label}
+                        fallbackKind={previewKind}
+                        mediaConfig={mediaConfig}
+                        viewportMode={viewport}
+                        className="h-full w-full bg-black"
+                        imageProps={{ draggable: false }}
+                        videoProps={{
+                            autoPlay: true,
+                            loop: true,
+                            muted: true,
+                            playsInline: true,
+                            preload: 'metadata',
+                        }}
+                    />
+                ) : (
+                    <div className="flex h-full items-center justify-center px-6 text-center text-sm leading-relaxed text-white/40">
+                        Add a media URL to start previewing this surface.
+                    </div>
+                )}
+
+                <div className="pointer-events-none absolute inset-0 border border-white/8"></div>
+                <div
+                    className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#EFE7DA] bg-[#EFE7DA]/18 shadow-[0_0_0_1px_rgba(0,0,0,0.14)]"
+                    style={{
+                        left: `${position.x}%`,
+                        top: `${position.y}%`,
+                    }}
+                >
+                    <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#EFE7DA]"></span>
+                </div>
+            </div>
+
+            <p className="text-xs leading-relaxed text-white/44">Drag inside the preview to place the focus for {viewport}.</p>
+        </div>
+    );
+}
+
+function SiteCopyEditor({
+    activeEntry,
+    draftTextValue,
+    draftMediaValue,
+    isSaving,
+    saveError,
+    onCancel,
+    onTextChange,
+    onMediaChange,
+    onSave,
+}) {
+    const [activeViewport, setActiveViewport] = useState('desktop');
+
+    useEffect(() => {
+        if (activeEntry?.key) {
+            setActiveViewport('desktop');
+        }
+    }, [activeEntry?.key]);
+
     if (!activeEntry) {
         return null;
     }
 
     const isMediaEntry = activeEntry.entryType === 'media';
-    const previewKind = isMediaEntry ? detectEditableMediaKind(draftValue, activeEntry.mediaKind) : 'image';
+    const resolvedDraftMediaValue = isMediaEntry
+        ? resolveSiteCopyMediaEntry(draftMediaValue, activeEntry.fallback, activeEntry.defaultMediaSettings || {})
+        : null;
+    const previewKind = isMediaEntry ? detectEditableMediaKind(resolvedDraftMediaValue?.src, activeEntry.mediaKind) : 'image';
     const previewLabel = previewKind === 'video' ? 'Video Preview' : 'Image Preview';
+
+    const updateMediaDraft = (updater) => {
+        if (!onMediaChange) {
+            return;
+        }
+
+        onMediaChange((currentMediaValue) => {
+            const nextMediaValue = typeof updater === 'function' ? updater(currentMediaValue) : updater;
+            return resolveSiteCopyMediaEntry(nextMediaValue, nextMediaValue?.src || activeEntry.fallback, activeEntry.defaultMediaSettings || {});
+        });
+    };
+
+    const viewportKeyMap = activeViewport === 'mobile'
+        ? { fit: 'fitMobile', scale: 'scaleMobile', position: 'positionMobile' }
+        : { fit: 'fitDesktop', scale: 'scaleDesktop', position: 'positionDesktop' };
+    const activeViewportPosition = resolvedDraftMediaValue?.[viewportKeyMap.position] || { x: 50, y: 50 };
+    const activeViewportFit = resolvedDraftMediaValue?.[viewportKeyMap.fit] || 'cover';
+    const activeViewportScale = resolvedDraftMediaValue?.[viewportKeyMap.scale] || 1;
+    const defaultViewportSettings = createDefaultMediaSettings(activeEntry.defaultMediaSettings || {});
 
     return (
         <div className="fixed inset-0 z-[260] flex items-end justify-center bg-[#1C1C1C]/55 p-4 backdrop-blur-sm sm:items-center">
-            <div className="w-full max-w-2xl rounded-[1.8rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-6 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:p-7">
+            <div className={`w-full rounded-[1.8rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-6 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:p-7 ${isMediaEntry ? 'max-w-6xl' : 'max-w-2xl'}`}>
                 <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : 'Inline Copy Editor'}</p>
@@ -47,50 +182,247 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
                 </div>
 
                 <div className="mt-6 flex flex-col gap-4">
-                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                        {isMediaEntry ? 'Media URL' : 'Visible Text'}
-                        {isMediaEntry ? (
-                            <input
-                                type="text"
-                                value={draftValue}
-                                onChange={(event) => onChange(event.target.value)}
-                                className="h-14 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
-                                placeholder="https://example.com/image.jpg or /banner.jpg"
-                            />
-                        ) : (
+                    {isMediaEntry ? (
+                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_22rem]">
+                            <div className="flex flex-col gap-5">
+                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                                    Media URL
+                                    <input
+                                        type="text"
+                                        value={resolvedDraftMediaValue?.src || ''}
+                                        onChange={(event) => {
+                                            const nextSource = event.target.value;
+                                            updateMediaDraft((currentMediaValue) => ({
+                                                ...currentMediaValue,
+                                                src: nextSource,
+                                            }));
+                                        }}
+                                        className="h-14 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
+                                        placeholder="https://example.com/image.jpg or /banner.jpg"
+                                    />
+                                </label>
+
+                                <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                                    <div className="flex flex-col gap-2 border-b border-white/8 pb-4 md:flex-row md:items-center md:justify-between">
+                                        <div>
+                                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Adaptive Preview</p>
+                                            <p className="mt-2 text-sm leading-relaxed text-white/62">The slot can now render {previewKind === 'video' ? 'video' : 'image'} media. Adjust desktop and mobile independently.</p>
+                                        </div>
+                                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-white/62">{previewLabel}</span>
+                                    </div>
+
+                                    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                                        <MediaPreviewSurface
+                                            label="Desktop Preview"
+                                            viewport="desktop"
+                                            mediaConfig={resolvedDraftMediaValue}
+                                            previewKind={previewKind}
+                                            onUpdatePosition={(viewport, nextX, nextY) => {
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    [viewport === 'mobile' ? 'positionMobile' : 'positionDesktop']: {
+                                                        x: nextX,
+                                                        y: nextY,
+                                                    },
+                                                }));
+                                            }}
+                                        />
+
+                                        <MediaPreviewSurface
+                                            label="Mobile Preview"
+                                            viewport="mobile"
+                                            mediaConfig={resolvedDraftMediaValue}
+                                            previewKind={previewKind}
+                                            onUpdatePosition={(viewport, nextX, nextY) => {
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    [viewport === 'mobile' ? 'positionMobile' : 'positionDesktop']: {
+                                                        x: nextX,
+                                                        y: nextY,
+                                                    },
+                                                }));
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 md:p-5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Adjustments</p>
+                                    <span className="text-[10px] uppercase tracking-[0.24em] text-white/32">Precise Controls</span>
+                                </div>
+
+                                <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                                    {['desktop', 'mobile'].map((viewport) => (
+                                        <button
+                                            key={viewport}
+                                            type="button"
+                                            onClick={() => setActiveViewport(viewport)}
+                                            className={`rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeViewport === viewport ? 'bg-[#EFE7DA] text-[#1C1C1C]' : 'text-white/58 hover:text-white'}`}
+                                        >
+                                            {viewport}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mt-5 flex flex-col gap-5">
+                                    <div className="flex flex-col gap-3">
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Fit</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['cover', 'contain'].map((fitMode) => (
+                                                <button
+                                                    key={fitMode}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        updateMediaDraft((currentMediaValue) => ({
+                                                            ...currentMediaValue,
+                                                            [viewportKeyMap.fit]: fitMode,
+                                                        }));
+                                                    }}
+                                                    className={`rounded-[0.95rem] border px-4 py-3 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeViewportFit === fitMode ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.03] text-white/60 hover:text-white'}`}
+                                                >
+                                                    {fitMode}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/45">
+                                        Scale
+                                        <div className="flex items-center justify-between gap-3 text-white/62">
+                                            <input
+                                                type="range"
+                                                min="0.6"
+                                                max="2.4"
+                                                step="0.01"
+                                                value={activeViewportScale}
+                                                onChange={(event) => {
+                                                    updateMediaDraft((currentMediaValue) => ({
+                                                        ...currentMediaValue,
+                                                        [viewportKeyMap.scale]: Number.parseFloat(event.target.value),
+                                                    }));
+                                                }}
+                                                className="w-full"
+                                            />
+                                            <span className="w-12 text-right text-xs">{Math.round(activeViewportScale * 100)}%</span>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/45">
+                                        Horizontal Position
+                                        <div className="flex items-center justify-between gap-3 text-white/62">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                value={activeViewportPosition.x}
+                                                onChange={(event) => {
+                                                    const nextValue = Number.parseFloat(event.target.value);
+                                                    updateMediaDraft((currentMediaValue) => ({
+                                                        ...currentMediaValue,
+                                                        [viewportKeyMap.position]: {
+                                                            ...(currentMediaValue?.[viewportKeyMap.position] || activeViewportPosition),
+                                                            x: nextValue,
+                                                        },
+                                                    }));
+                                                }}
+                                                className="w-full"
+                                            />
+                                            <span className="w-12 text-right text-xs">{Math.round(activeViewportPosition.x)}%</span>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/45">
+                                        Vertical Position
+                                        <div className="flex items-center justify-between gap-3 text-white/62">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                value={activeViewportPosition.y}
+                                                onChange={(event) => {
+                                                    const nextValue = Number.parseFloat(event.target.value);
+                                                    updateMediaDraft((currentMediaValue) => ({
+                                                        ...currentMediaValue,
+                                                        [viewportKeyMap.position]: {
+                                                            ...(currentMediaValue?.[viewportKeyMap.position] || activeViewportPosition),
+                                                            y: nextValue,
+                                                        },
+                                                    }));
+                                                }}
+                                                className="w-full"
+                                            />
+                                            <span className="w-12 text-right text-xs">{Math.round(activeViewportPosition.y)}%</span>
+                                        </div>
+                                    </label>
+
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    [viewportKeyMap.position]: { x: 50, y: 50 },
+                                                }));
+                                            }}
+                                            className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/62 transition-colors hover:text-white"
+                                        >
+                                            Center Focus
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const fromViewport = activeViewport === 'desktop' ? 'positionDesktop' : 'positionMobile';
+                                                const toViewport = activeViewport === 'desktop' ? 'positionMobile' : 'positionDesktop';
+                                                const fromFit = activeViewport === 'desktop' ? 'fitDesktop' : 'fitMobile';
+                                                const toFit = activeViewport === 'desktop' ? 'fitMobile' : 'fitDesktop';
+                                                const fromScale = activeViewport === 'desktop' ? 'scaleDesktop' : 'scaleMobile';
+                                                const toScale = activeViewport === 'desktop' ? 'scaleMobile' : 'scaleDesktop';
+
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    [toViewport]: currentMediaValue?.[fromViewport],
+                                                    [toFit]: currentMediaValue?.[fromFit],
+                                                    [toScale]: currentMediaValue?.[fromScale],
+                                                }));
+                                            }}
+                                            className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/62 transition-colors hover:text-white"
+                                        >
+                                            {activeViewport === 'desktop' ? 'Copy Desktop To Mobile' : 'Copy Mobile To Desktop'}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                updateMediaDraft((currentMediaValue) => ({
+                                                    ...currentMediaValue,
+                                                    [viewportKeyMap.fit]: defaultViewportSettings[viewportKeyMap.fit],
+                                                    [viewportKeyMap.position]: defaultViewportSettings[viewportKeyMap.position],
+                                                    [viewportKeyMap.scale]: defaultViewportSettings[viewportKeyMap.scale],
+                                                }));
+                                            }}
+                                            className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/62 transition-colors hover:text-white sm:col-span-2 xl:col-span-1"
+                                        >
+                                            Reset {activeViewport}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                            Visible Text
                             <textarea
-                                value={draftValue}
-                                onChange={(event) => onChange(event.target.value)}
+                                value={draftTextValue}
+                                onChange={(event) => onTextChange(event.target.value)}
                                 rows={activeEntry.multiline ? 7 : 3}
                                 className="min-h-[10rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-relaxed tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
                             />
-                        )}
-                    </label>
-
-                    {isMediaEntry && (
-                        <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
-                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">{previewLabel}</p>
-                            <div className="mt-3 overflow-hidden rounded-[1rem] border border-white/8 bg-[#080808]">
-                                {draftValue ? (
-                                    <EditableMediaAsset
-                                        source={draftValue}
-                                        alt={activeEntry.label}
-                                        fallbackKind={activeEntry.mediaKind}
-                                        className="max-h-[24rem] w-full bg-black object-contain"
-                                        imageProps={{}}
-                                        videoProps={{
-                                            controls: true,
-                                            muted: true,
-                                            playsInline: true,
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="flex min-h-[14rem] items-center justify-center px-6 py-10 text-center text-sm leading-relaxed text-white/46">
-                                        Paste a media URL or a public asset path to preview it here.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        </label>
                     )}
 
                     {saveError && <p className="text-sm leading-relaxed text-red-300">{saveError}</p>}
@@ -123,7 +455,8 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const [isEditMode, setIsEditMode] = useState(false);
     const [hoveredEntry, setHoveredEntry] = useState(null);
     const [activeEntry, setActiveEntry] = useState(null);
-    const [draftValue, setDraftValue] = useState('');
+    const [draftTextValue, setDraftTextValue] = useState('');
+    const [draftMediaValue, setDraftMediaValue] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
     const hoverClearTimeoutRef = useRef(null);
@@ -155,16 +488,31 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, [entries]);
 
     const resolveMedia = useCallback((key, fallback) => {
-        if (Object.prototype.hasOwnProperty.call(entries, key)) {
-            return entries[key];
-        }
-
-        return fallback;
+        return resolveSiteCopyMediaEntry(
+            Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
+            fallback,
+        ).src;
     }, [entries]);
+
+    const resolveMediaEntry = useCallback((key, fallback, defaultMediaSettings) => resolveSiteCopyMediaEntry(
+        Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
+        fallback,
+        defaultMediaSettings,
+    ), [entries]);
 
     const openEditor = useCallback((entry) => {
         setActiveEntry(entry);
-        setDraftValue(Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback);
+        if (entry.entryType === 'media') {
+            setDraftMediaValue(resolveSiteCopyMediaEntry(
+                Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback,
+                entry.fallback,
+                entry.defaultMediaSettings || {},
+            ));
+            setDraftTextValue('');
+        } else {
+            setDraftTextValue(Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback);
+            setDraftMediaValue(null);
+        }
         setSaveError('');
     }, [entries]);
 
@@ -215,12 +563,15 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         setSaveError('');
 
         try {
+            const nextValue = activeEntry.entryType === 'media'
+                ? serializeSiteCopyMediaEntry(draftMediaValue, activeEntry.defaultMediaSettings || {})
+                : draftTextValue;
             const response = await fetch('/api/admin/site-copy', {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ key: activeEntry.key, value: draftValue }),
+                body: JSON.stringify({ key: activeEntry.key, value: nextValue }),
             });
             const data = await response.json().catch(() => ({}));
 
@@ -230,7 +581,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
             setEntries((currentEntries) => ({
                 ...currentEntries,
-                [activeEntry.key]: data.entry?.value ?? draftValue,
+                [activeEntry.key]: data.entry?.value ?? nextValue,
             }));
             setActiveEntry(null);
         } catch (error) {
@@ -238,7 +589,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         } finally {
             setIsSaving(false);
         }
-    }, [activeEntry, draftValue, isSaving]);
+    }, [activeEntry, draftMediaValue, draftTextValue, isSaving]);
 
     const hoverButtonStyle = hoveredEntry?.rect
         ? {
@@ -252,10 +603,11 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         isEditMode,
         resolveText,
         resolveMedia,
+        resolveMediaEntry,
         openEditor,
         registerHoverTarget,
         clearHoverTarget,
-    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveText]);
+    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveText]);
 
     return (
         <SiteCopyContext.Provider value={value}>
@@ -298,14 +650,16 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
                     <SiteCopyEditor
                         activeEntry={activeEntry}
-                        draftValue={draftValue}
+                        draftTextValue={draftTextValue}
+                        draftMediaValue={draftMediaValue}
                         isSaving={isSaving}
                         saveError={saveError}
                         onCancel={() => {
                             setActiveEntry(null);
                             setSaveError('');
                         }}
-                        onChange={setDraftValue}
+                        onTextChange={setDraftTextValue}
+                        onMediaChange={setDraftMediaValue}
                         onSave={saveActiveEntry}
                     />
                 </>

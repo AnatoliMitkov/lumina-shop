@@ -12,12 +12,16 @@ export default function EditableMedia({
     className = '',
     wrapperClassName = '',
     mediaKind = 'image',
+    defaultMediaSettings,
     videoProps = {},
     onError,
     ...imageProps
 }) {
     const context = useSiteCopy();
-    const resolvedSource = context ? context.resolveMedia(contentKey, fallback) : fallback;
+    const resolvedMediaEntry = context
+        ? context.resolveMediaEntry(contentKey, fallback, defaultMediaSettings)
+        : { src: fallback, ...(defaultMediaSettings || {}) };
+    const resolvedSource = resolvedMediaEntry?.src || fallback;
 
     return (
         <EditableMediaFrame
@@ -26,12 +30,14 @@ export default function EditableMedia({
             editorLabel={editorLabel}
             mediaKind={mediaKind}
             className={wrapperClassName}
+            defaultMediaSettings={defaultMediaSettings}
         >
             <EditableMediaAsset
                 source={resolvedSource}
                 alt={alt}
                 fallbackKind={mediaKind}
                 className={className}
+                mediaConfig={resolvedMediaEntry}
                 onError={onError}
                 imageProps={imageProps}
                 videoProps={{
