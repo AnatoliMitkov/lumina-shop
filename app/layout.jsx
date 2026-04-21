@@ -7,10 +7,67 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { createClient, isSupabaseConfigured, resolveSupabaseWithTimeout } from '../utils/supabase/server';
 import { isSiteCopySetupError, toSiteCopyMap } from '../utils/site-copy';
+import { absoluteSiteUrl, getSiteUrl } from '../utils/seo';
+
+const siteUrl = getSiteUrl();
 
 export const metadata = {
-  title: 'The VA Store | High-End Macramé',
-  description: 'Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'The VA Store | Handmade Avant-Garde Fashion',
+    template: '%s | The VA Store',
+  },
+  description: 'Hand-knotted avant-garde fashion from Styling by VA. Explore sculptural tops, dresses, sets, bespoke pieces, and worldwide delivery from Bulgaria.',
+  applicationName: 'The VA Store',
+  keywords: [
+    'The VA Store',
+    'Styling by VA',
+    'macrame fashion',
+    'avant-garde fashion',
+    'handmade fashion',
+    'designer tops',
+    'bespoke fashion Bulgaria',
+    'luxury handmade clothing',
+  ],
+  authors: [{ name: 'Styling by VA' }],
+  creator: 'Styling by VA',
+  publisher: 'Styling by VA',
+  alternates: {
+    canonical: '/',
+  },
+  category: 'fashion',
+  openGraph: {
+    type: 'website',
+    url: siteUrl,
+    siteName: 'The VA Store',
+    title: 'The VA Store | Handmade Avant-Garde Fashion',
+    description: 'Hand-knotted avant-garde fashion from Styling by VA with collections, spotlight stories, and worldwide delivery.',
+    images: [
+      {
+        url: absoluteSiteUrl('/icon-512.png'),
+        width: 512,
+        height: 512,
+        alt: 'The VA Store icon',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The VA Store | Handmade Avant-Garde Fashion',
+    description: 'Explore hand-knotted avant-garde fashion from Styling by VA.',
+    images: [absoluteSiteUrl('/icon-512.png')],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },

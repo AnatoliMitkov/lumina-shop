@@ -4,6 +4,14 @@ import { createClient } from '../../utils/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Collections',
+    description: 'Browse The VA Store collections and discover handmade avant-garde macrame fashion by Styling by VA.',
+    alternates: {
+        canonical: '/collections',
+    },
+};
+
 export default async function CollectionsPage() {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);

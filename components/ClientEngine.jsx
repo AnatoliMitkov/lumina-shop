@@ -945,8 +945,15 @@ export default function ClientEngine({ children }) {
                         </div>
                     </div>
 
-                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40">
+                        <div className="flex flex-col gap-4 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 md:flex-row md:items-center md:justify-between">
                         <p><EditableText contentKey="shell.footer.copyright" fallback="© 2026 The VA Store." editorLabel="Footer copyright" /></p>
+                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center md:justify-start">
+                                <a href="/privacy-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.privacy_policy" fallback="Privacy Policy" editorLabel="Footer privacy policy label" /></a>
+                                <a href="/cookie-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.cookie_policy" fallback="Cookie Policy" editorLabel="Footer cookie policy label" /></a>
+                                <a href="https://www.instagram.com/va.storeofficial/" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.instagram" fallback="Instagram" editorLabel="Footer Instagram label" /></a>
+                                <a href="https://www.facebook.com/profile.php?id=61584052437151" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.facebook" fallback="Facebook" editorLabel="Footer Facebook label" /></a>
+                                <a href="https://www.tiktok.com/@2hotbyva" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.tiktok" fallback="TikTok" editorLabel="Footer TikTok label" /></a>
+                            </div>
                             <div className="flex items-center gap-3">
                                 <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback="Page Motion" editorLabel="Footer page motion label" /></span>
                                 <button
@@ -963,7 +970,7 @@ export default function ClientEngine({ children }) {
                                     <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
                                 </button>
                             </div>
-                        <p className="hover-target"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
+                        <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
                     </div>
                 </div>
             </footer>

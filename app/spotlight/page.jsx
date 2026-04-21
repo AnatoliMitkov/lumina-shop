@@ -5,6 +5,14 @@ import { buildCollectionsHref, resolveProductGallery, sortProducts } from '../..
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Spotlight',
+    description: 'Experience the cinematic collection spotlight and explore featured windows from The VA Store.',
+    alternates: {
+        canonical: '/spotlight',
+    },
+};
+
 const fallbackCollectionStory = {
     name: 'Editorial Avenue',
     href: '/collections',

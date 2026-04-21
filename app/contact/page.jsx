@@ -5,6 +5,14 @@ import EditableText from '../../components/site-copy/EditableText';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+    title: 'Contact',
+    description: 'Contact The VA Store for bespoke requests, order questions, fittings, and atelier support.',
+    alternates: {
+        canonical: '/contact',
+    },
+};
+
 export default async function ContactPage() {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);

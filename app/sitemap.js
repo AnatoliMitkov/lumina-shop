@@ -1,0 +1,53 @@
+import { createAdminClient, isAdminConfigured } from '../utils/supabase/admin';
+import { buildProductHref, normalizeProductRecord } from '../utils/products';
+import { absoluteSiteUrl } from '../utils/seo';
+
+export const revalidate = 3600;
+
+const staticRoutes = [
+    { path: '/', changeFrequency: 'weekly', priority: 1 },
+    { path: '/collections', changeFrequency: 'daily', priority: 0.9 },
+    { path: '/spotlight', changeFrequency: 'weekly', priority: 0.8 },
+    { path: '/bespoke', changeFrequency: 'monthly', priority: 0.8 },
+    { path: '/contact', changeFrequency: 'monthly', priority: 0.7 },
+    { path: '/privacy-policy', changeFrequency: 'monthly', priority: 0.4 },
+    { path: '/cookie-policy', changeFrequency: 'monthly', priority: 0.4 },
+];
+
+export default async function sitemap() {
+    const entries = staticRoutes.map((route) => ({
+        url: absoluteSiteUrl(route.path),
+        changeFrequency: route.changeFrequency,
+        priority: route.priority,
+    }));
+
+    if (!isAdminConfigured()) {
+        return entries;
+    }
+
+    try {
+        const adminClient = createAdminClient();
+        const { data: products, error } = await adminClient
+            .from('products')
+            .select('id, slug, status, updated_at')
+            .eq('status', 'active');
+
+        if (error) {
+            throw error;
+        }
+
+        const productEntries = (products || [])
+            .map((product) => normalizeProductRecord(product))
+            .filter((product) => product.status === 'active' && product.id)
+            .map((product) => ({
+                url: absoluteSiteUrl(buildProductHref(product)),
+                lastModified: product.updated_at || undefined,
+                changeFrequency: 'weekly',
+                priority: 0.7,
+            }));
+
+        return [...entries, ...productEntries];
+    } catch {
+        return entries;
+    }
+}

@@ -298,7 +298,7 @@ export function sortProducts(products = []) {
 
 export function buildProductHref(product = {}) {
   const normalizedProduct = normalizeProductRecord(product);
-  const slugOrId = normalizedProduct.id || normalizedProduct.slug;
+  const slugOrId = normalizedProduct.slug || normalizedProduct.id;
 
   return `/product/${encodeURIComponent(slugOrId)}`;
 }

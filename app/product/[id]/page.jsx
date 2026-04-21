@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import ProductDetailAccordions from '../../../components/ProductDetailAccordions';
 import ProductGallery from '../../../components/ProductGallery';
@@ -12,6 +13,7 @@ import {
     resolveProductGallery,
     sortProducts,
 } from '../../../utils/products';
+import { absoluteSiteUrl } from '../../../utils/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +49,57 @@ const SIZE_MEASUREMENTS = [
         cm: { bust: '114 - 135', waist: '97 - 117', hips: '119 - 140', back: '41 - 46' },
     },
 ];
+
+const getCatalog = cache(async () => {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data: products } = await supabase.from('products').select('*');
+
+    return sortProducts(products ?? []).map((entry) => normalizeProductRecord(entry));
+});
+
+export async function generateMetadata({ params }) {
+    const { id } = await params;
+    const catalog = await getCatalog();
+    const product = catalog.find((entry) => entry.id === id || entry.slug === id);
+
+    if (!product) {
+        return {
+            title: 'Product',
+        };
+    }
+
+    const canonicalPath = buildProductHref(product);
+    const description = product.subtitle || product.description || `${product.name} by The VA Store.`;
+    const gallery = resolveProductGallery(product);
+    const primaryImage = gallery[0] || '/icon-512.png';
+
+    return {
+        title: product.name,
+        description,
+        alternates: {
+            canonical: canonicalPath,
+        },
+        openGraph: {
+            type: 'website',
+            title: product.name,
+            description,
+            url: canonicalPath,
+            images: [
+                {
+                    url: primaryImage.startsWith('http') ? primaryImage : absoluteSiteUrl(primaryImage),
+                    alt: product.name,
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: product.name,
+            description,
+            images: [primaryImage.startsWith('http') ? primaryImage : absoluteSiteUrl(primaryImage)],
+        },
+    };
+}
 
 function buildHighlightList(product) {
     if (product.highlights.length > 0) {
@@ -141,11 +194,7 @@ function RelatedPieceCard({ product }) {
 
 export default async function ProductPage({ params }) {
     const { id } = await params;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: products } = await supabase.from('products').select('*');
-
-    const catalog = sortProducts(products ?? []).map((entry) => normalizeProductRecord(entry));
+    const catalog = await getCatalog();
     const product = catalog.find((entry) => entry.id === id || entry.slug === id);
 
     if (!product) {
