@@ -23,6 +23,13 @@ html[data-page-motion='off'] #nav {
     opacity: 1 !important;
 }
 
+html[data-archive-filter-panel='open'] #nav {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 html[data-page-motion='off'] .hero-title {
     transform: translateY(0) !important;
 }

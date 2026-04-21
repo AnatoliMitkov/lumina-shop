@@ -211,7 +211,7 @@ function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
     }, [delayMs, value]);
 
     return (
-        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 flex min-h-[5.75rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/50 p-3 md:min-h-[8.25rem] md:p-5">
+        <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 flex flex-col gap-2 rounded-sm border border-[#1C1C1C]/10 bg-white/50 p-3 md:gap-3 md:p-5">
             <p className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
             <p className="storefront-stat-display font-serif text-2xl md:text-[2.65rem] font-light leading-none text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
         </div>
@@ -375,6 +375,24 @@ export default function CollectionsArchive({ products = [] }) {
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isFilterPanelOpen]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') {
+            return undefined;
+        }
+
+        const rootElement = document.documentElement;
+
+        if (isFilterPanelOpen) {
+            rootElement.dataset.archiveFilterPanel = 'open';
+        } else {
+            delete rootElement.dataset.archiveFilterPanel;
+        }
+
+        return () => {
+            delete rootElement.dataset.archiveFilterPanel;
         };
     }, [isFilterPanelOpen]);
 
@@ -549,18 +567,20 @@ export default function CollectionsArchive({ products = [] }) {
                                     />
                                 </label>
 
-                                <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
-                                    <EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" />
-                                    <select
-                                        value={cardsPerRow}
-                                        onChange={(event) => setCardsPerRow(Number(event.target.value) || (isMobileViewport ? 1 : 3))}
-                                        className="h-14 rounded-[1.05rem] border border-white/10 bg-white/[0.04] px-4 text-[10px] uppercase tracking-[0.22em] text-white outline-none transition-colors focus:border-white/24"
-                                    >
+                                <div className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
+                                    <p><EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" /></p>
+                                    <div className="flex flex-wrap gap-2">
                                         {cardsPerRowOptions.map((option) => (
-                                            <option key={option} value={option}>{String(option).padStart(2, '0')}</option>
+                                            <FilterButton
+                                                key={option}
+                                                label={String(option).padStart(2, '0')}
+                                                theme="dark"
+                                                isActive={cardsPerRow === option}
+                                                onClick={() => setCardsPerRow(option)}
+                                            />
                                         ))}
-                                    </select>
-                                </label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="mt-6 flex flex-col gap-6">

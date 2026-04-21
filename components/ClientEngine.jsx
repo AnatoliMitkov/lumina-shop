@@ -793,7 +793,6 @@ export default function ClientEngine({ children }) {
                         <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-[6px]'}`}></span>
                         <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
                         <span className={`absolute h-[1.5px] w-5 rounded-full bg-current transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-[6px]'}`}></span>
-                        {cartItems.length > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1.5 text-[9px] font-medium tracking-normal text-[#111111]">{cartItems.length}</span>}
                     </button>
                 </div>
                 <div className="hidden md:flex gap-10 text-sm md:text-base uppercase tracking-[0.2em] font-medium">
@@ -813,7 +812,7 @@ export default function ClientEngine({ children }) {
                     <a href="/spotlight" className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
                     <a href="/account" className="hover-target transition-link"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
                     <a href="/contact" className="hover-target transition-link"><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></a>
-                    <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /> ({cartItems.length})</a>
+                    <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
                 </div>
             </nav>
 
@@ -907,8 +906,8 @@ export default function ClientEngine({ children }) {
 
             <footer className="fixed bottom-0 left-0 w-full h-[24rem] md:h-[18rem] z-0 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 py-5">
                 <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-4 md:gap-6">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 md:grid-cols-4 md:gap-x-16 md:gap-y-8 text-[11px] md:text-xs uppercase tracking-[0.15em] font-medium">
-                        <div className="col-span-2 flex flex-col gap-3 max-w-sm">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
+                        <div className="col-span-2 flex max-w-sm flex-col gap-3 md:col-span-1 md:max-w-none">
                             <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
                             <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback="Beautiful People Smile More" editorLabel="Footer slogan" /></p>
                             <p className="hidden md:block text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Footer brand copy" /></p>
@@ -933,7 +932,7 @@ export default function ClientEngine({ children }) {
                             </div>
                         </div>
 
-                        <div className="col-start-2 row-start-2 row-span-2 flex flex-col border-l border-white/10 pl-4 text-right md:col-span-1 md:col-start-auto md:row-start-auto md:row-span-1 md:border-l-0 md:pl-0 md:text-left">
+                        <div className="col-start-2 row-start-2 row-span-2 flex flex-col border-l border-white/10 pl-4 text-right md:col-span-1 md:col-start-auto md:row-start-auto md:row-span-1 md:pl-6 md:text-left">
                             <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
                             <div className="flex h-full flex-col gap-2.5 normal-case tracking-normal text-sm font-normal text-white/55 md:h-auto">
                                 <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback="Ruse, Bulgaria" editorLabel="Footer location" /></p>
