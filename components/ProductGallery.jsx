@@ -238,7 +238,7 @@ export default function ProductGallery({ productName, collection, category, gall
                     </div>
                 )}
 
-                <div className="order-1 relative overflow-hidden rounded-sm border border-[#1C1C1C]/10 bg-[#161614] product-gallery-stage">
+                <div className="order-1 relative overflow-hidden rounded-sm border border-[#1C1C1C]/10 bg-[#F5F0EA] product-gallery-stage">
                     <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
                         <span>{collection}</span>
                         <span>/</span>
