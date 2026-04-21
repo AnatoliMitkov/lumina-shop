@@ -1,7 +1,6 @@
 "use client";
 
 import EditableMedia from '../components/site-copy/EditableMedia';
-import EditableMediaFrame from '../components/site-copy/EditableMediaFrame';
 import EditableText from '../components/site-copy/EditableText';
 import { useSiteCopy } from '../components/site-copy/SiteCopyProvider';
 
@@ -77,8 +76,7 @@ const marqueeItems = [
 export default function Home() {
     const siteCopy = useSiteCopy();
     const newsletterPlaceholder = siteCopy ? siteCopy.resolveText('home.newsletter.placeholder', 'Email address') : 'Email address';
-    const heroVideoFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
-    const heroVideoSrc = siteCopy ? siteCopy.resolveMedia('home.hero.media.video', heroVideoFallback) : heroVideoFallback;
+    const heroMediaFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
 
     return (
         <>
@@ -95,29 +93,21 @@ export default function Home() {
             <section className="relative w-full flex flex-col overflow-hidden" style={{ minHeight: '100svh', height: '100svh' }}>
                 <div className="relative w-full flex items-center justify-center overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
                     <div className="absolute inset-0 z-0 bg-[#1C1C1C]">
-                        <EditableMediaFrame
+                        <EditableMedia
                             contentKey="home.hero.media.video"
-                            fallback={heroVideoFallback}
-                            editorLabel="Home hero background video"
+                            fallback={heroMediaFallback}
+                            editorLabel="Home hero background media"
                             mediaKind="video"
-                            className="absolute inset-0"
-                        >
-                            <video
-                                key={heroVideoSrc}
-                                className="hero-img w-full h-full object-cover opacity-0 scale-125"
-                                autoPlay
-                                muted
-                                loop
-                                playsInline
-                                preload="auto"
-                                aria-hidden="true"
-                                onError={(event) => {
-                                    event.currentTarget.style.display = 'none';
-                                }}
-                            >
-                                <source src={heroVideoSrc} type="video/mp4" />
-                            </video>
-                        </EditableMediaFrame>
+                            wrapperClassName="absolute inset-0"
+                            className="hero-img h-full w-full object-cover opacity-0 scale-125"
+                            onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                            }}
+                            videoProps={{
+                                preload: 'auto',
+                                'aria-hidden': true,
+                            }}
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
                     </div>
 

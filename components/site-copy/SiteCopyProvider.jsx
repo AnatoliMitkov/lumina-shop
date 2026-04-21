@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import EditableMediaAsset from './EditableMediaAsset';
+import { detectEditableMediaKind } from './media-kind';
 
 const SiteCopyContext = createContext(null);
 
@@ -23,7 +25,8 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
     }
 
     const isMediaEntry = activeEntry.entryType === 'media';
-    const previewLabel = activeEntry.mediaKind === 'video' ? 'Video Preview' : 'Image Preview';
+    const previewKind = isMediaEntry ? detectEditableMediaKind(draftValue, activeEntry.mediaKind) : 'image';
+    const previewLabel = previewKind === 'video' ? 'Video Preview' : 'Image Preview';
 
     return (
         <div className="fixed inset-0 z-[260] flex items-end justify-center bg-[#1C1C1C]/55 p-4 backdrop-blur-sm sm:items-center">
@@ -69,22 +72,18 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
                             <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">{previewLabel}</p>
                             <div className="mt-3 overflow-hidden rounded-[1rem] border border-white/8 bg-[#080808]">
                                 {draftValue ? (
-                                    activeEntry.mediaKind === 'video' ? (
-                                        <video
-                                            key={draftValue}
-                                            src={draftValue}
-                                            controls
-                                            muted
-                                            playsInline
-                                            className="max-h-[24rem] w-full bg-black object-contain"
-                                        />
-                                    ) : (
-                                        <img
-                                            src={draftValue}
-                                            alt={activeEntry.label}
-                                            className="max-h-[24rem] w-full bg-black object-contain"
-                                        />
-                                    )
+                                    <EditableMediaAsset
+                                        source={draftValue}
+                                        alt={activeEntry.label}
+                                        fallbackKind={activeEntry.mediaKind}
+                                        className="max-h-[24rem] w-full bg-black object-contain"
+                                        imageProps={{}}
+                                        videoProps={{
+                                            controls: true,
+                                            muted: true,
+                                            playsInline: true,
+                                        }}
+                                    />
                                 ) : (
                                     <div className="flex min-h-[14rem] items-center justify-center px-6 py-10 text-center text-sm leading-relaxed text-white/46">
                                         Paste a media URL or a public asset path to preview it here.

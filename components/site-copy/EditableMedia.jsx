@@ -1,5 +1,6 @@
 "use client";
 
+import EditableMediaAsset from './EditableMediaAsset';
 import EditableMediaFrame from './EditableMediaFrame';
 import { useSiteCopy } from './SiteCopyProvider';
 
@@ -10,6 +11,9 @@ export default function EditableMedia({
     alt = '',
     className = '',
     wrapperClassName = '',
+    mediaKind = 'image',
+    videoProps = {},
+    onError,
     ...imageProps
 }) {
     const context = useSiteCopy();
@@ -20,10 +24,25 @@ export default function EditableMedia({
             contentKey={contentKey}
             fallback={fallback}
             editorLabel={editorLabel}
-            mediaKind="image"
+            mediaKind={mediaKind}
             className={wrapperClassName}
         >
-            <img src={resolvedSource} alt={alt} className={className} {...imageProps} />
+            <EditableMediaAsset
+                source={resolvedSource}
+                alt={alt}
+                fallbackKind={mediaKind}
+                className={className}
+                onError={onError}
+                imageProps={imageProps}
+                videoProps={{
+                    autoPlay: true,
+                    loop: true,
+                    muted: true,
+                    playsInline: true,
+                    preload: 'metadata',
+                    ...videoProps,
+                }}
+            />
         </EditableMediaFrame>
     );
 }

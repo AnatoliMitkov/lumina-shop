@@ -157,7 +157,7 @@ export default function EditableMediaFrame({
                     style={triggerStyle}
                     aria-label={`Edit ${editorLabel || contentKey}`}
                 >
-                    {mediaKind === 'video' ? 'Edit Video' : 'Edit Image'}
+                    Edit Media
                 </button>,
                 document.body,
             )}
