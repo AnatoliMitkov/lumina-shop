@@ -4,6 +4,7 @@ import { useCart } from '../../components/CartProvider';
 import EditableText from '../../components/site-copy/EditableText';
 import { useSiteCopy } from '../../components/site-copy/SiteCopyProvider';
 import { formatCustomMeasurementSummary } from '../../utils/cart';
+import { SPOTLIGHT_PATH } from '../../utils/site-routes';
 
 function CartImage({ item }) {
     if (!item.image_main) {
@@ -77,7 +78,7 @@ export default function CartPage() {
                             <p className="font-serif text-2xl md:text-4xl font-light leading-tight max-w-2xl"><EditableText contentKey="cart.empty.title" fallback="Nothing is waiting here yet. Start with a piece that deserves a closer look." editorLabel="Cart empty title" /></p>
                             <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                 <a href="/collections" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium hover:bg-black transition-colors"><EditableText contentKey="cart.empty.explore_collections" fallback="Explore Collections" editorLabel="Cart empty explore collections" /></a>
-                                <a href="/spotlight" className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors"><EditableText contentKey="cart.empty.open_spotlight" fallback="Open Spotlight" editorLabel="Cart empty open spotlight" /></a>
+                                <a href={SPOTLIGHT_PATH} className="hover-target transition-link inline-flex items-center justify-center px-8 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:border-[#1C1C1C]/25 hover:bg-white/50 transition-colors"><EditableText contentKey="cart.empty.open_spotlight" fallback="Open Spotlight" editorLabel="Cart empty open spotlight" /></a>
                             </div>
                         </div>
                     ) : (

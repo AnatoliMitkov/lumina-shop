@@ -8,6 +8,7 @@ import { detectEditableMediaKind } from './site-copy/media-kind';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { buildProductHref, formatProductCurrency, resolveStorefrontGallery } from '../utils/storefront-products';
 import { resolveSiteCopyMediaEntry } from '../utils/site-copy';
+import { SPOTLIGHT_PATH } from '../utils/site-routes';
 
 const containMediaDefaults = {
     fitDesktop: 'contain',
@@ -44,7 +45,7 @@ const categoryShowcaseItems = [
         key: 'private-commission',
         title: 'Private Commission',
         label: 'By Appointment',
-        href: '/spotlight',
+        href: SPOTLIGHT_PATH,
         image: 'https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1800',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
@@ -252,7 +253,7 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                             <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/40"><EditableText contentKey="home.brand.eyebrow" fallback="Brand Ethos" editorLabel="Home brand ethos eyebrow" /></p>
                             <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.08em] leading-[0.92]"><EditableText contentKey="home.brand.title" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Home brand ethos title" /></h2>
                             <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-white/62"><EditableText contentKey="home.brand.copy" fallback="Every silhouette begins as a study in tension, line, and hand-knotting discipline. The atelier treats slow craft as structure, turning traditional techniques into an editorial language that feels directional rather than nostalgic." editorLabel="Home brand ethos copy" /></p>
-                            <a href="/spotlight" className="reveal-text opacity-0 translate-y-8 inline-flex w-max items-center gap-3 border border-white/12 px-8 py-4 text-[10px] uppercase tracking-[0.26em] font-medium text-white transition-colors hover:bg-white hover:text-[#121211]">
+                            <a href={SPOTLIGHT_PATH} className="reveal-text opacity-0 translate-y-8 inline-flex w-max items-center gap-3 border border-white/12 px-8 py-4 text-[10px] uppercase tracking-[0.26em] font-medium text-white transition-colors hover:bg-white hover:text-[#121211]">
                                 <EditableText contentKey="home.brand.cta" fallback="Enter The Spotlight" editorLabel="Home brand CTA" />
                             </a>
                         </div>

@@ -442,7 +442,7 @@ body {
 }
 
 .storefront-stat-card {
-    min-height: clamp(8.5rem, 14vw, 10rem);
+    min-height: auto;
 }
 
 .storefront-media-stage {

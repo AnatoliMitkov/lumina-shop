@@ -489,7 +489,7 @@ export default function CollectionsArchive({ products = [] }) {
 
     return (
         <div ref={archiveRef}>
-            <section className="mb-7 md:mb-16 grid grid-cols-3 gap-2 md:gap-5">
+            <section className="mb-1 md:mb-4 grid grid-cols-3 gap-2 md:gap-5">
                 <StatCard label="Pieces" labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." copyKey="collections.stats.pieces.copy" />
                 <StatCard label="Collections" labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} copy="Distinct storylines shaping the archive into easier visual paths." copyKey="collections.stats.collections.copy" />
                 <StatCard label="Categories" labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} copy="Focused entry points for shoppers who already know the silhouette they want." copyKey="collections.stats.categories.copy" />

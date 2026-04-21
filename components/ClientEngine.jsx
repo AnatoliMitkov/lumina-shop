@@ -10,6 +10,7 @@ import { useCart } from './CartProvider';
 import EditableText from './site-copy/EditableText';
 import { formatCustomMeasurementSummary } from '../utils/cart';
 import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
+import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -103,10 +104,10 @@ export default function ClientEngine({ children }) {
         loaderTitle = "Collections";
         loaderSub = null;
     } else if (pathname === '/bespoke') {
-        loaderTitle = "Spotlight";
+        loaderTitle = "5th Avenue";
         loaderSub = "Editorial Redirect";
-    } else if (pathname === '/spotlight') {
-        loaderTitle = "Spotlight";
+    } else if (isSpotlightPath(pathname)) {
+        loaderTitle = "5th Avenue";
         loaderSub = "Editorial Feature";
     } else if (pathname === '/account') {
         loaderTitle = "Account";
@@ -809,7 +810,7 @@ export default function ClientEngine({ children }) {
                             <span className="text-white/30">+</span>
                         </a>
                     </div>
-                    <a href="/spotlight" className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
+                    <a href={SPOTLIGHT_PATH} className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
                     <a href="/account" className="hover-target transition-link"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
                     <a href="/contact" className="hover-target transition-link"><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></a>
                     <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
@@ -890,7 +891,7 @@ export default function ClientEngine({ children }) {
                             </div>
                         </div>
 
-                        <a href="/spotlight" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span></a>
+                        <a href={SPOTLIGHT_PATH} onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span></a>
                         <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></span></a>
                         <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></span></a>
                         <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></span></a>
@@ -918,7 +919,7 @@ export default function ClientEngine({ children }) {
                             <div className="flex flex-col gap-3">
                                 <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.home" fallback="Home" editorLabel="Footer Home label" /></a>
                                 <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></a>
-                                <a href="/spotlight" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
+                                <a href={SPOTLIGHT_PATH} className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
                             </div>
                         </div>
 

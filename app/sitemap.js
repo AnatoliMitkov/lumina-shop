@@ -1,13 +1,14 @@
 import { createAdminClient, isAdminConfigured } from '../utils/supabase/admin';
 import { buildProductHref, normalizeProductRecord } from '../utils/products';
 import { absoluteSiteUrl } from '../utils/seo';
+import { SPOTLIGHT_PATH } from '../utils/site-routes';
 
 export const revalidate = 3600;
 
 const staticRoutes = [
     { path: '/', changeFrequency: 'weekly', priority: 1 },
     { path: '/collections', changeFrequency: 'daily', priority: 0.9 },
-    { path: '/spotlight', changeFrequency: 'weekly', priority: 0.8 },
+    { path: SPOTLIGHT_PATH, changeFrequency: 'weekly', priority: 0.8 },
     { path: '/bespoke', changeFrequency: 'monthly', priority: 0.8 },
     { path: '/contact', changeFrequency: 'monthly', priority: 0.7 },
     { path: '/privacy-policy', changeFrequency: 'monthly', priority: 0.4 },
