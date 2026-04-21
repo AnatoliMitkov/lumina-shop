@@ -1,5 +1,7 @@
 "use client";
 
+import EditableMedia from '../components/site-copy/EditableMedia';
+import EditableMediaFrame from '../components/site-copy/EditableMediaFrame';
 import EditableText from '../components/site-copy/EditableText';
 import { useSiteCopy } from '../components/site-copy/SiteCopyProvider';
 
@@ -75,6 +77,8 @@ const marqueeItems = [
 export default function Home() {
     const siteCopy = useSiteCopy();
     const newsletterPlaceholder = siteCopy ? siteCopy.resolveText('home.newsletter.placeholder', 'Email address') : 'Email address';
+    const heroVideoFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
+    const heroVideoSrc = siteCopy ? siteCopy.resolveMedia('home.hero.media.video', heroVideoFallback) : heroVideoFallback;
 
     return (
         <>
@@ -91,20 +95,29 @@ export default function Home() {
             <section className="relative w-full flex flex-col overflow-hidden" style={{ minHeight: '100svh', height: '100svh' }}>
                 <div className="relative w-full flex items-center justify-center overflow-hidden" style={{ minHeight: 0, flex: '1 1 auto' }}>
                     <div className="absolute inset-0 z-0 bg-[#1C1C1C]">
-                        <video
-                            className="hero-img w-full h-full object-cover opacity-0 scale-125"
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            preload="auto"
-                            aria-hidden="true"
-                            onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                            }}
+                        <EditableMediaFrame
+                            contentKey="home.hero.media.video"
+                            fallback={heroVideoFallback}
+                            editorLabel="Home hero background video"
+                            mediaKind="video"
+                            className="absolute inset-0"
                         >
-                            <source src="https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4" type="video/mp4" />
-                        </video>
+                            <video
+                                key={heroVideoSrc}
+                                className="hero-img w-full h-full object-cover opacity-0 scale-125"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                preload="auto"
+                                aria-hidden="true"
+                                onError={(event) => {
+                                    event.currentTarget.style.display = 'none';
+                                }}
+                            >
+                                <source src={heroVideoSrc} type="video/mp4" />
+                            </video>
+                        </EditableMediaFrame>
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
                     </div>
 
@@ -152,10 +165,13 @@ export default function Home() {
                                 href={item.href}
                                 className={`group relative overflow-hidden border border-white/8 bg-[#161614] hover-target transition-link ${item.layout}`}
                             >
-                                <img
-                                    src={item.image}
+                                <EditableMedia
+                                    contentKey={`home.category_showcase.${item.key}.image`}
+                                    fallback={item.image}
+                                    editorLabel={`${item.title} showcase image`}
                                     alt={item.title}
-                                    className="absolute inset-0 h-full w-full object-contain p-3 md:p-4 transition-transform duration-[1600ms] ease-out group-hover:scale-[1.02]"
+                                    wrapperClassName="absolute inset-0"
+                                    className="h-full w-full object-contain p-3 md:p-4 transition-transform duration-[1600ms] ease-out group-hover:scale-[1.02]"
                                     onError={(event) => {
                                         event.target.style.display = 'none';
                                     }}
@@ -187,18 +203,24 @@ export default function Home() {
                         {featuredProducts.map((product) => (
                             <a key={product.name} href={product.href} className="group flex flex-col gap-5 hover-target transition-link">
                                 <div className="relative aspect-[3/4] overflow-hidden bg-[#D8D1C7]">
-                                    <img
-                                        src={product.primaryImage}
+                                    <EditableMedia
+                                        contentKey={`home.featured.${product.key}.primary_image`}
+                                        fallback={product.primaryImage}
+                                        editorLabel={`${product.name} primary image`}
                                         alt={product.name}
-                                        className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-0"
+                                        wrapperClassName="absolute inset-0"
+                                        className="h-full w-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-0"
                                         onError={(event) => {
                                             event.target.style.display = 'none';
                                         }}
                                     />
-                                    <img
-                                        src={product.secondaryImage}
+                                    <EditableMedia
+                                        contentKey={`home.featured.${product.key}.secondary_image`}
+                                        fallback={product.secondaryImage}
+                                        editorLabel={`${product.name} secondary image`}
                                         alt={`${product.name} alternate view`}
-                                        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-100"
+                                        wrapperClassName="absolute inset-0"
+                                        className="h-full w-full object-cover opacity-0 transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-100"
                                         onError={(event) => {
                                             event.target.style.display = 'none';
                                         }}
@@ -228,10 +250,13 @@ export default function Home() {
                     </div>
 
                     <div className="relative h-[18rem] md:h-[22rem] lg:h-auto lg:min-h-[24rem] overflow-hidden view-img bg-[#1C1C1C]">
-                        <img
-                            src="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
+                        <EditableMedia
+                            contentKey="home.brand.image"
+                            fallback="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
+                            editorLabel="Home brand image"
                             alt="Styling by VA atelier detail"
-                            className="absolute inset-0 h-full w-full object-contain p-3 md:p-4"
+                            wrapperClassName="absolute inset-0"
+                            className="h-full w-full object-contain p-3 md:p-4"
                             onError={(event) => {
                                 event.target.style.display = 'none';
                             }}

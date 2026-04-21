@@ -222,7 +222,7 @@ export function CartProvider({ children }) {
             setIsCartOpen(false);
             setCartStatus('ready');
             setCheckoutStatus('success');
-            setCartMessage(data.message || 'Your order is now waiting for atelier review.');
+            setCartMessage(data.message || 'Your order request has been saved successfully.');
 
             return {
                 order: data.order || null,

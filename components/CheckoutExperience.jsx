@@ -228,13 +228,16 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const hasPricingBlocker = (Boolean(discountCode) && pricingPreview.discount.status === 'invalid')
         || (Boolean(affiliateCode) && pricingPreview.affiliate.status === 'invalid')
         || ((discountCode || affiliateCode) && pricingPreview.pricingReady === false);
-    const hasInventoryHints = cartItems.some((item) => item.inventory_count != null);
-    const likelyMadeToOrder = hasInventoryHints && cartItems.some((item) => Number(item.inventory_count ?? 0) <= 0);
-    const payNowEligible = structuredCheckoutReady && stripeReady && !likelyMadeToOrder;
     const domesticManualLaneEnabled = shippingScope === 'domestic_bg';
+    const hasInvalidPaymentItems = cartItems.some((item) => Number(item.price ?? 0) <= 0);
+    const hasPayableOrderTotal = Number(orderTotal ?? 0) > 0;
+    const canSubmitStripe = structuredCheckoutReady && stripeReady && !hasInvalidPaymentItems && hasPayableOrderTotal;
+    const canSubmitPayOnDelivery = structuredCheckoutReady && domesticManualLaneEnabled && !hasInvalidPaymentItems && hasPayableOrderTotal;
+    const paymentRouteReady = domesticManualLaneEnabled ? (canSubmitStripe || canSubmitPayOnDelivery) : canSubmitStripe;
     const paymentBlockers = [
-        !stripeReady ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.no_stripe', 'Secure online payment is not configured in this environment yet.') : 'Secure online payment is not configured in this environment yet.') : '',
-        likelyMadeToOrder ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.made_to_order', 'One or more selected pieces are made to order and still need manual review.') : 'One or more selected pieces are made to order and still need manual review.') : '',
+        hasInvalidPaymentItems ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.invalid_price', 'One or more selected pieces do not have a valid live price yet.') : 'One or more selected pieces do not have a valid live price yet.') : '',
+        !hasPayableOrderTotal ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.zero_total', 'The live total must be above zero before checkout can continue.') : 'The live total must be above zero before checkout can continue.') : '',
+        !stripeReady && !domesticManualLaneEnabled ? (siteCopy ? siteCopy.resolveText('checkout.payment_route.blockers.no_stripe', 'Secure online payment is not configured in this environment yet.') : 'Secure online payment is not configured in this environment yet.') : '',
     ].filter(Boolean);
     const selectCountryLabel = siteCopy ? siteCopy.resolveText('checkout.delivery.select_country', 'Select country') : 'Select country';
     const mapsPlaceholder = siteCopy ? siteCopy.resolveText('checkout.delivery.maps_placeholder', 'https://maps.app.goo.gl/...') : 'https://maps.app.goo.gl/...';
@@ -242,15 +245,22 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const affiliatePlaceholder = siteCopy ? siteCopy.resolveText('checkout.codes.affiliate_placeholder', 'PARTNER') : 'PARTNER';
 
     useEffect(() => {
-        if (!payNowEligible && checkoutMode !== 'manual_review') {
+        if (!domesticManualLaneEnabled) {
+            if (checkoutMode !== 'stripe_checkout') {
+                setCheckoutMode('stripe_checkout');
+            }
+            return;
+        }
+
+        if (checkoutMode === 'stripe_checkout' && !canSubmitStripe) {
             setCheckoutMode('manual_review');
             return;
         }
 
-        if (payNowEligible && !domesticManualLaneEnabled && checkoutMode !== 'stripe_checkout') {
+        if (checkoutMode === 'manual_review' && !canSubmitPayOnDelivery && canSubmitStripe) {
             setCheckoutMode('stripe_checkout');
         }
-    }, [checkoutMode, domesticManualLaneEnabled, payNowEligible]);
+    }, [canSubmitPayOnDelivery, canSubmitStripe, checkoutMode, domesticManualLaneEnabled]);
 
     useEffect(() => {
         const basePricing = createBaseCheckoutPricing({ subtotal: orderSubtotal, shippingInput });
@@ -633,7 +643,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     )}
 
                     <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                        <EditableText contentKey="checkout.codes.notice" fallback="Codes are validated against the live studio settings. Shopper savings update immediately, domestic shipping follows the current studio rules, and worldwide routing still stays manual until confirmed." editorLabel="Checkout codes notice" />
+                        <EditableText contentKey="checkout.codes.notice" fallback="Codes are validated against the live studio settings. Shopper savings update immediately, and delivery coverage follows the current studio rules before payment opens." editorLabel="Checkout codes notice" />
                     </div>
 
                     {pricingMessage && (
@@ -652,29 +662,33 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         <h3 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.1em] leading-none text-[#1C1C1C]"><EditableText contentKey="checkout.payment_route.title" fallback="How This Order Moves" editorLabel="Checkout payment route title" /></h3>
                     </div>
 
-                    {payNowEligible ? (
+                    {paymentRouteReady ? (
                         domesticManualLaneEnabled ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <PaymentModeButton
-                                    label="Online Payment"
-                                    copy="Move this order into secure Stripe payment. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
-                                    active={checkoutMode === 'stripe_checkout'}
-                                    onClick={() => setCheckoutMode('stripe_checkout')}
-                                    contentKeyPrefix="checkout.payment_route.online_payment"
-                                />
-                                <PaymentModeButton
-                                    label="Local Delivery"
-                                    copy="Keep this Bulgarian order in the local coordination lane first when payment or handoff will be confirmed directly around delivery."
-                                    active={checkoutMode === 'manual_review'}
-                                    onClick={() => setCheckoutMode('manual_review')}
-                                    contentKeyPrefix="checkout.payment_route.local_delivery"
-                                />
+                                {canSubmitStripe && (
+                                    <PaymentModeButton
+                                        label="Online Payment"
+                                        copy="Move this order into secure Stripe payment. Cards, Apple Pay, and Google Pay appear automatically when the device supports them."
+                                        active={checkoutMode === 'stripe_checkout'}
+                                        onClick={() => setCheckoutMode('stripe_checkout')}
+                                        contentKeyPrefix="checkout.payment_route.online_payment"
+                                    />
+                                )}
+                                {canSubmitPayOnDelivery && (
+                                    <PaymentModeButton
+                                        label="Pay On Delivery"
+                                        copy="Submit this Bulgarian order without paying online first. Payment is confirmed directly on delivery or pickup."
+                                        active={checkoutMode === 'manual_review'}
+                                        onClick={() => setCheckoutMode('manual_review')}
+                                        contentKeyPrefix="checkout.payment_route.local_delivery"
+                                    />
+                                )}
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 gap-4">
                                 <PaymentModeButton
                                     label="Online Payment"
-                                    copy="Pay securely by card without sending the order through a manual review lane first."
+                                    copy="Pay securely by card online. Apple Pay and Google Pay appear automatically when the device supports them."
                                     active={checkoutMode === 'stripe_checkout'}
                                     onClick={() => setCheckoutMode('stripe_checkout')}
                                     contentKeyPrefix="checkout.payment_route.online_payment"
@@ -683,7 +697,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         )
                     ) : (
                         <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm px-4 py-4 text-sm leading-relaxed text-[#1C1C1C]/62">
-                            {paymentBlockers[0] || <EditableText contentKey="checkout.payment_route.manual_review" fallback="This order will stay in atelier review first." editorLabel="Checkout manual review notice" />}
+                            {paymentBlockers[0] || <EditableText contentKey="checkout.payment_route.manual_review" fallback="Online payment is not available for this order yet." editorLabel="Checkout manual review notice" />}
                         </div>
                     )}
 
@@ -691,8 +705,8 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                         {checkoutMode === 'stripe_checkout'
                             ? <EditableText contentKey="checkout.payment_route.stripe_notice" fallback="The final secure payment amount will be reconfirmed on the server against the live catalog before Stripe Checkout opens." editorLabel="Checkout stripe notice" />
                             : domesticManualLaneEnabled
-                                ? <EditableText contentKey="checkout.payment_route.domestic_notice" fallback="Domestic Bulgaria can stay in the local coordination lane when delivery and payment need to be confirmed directly first." editorLabel="Checkout domestic notice" />
-                                : <EditableText contentKey="checkout.payment_route.manual_notice" fallback="This order will stay in atelier review until it is ready for payment." editorLabel="Checkout manual notice" />}
+                                ? <EditableText contentKey="checkout.payment_route.domestic_notice" fallback="Domestic Bulgaria can use either secure online payment now or a pay-on-delivery request confirmed directly on delivery or pickup." editorLabel="Checkout domestic notice" />
+                                : <EditableText contentKey="checkout.payment_route.manual_notice" fallback="Online payment is required for this delivery scope before the order can continue." editorLabel="Checkout manual notice" />}
                     </div>
                 </section>
 
@@ -704,7 +718,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     {structuredCheckoutReady ? (
-                        <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker ? 'opacity-60' : 'hover:bg-black'}`}>
+                        <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker || (checkoutMode === 'stripe_checkout' ? !canSubmitStripe : !canSubmitPayOnDelivery)} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker || (checkoutMode === 'stripe_checkout' ? !canSubmitStripe : !canSubmitPayOnDelivery) ? 'opacity-60' : 'hover:bg-black'}`}>
                             {checkoutStatus === 'submitting'
                                 ? <EditableText contentKey="checkout.submit.submitting" fallback="Submitting Order..." editorLabel="Checkout submitting" />
                                 : checkoutStatus === 'redirecting'
@@ -714,7 +728,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                         : checkoutMode === 'stripe_checkout'
                                             ? <EditableText contentKey="checkout.submit.secure_payment" fallback="Continue To Secure Payment" editorLabel="Checkout continue to secure payment" />
                                             : domesticManualLaneEnabled
-                                                ? <EditableText contentKey="checkout.submit.local_delivery" fallback="Submit Local Delivery Request" editorLabel="Checkout local delivery submit" />
+                                                ? <EditableText contentKey="checkout.submit.local_delivery" fallback="Submit Pay On Delivery Request" editorLabel="Checkout local delivery submit" />
                                                 : <EditableText contentKey="checkout.submit.order_request" fallback="Submit Order Request" editorLabel="Checkout order request submit" />}
                         </button>
                     ) : (
@@ -773,7 +787,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     </div>
 
                     <p className="text-sm leading-relaxed text-white/62">
-                        {pricingPreview.shipping.message || <EditableText contentKey="checkout.pricing.notice" fallback="Live codes now affect the checkout total immediately, while worldwide shipping remains manual until the atelier confirms the route." editorLabel="Checkout pricing notice" />}
+                        {pricingPreview.shipping.message || <EditableText contentKey="checkout.pricing.notice" fallback="Live codes now affect the checkout total immediately, and delivery coverage follows the current studio rules before the order is submitted." editorLabel="Checkout pricing notice" />}
                     </p>
                 </section>
             </aside>

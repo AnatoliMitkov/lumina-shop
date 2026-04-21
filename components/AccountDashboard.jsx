@@ -86,7 +86,7 @@ function getOrderStatusMeta(status) {
         default:
             return {
                 label: 'Pending',
-                description: 'Waiting for atelier review and next steps.',
+                description: 'Waiting for confirmation and next steps.',
                 className: 'border-[#D9C08A] bg-[#FFF8E8] text-[#8A6A2F]',
             };
     }

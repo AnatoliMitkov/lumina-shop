@@ -450,7 +450,7 @@ export default function AdminOrdersPanel({
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 flex flex-col gap-2">
                                     <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">Payment</p>
                                     <p className="font-serif text-2xl font-light leading-tight text-[#1C1C1C]">{buildOrderPaymentSummary(selectedOrder)}</p>
-                                    <p className="text-sm text-[#1C1C1C]/62">Checkout route: {selectedOrder.checkout_mode === 'stripe_checkout' ? 'Stripe Checkout' : 'Atelier review'}</p>
+                                    <p className="text-sm text-[#1C1C1C]/62">Checkout route: {selectedOrder.checkout_mode === 'stripe_checkout' ? 'Stripe Checkout' : 'Pay on delivery'}</p>
                                     {selectedOrder.payment_reference && <p className="text-xs break-all text-[#1C1C1C]/52">Reference: {selectedOrder.payment_reference}</p>}
                                     {selectedOrder.paid_at && <p className="text-xs text-[#1C1C1C]/52">Paid on {formatDate(selectedOrder.paid_at)}</p>}
                                 </div>

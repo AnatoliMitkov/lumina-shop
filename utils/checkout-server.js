@@ -66,15 +66,37 @@ export function buildTrustedCartSnapshot(items = [], productRecords = []) {
   return buildCartSnapshot(trustedItems);
 }
 
+export function buildCatalogBackfilledCartSnapshot(items = [], productRecords = []) {
+  const productRecordMap = new Map(productRecords.map((product) => [String(product.id), product]));
+  const refreshedItems = (Array.isArray(items) ? items : []).map((item) => {
+    const productId = toText(item?.id);
+    const product = productRecordMap.get(productId);
+
+    if (!product) {
+      return normalizeCartItem(item);
+    }
+
+    return normalizeCartItem({
+      ...item,
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image_main: product.image_main,
+      category: product.category,
+      description: product.description,
+      inventory_count: product.inventory_count,
+      lead_time_days: product.lead_time_days,
+    });
+  });
+
+  return buildCartSnapshot(refreshedItems);
+}
+
 export function evaluateCheckoutMode({ requestedMode = '', shippingScope = 'worldwide', productRecords = [], total = 0 } = {}) {
   const normalizedRequestedMode = normalizeCheckoutMode(requestedMode);
   const normalizedShippingScope = shippingScope === 'domestic_bg' ? 'domestic_bg' : 'worldwide';
   const manualLaneEnabled = normalizedShippingScope === 'domestic_bg';
   const reasons = [];
-
-  if (productRecords.some((product) => Number(product.inventory_count ?? 0) <= 0)) {
-    reasons.push('One or more selected pieces are made to order and still need atelier review.');
-  }
 
   if (productRecords.some((product) => Number(product.price ?? 0) <= 0)) {
     reasons.push('One or more selected pieces do not have a valid live price yet.');

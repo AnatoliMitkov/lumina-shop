@@ -7,7 +7,7 @@ export const shippingScopeOptions = [
     {
         value: 'worldwide',
         label: 'Worldwide',
-        copy: 'For clients outside Bulgaria while the atelier reviews the route, destination, and final shipping quote manually.',
+        copy: 'For clients outside Bulgaria, with delivery details used to prepare the worldwide shipping route and quote.',
     },
 ];
 
@@ -55,7 +55,7 @@ const deliveryMethodOptionsByScope = {
         {
             value: 'worldwide_quote',
             label: 'Worldwide Shipping Quote',
-            copy: 'The atelier reviews the typed address, pinned map, and route before confirming the final worldwide shipping quote.',
+            copy: 'The typed address, pinned map, and route details prepare the final worldwide shipping quote before dispatch.',
         },
     ],
 };
@@ -179,7 +179,7 @@ export function evaluateCheckoutShipping({
             status: 'pending_quote',
             label: 'Quote pending',
             message: destinationReady
-                ? 'Worldwide shipping is still confirmed manually after the atelier reviews the address and route.'
+                ? 'Worldwide shipping is prepared from the submitted address and route details before dispatch.'
                 : 'Add the country, city, and custom address so the atelier can prepare the worldwide shipping quote.',
             payer: 'pending',
             source: 'worldwide',

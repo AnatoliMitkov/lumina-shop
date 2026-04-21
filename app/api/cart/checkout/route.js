@@ -46,16 +46,22 @@ function withCartSession(response, sessionId) {
   return response;
 }
 
-function buildCheckoutMessage({ mode, orderReference, totalSavings = 0 }) {
+function buildCheckoutMessage({ mode, orderReference, shippingScope = 'worldwide', totalSavings = 0 }) {
   if (mode === 'stripe_checkout') {
     return totalSavings > 0
       ? `Order ${orderReference} is ready for secure payment. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
       : `Order ${orderReference} is ready for secure payment.`;
   }
 
+  if (shippingScope === 'domestic_bg') {
+    return totalSavings > 0
+      ? `Order ${orderReference} is now saved as a pay-on-delivery request. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
+      : `Order ${orderReference} is now saved as a pay-on-delivery request.`;
+  }
+
   return totalSavings > 0
-    ? `Order ${orderReference} is now waiting for atelier review. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
-    : `Order ${orderReference} is now waiting for atelier review.`;
+    ? `Order ${orderReference} is saved and waiting for confirmation. ${formatPromotionCurrency(totalSavings)} saved through live codes.`
+    : `Order ${orderReference} is saved and waiting for confirmation.`;
 }
 
 function buildOrderResponse(order, { fallbackStatus = 'pending', fallbackPaymentStatus = 'manual_review', fallbackTotal = 0, fallbackItemCount = 0, fallbackCreatedAt = null } = {}) {
@@ -294,8 +300,20 @@ export async function POST(request) {
       productRecords,
       total: orderTotal,
     });
+    const requiresOnlinePayment = checkout.delivery.shippingScope === 'worldwide';
 
-    if (requestedMode === 'stripe_checkout' && !isStripeConfigured()) {
+    if (!paymentDecision.payNowEligible) {
+      const response = NextResponse.json(
+        {
+          error: paymentDecision.reasons.join(' ') || 'This order is not eligible for checkout right now.',
+        },
+        { status: 409 }
+      );
+
+      return withCartSession(response, sessionId);
+    }
+
+    if (requiresOnlinePayment && !isStripeConfigured()) {
       const response = NextResponse.json(
         {
           error: 'Secure online payment is not configured in this environment yet.',
@@ -306,12 +324,12 @@ export async function POST(request) {
       return withCartSession(response, sessionId);
     }
 
-    if (requestedMode === 'stripe_checkout' && !paymentDecision.payNowEligible) {
+    if (requestedMode === 'stripe_checkout' && !isStripeConfigured()) {
       const response = NextResponse.json(
         {
-          error: paymentDecision.reasons.join(' ') || 'This order is not eligible for online payment right now.',
+          error: 'Secure online payment is not configured in this environment yet.',
         },
-        { status: 409 }
+        { status: 503 }
       );
 
       return withCartSession(response, sessionId);
@@ -507,6 +525,7 @@ export async function POST(request) {
         message: buildCheckoutMessage({
           mode: resolvedMode,
           orderReference,
+          shippingScope: checkout.delivery.shippingScope,
           totalSavings: pricing.totalSavings,
         }),
       });
@@ -550,6 +569,7 @@ export async function POST(request) {
       message: buildCheckoutMessage({
         mode: resolvedMode,
         orderReference,
+        shippingScope: checkout.delivery.shippingScope,
         totalSavings: pricing.totalSavings,
       }),
     });

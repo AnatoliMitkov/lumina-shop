@@ -16,7 +16,7 @@ export default async function CheckoutCancelPage({ searchParams = {} }) {
         </div>
 
         <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
-          <EditableText contentKey="checkout.cancel.copy" fallback="The secure checkout was not completed. Your current selection stays in place, so you can return to checkout, adjust the order, or send it through atelier review instead." editorLabel="Checkout cancel copy" />
+          <EditableText contentKey="checkout.cancel.copy" fallback="The secure checkout was not completed. Your current selection stays in place, so you can return to checkout, adjust the order, or choose another payment path if it is available for that delivery scope." editorLabel="Checkout cancel copy" />
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3">

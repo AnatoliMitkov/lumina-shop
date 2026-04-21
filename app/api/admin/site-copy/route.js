@@ -7,10 +7,10 @@ export const dynamic = 'force-dynamic';
 
 function toErrorResponse(error) {
     if (isSiteCopySetupError(error)) {
-        return NextResponse.json({ error: 'Site copy schema is missing. Run supabase/cart-orders.sql before editing storefront text inline.' }, { status: 503 });
+        return NextResponse.json({ error: 'Site copy schema is missing. Run supabase/cart-orders.sql before editing storefront content inline.' }, { status: 503 });
     }
 
-    return NextResponse.json({ error: error?.message || 'Unable to save the text right now.' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Unable to save this storefront entry right now.' }, { status: 500 });
 }
 
 async function getAdminContext() {
@@ -20,7 +20,7 @@ async function getAdminContext() {
 
     if (authError || !user) {
         return {
-            errorResponse: NextResponse.json({ error: 'You must be signed in to edit storefront text.' }, { status: 401 }),
+            errorResponse: NextResponse.json({ error: 'You must be signed in to edit storefront content.' }, { status: 401 }),
         };
     }
 
@@ -38,7 +38,7 @@ async function getAdminContext() {
 
     if (!profileResult.data?.is_admin) {
         return {
-            errorResponse: NextResponse.json({ error: 'Admin access is required for inline text editing.' }, { status: 403 }),
+            errorResponse: NextResponse.json({ error: 'Admin access is required for inline content editing.' }, { status: 403 }),
         };
     }
 

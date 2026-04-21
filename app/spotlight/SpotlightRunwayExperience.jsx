@@ -4,13 +4,49 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import EditableMedia from '../../components/site-copy/EditableMedia';
 import EditableText from '../../components/site-copy/EditableText';
+import { useSiteCopy } from '../../components/site-copy/SiteCopyProvider';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
 
 function formatLookCount(count) {
     return `${count} look${count === 1 ? '' : 's'}`;
+}
+
+function CollectionFrameImage({
+    collection,
+    frameIndex = 0,
+    fallbackFrameIndex = 0,
+    alt,
+    className,
+    wrapperClassName = '',
+    editorLabel,
+}) {
+    const siteCopy = useSiteCopy();
+    const frames = Array.isArray(collection?.frames) ? collection.frames : [];
+    const frameKeys = Array.isArray(collection?.frameKeys) ? collection.frameKeys : [];
+    const hasTargetFrame = Boolean(frames[frameIndex]);
+    const resolvedIndex = hasTargetFrame ? frameIndex : fallbackFrameIndex;
+    const fallback = frames[resolvedIndex] || frames[0] || '';
+    const frameKey = frameKeys[resolvedIndex] || '';
+    const resolvedSource = frameKey && siteCopy ? siteCopy.resolveMedia(frameKey, fallback) : fallback;
+
+    if (!frameKey) {
+        return <img src={resolvedSource} alt={alt} className={className} />;
+    }
+
+    return (
+        <EditableMedia
+            contentKey={frameKey}
+            fallback={fallback}
+            editorLabel={editorLabel || `${collection?.name || 'Spotlight'} frame ${resolvedIndex + 1}`}
+            alt={alt}
+            wrapperClassName={wrapperClassName}
+            className={className}
+        />
+    );
 }
 
 function RunwayWindowCard({ collection, index, isActive = false, onPreview }) {
@@ -101,7 +137,15 @@ function RunwayWindowCard({ collection, index, isActive = false, onPreview }) {
                 <div ref={glareRef} className="pointer-events-none absolute inset-[-14%] bg-[radial-gradient(circle_at_center,rgba(255,242,214,0.22),rgba(255,242,214,0)_54%)] mix-blend-screen" style={{ opacity: 0.58 }}></div>
 
                 <div className={`relative overflow-hidden ${index === 0 ? 'aspect-[16/10]' : 'aspect-[4/5]'}`} style={{ transform: 'translateZ(42px)' }}>
-                    <img src={index === 0 ? collection.frames[0] : (collection.frames[1] || collection.frames[0])} alt={collection.name} className="h-full w-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.05]" />
+                    <CollectionFrameImage
+                        collection={collection}
+                        frameIndex={index === 0 ? 0 : 1}
+                        fallbackFrameIndex={0}
+                        alt={collection.name}
+                        className="h-full w-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.05]"
+                        wrapperClassName="h-full w-full"
+                        editorLabel={`${collection.name} runway card image`}
+                    />
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.02),rgba(0,0,0,0.15)_38%,rgba(0,0,0,0.72))]"></div>
                 </div>
 
@@ -178,7 +222,15 @@ function AvenueRunwayStage({ activeCollection, collections = [], onPreview }) {
                     <div className="absolute inset-[1.1rem] overflow-hidden rounded-[1.45rem] border border-white/12 bg-[rgba(8,8,10,0.72)]">
                         <div className="pointer-events-none absolute inset-0 z-[2] bg-[linear-gradient(90deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02)_12%,rgba(255,255,255,0)_26%,rgba(255,255,255,0.06)_48%,rgba(255,255,255,0)_72%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0)_24%,rgba(0,0,0,0.16)_52%,rgba(0,0,0,0.78)_100%)]"></div>
                         <div className="pointer-events-none absolute inset-0 z-[3] bg-[radial-gradient(circle_at_var(--spotlight-x)_var(--spotlight-y),rgba(255,244,220,0.34),rgba(255,244,220,0.1)_18%,rgba(255,244,220,0)_46%)]"></div>
-                        <img key={`${activeCollection.name}-window`} src={activeCollection.frames[0]} alt={activeCollection.name} className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out" />
+                        <CollectionFrameImage
+                            key={`${activeCollection.name}-window`}
+                            collection={activeCollection}
+                            frameIndex={0}
+                            alt={activeCollection.name}
+                            className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out"
+                            wrapperClassName="h-full w-full"
+                            editorLabel={`${activeCollection.name} stage window image`}
+                        />
                     </div>
 
                     <div data-window-placard className="absolute inset-x-3 bottom-3 z-[4]">
@@ -209,7 +261,15 @@ function AvenueRunwayStage({ activeCollection, collections = [], onPreview }) {
                                 style={{ top: placement.top, right: placement.right, width: placement.width, opacity: placement.opacity, transform: `scale(${placement.scale}) rotateY(${placement.rotateY}deg)` }}
                             >
                                 <div className="aspect-[4/5] overflow-hidden bg-[#090909]">
-                                    <img src={collection.frames[1] || collection.frames[0]} alt={collection.name} className="h-full w-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.05]" />
+                                    <CollectionFrameImage
+                                        collection={collection}
+                                        frameIndex={1}
+                                        fallbackFrameIndex={0}
+                                        alt={collection.name}
+                                        className="h-full w-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.05]"
+                                        wrapperClassName="h-full w-full"
+                                        editorLabel={`${collection.name} avenue window image`}
+                                    />
                                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0)_22%,rgba(0,0,0,0.2)_54%,rgba(0,0,0,0.8)_100%)]"></div>
                                 </div>
                                 <div className="absolute inset-x-0 bottom-0 p-3">
@@ -512,7 +572,15 @@ export default function SpotlightRunwayExperience({ collections = [] }) {
                             {supportingCollections.map((collection) => (
                                 <a key={collection.name} href={collection.href} onMouseEnter={() => handleCollectionPreview(collection)} onFocus={() => handleCollectionPreview(collection)} className={`transition-link group rounded-[1.7rem] border bg-white/[0.03] p-4 backdrop-blur-xl hover-target ${collection.name === activeCollection.name ? 'border-[#D5B97E]/24 shadow-[0_18px_60px_rgba(213,185,126,0.12)]' : 'border-white/8'}`} data-cursor-text="Open Window">
                                     <div className="overflow-hidden rounded-[1.3rem] border border-white/10 bg-[#111111] aspect-[4/5]">
-                                        <img src={collection.frames[1] || collection.frames[0]} alt={collection.name} className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out group-hover:scale-[1.04]" />
+                                        <CollectionFrameImage
+                                            collection={collection}
+                                            frameIndex={1}
+                                            fallbackFrameIndex={0}
+                                            alt={collection.name}
+                                            className="h-full w-full object-cover transition-transform duration-[1600ms] ease-out group-hover:scale-[1.04]"
+                                            wrapperClassName="h-full w-full"
+                                            editorLabel={`${collection.name} support card image`}
+                                        />
                                     </div>
                                     <div className="mt-4 flex flex-col gap-2">
                                         <p className="text-[10px] uppercase tracking-[0.24em] text-[#D5B97E]/52">{formatLookCount(collection.lookCount)}</p>
@@ -545,7 +613,15 @@ export default function SpotlightRunwayExperience({ collections = [] }) {
                         <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-white/8 bg-white/[0.03]">
                             <div className="grid grid-cols-[0.74fr_1fr] items-stretch">
                                 <div className="relative min-h-[14rem] bg-[#0b0b0d]">
-                                    <img src={activeCollection.frames[1] || activeCollection.frames[0]} alt={activeCollection.name} className="h-full w-full object-cover" />
+                                    <CollectionFrameImage
+                                        collection={activeCollection}
+                                        frameIndex={1}
+                                        fallbackFrameIndex={0}
+                                        alt={activeCollection.name}
+                                        className="h-full w-full object-cover"
+                                        wrapperClassName="h-full w-full"
+                                        editorLabel={`${activeCollection.name} current focus image`}
+                                    />
                                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0)_22%,rgba(0,0,0,0.18)_54%,rgba(0,0,0,0.76)_100%)]"></div>
                                 </div>
                                 <div className="flex flex-col justify-between gap-4 p-5">

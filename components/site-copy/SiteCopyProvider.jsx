@@ -22,12 +22,15 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
         return null;
     }
 
+    const isMediaEntry = activeEntry.entryType === 'media';
+    const previewLabel = activeEntry.mediaKind === 'video' ? 'Video Preview' : 'Image Preview';
+
     return (
         <div className="fixed inset-0 z-[260] flex items-end justify-center bg-[#1C1C1C]/55 p-4 backdrop-blur-sm sm:items-center">
             <div className="w-full max-w-2xl rounded-[1.8rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-6 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] sm:p-7">
                 <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Inline Copy Editor</p>
+                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : 'Inline Copy Editor'}</p>
                         <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white">{activeEntry.label}</h3>
                         <p className="mt-3 text-sm leading-relaxed text-white/62">Key: {activeEntry.key}</p>
                     </div>
@@ -42,14 +45,54 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
 
                 <div className="mt-6 flex flex-col gap-4">
                     <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                        Visible Text
-                        <textarea
-                            value={draftValue}
-                            onChange={(event) => onChange(event.target.value)}
-                            rows={activeEntry.multiline ? 7 : 3}
-                            className="min-h-[10rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-relaxed tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
-                        />
+                        {isMediaEntry ? 'Media URL' : 'Visible Text'}
+                        {isMediaEntry ? (
+                            <input
+                                type="text"
+                                value={draftValue}
+                                onChange={(event) => onChange(event.target.value)}
+                                className="h-14 rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
+                                placeholder="https://example.com/image.jpg or /banner.jpg"
+                            />
+                        ) : (
+                            <textarea
+                                value={draftValue}
+                                onChange={(event) => onChange(event.target.value)}
+                                rows={activeEntry.multiline ? 7 : 3}
+                                className="min-h-[10rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-relaxed tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
+                            />
+                        )}
                     </label>
+
+                    {isMediaEntry && (
+                        <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4">
+                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">{previewLabel}</p>
+                            <div className="mt-3 overflow-hidden rounded-[1rem] border border-white/8 bg-[#080808]">
+                                {draftValue ? (
+                                    activeEntry.mediaKind === 'video' ? (
+                                        <video
+                                            key={draftValue}
+                                            src={draftValue}
+                                            controls
+                                            muted
+                                            playsInline
+                                            className="max-h-[24rem] w-full bg-black object-contain"
+                                        />
+                                    ) : (
+                                        <img
+                                            src={draftValue}
+                                            alt={activeEntry.label}
+                                            className="max-h-[24rem] w-full bg-black object-contain"
+                                        />
+                                    )
+                                ) : (
+                                    <div className="flex min-h-[14rem] items-center justify-center px-6 py-10 text-center text-sm leading-relaxed text-white/46">
+                                        Paste a media URL or a public asset path to preview it here.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {saveError && <p className="text-sm leading-relaxed text-red-300">{saveError}</p>}
 
@@ -67,7 +110,7 @@ function SiteCopyEditor({ activeEntry, draftValue, isSaving, saveError, onCancel
                             disabled={isSaving}
                             className={`hover-target rounded-full bg-[#EFE7DA] px-6 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors ${isSaving ? 'opacity-60' : 'hover:bg-white'}`}
                         >
-                            {isSaving ? 'Saving' : 'Save Text'}
+                            {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : 'Save Text'}
                         </button>
                     </div>
                 </div>
@@ -105,6 +148,14 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, []);
 
     const resolveText = useCallback((key, fallback) => {
+        if (Object.prototype.hasOwnProperty.call(entries, key)) {
+            return entries[key];
+        }
+
+        return fallback;
+    }, [entries]);
+
+    const resolveMedia = useCallback((key, fallback) => {
         if (Object.prototype.hasOwnProperty.call(entries, key)) {
             return entries[key];
         }
@@ -175,7 +226,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                throw new Error(data.error || 'Unable to save the text right now.');
+                throw new Error(data.error || 'Unable to save this entry right now.');
             }
 
             setEntries((currentEntries) => ({
@@ -184,7 +235,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
             }));
             setActiveEntry(null);
         } catch (error) {
-            setSaveError(error.message || 'Unable to save the text right now.');
+            setSaveError(error.message || 'Unable to save this entry right now.');
         } finally {
             setIsSaving(false);
         }
@@ -201,10 +252,11 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         isAdmin,
         isEditMode,
         resolveText,
+        resolveMedia,
         openEditor,
         registerHoverTarget,
         clearHoverTarget,
-    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveText]);
+    }), [clearHoverTarget, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveText]);
 
     return (
         <SiteCopyContext.Provider value={value}>

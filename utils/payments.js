@@ -10,8 +10,8 @@ export const PAYMENT_MODE_OPTIONS = [
   },
   {
     value: 'manual_review',
-    label: 'Local Review',
-    copy: 'Send the order through the local review lane before payment is confirmed.',
+    label: 'Pay On Delivery',
+    copy: 'Submit the Bulgarian order first and confirm payment directly on delivery or pickup.',
   },
 ];
 
@@ -95,8 +95,8 @@ export function getPaymentStatusMeta(status = '', checkoutMode = 'manual_review'
             className: 'border-sky-200 bg-sky-50 text-sky-700',
           }
         : {
-            label: 'Local Review',
-            description: 'The atelier confirms delivery and payment details before payment is collected.',
+            label: 'Pay On Delivery',
+            description: 'Payment will be confirmed directly on delivery or pickup.',
             className: 'border-[#D9C08A] bg-[#FFF8E8] text-[#8A6A2F]',
           };
   }

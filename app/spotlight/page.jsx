@@ -21,6 +21,11 @@ const fallbackCollectionStory = {
         'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1800',
         'https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1800',
     ],
+    frameKeys: [
+        'spotlight.fallback.frame_one',
+        'spotlight.fallback.frame_two',
+        'spotlight.fallback.frame_three',
+    ],
 };
 
 function normalizeValue(value) {

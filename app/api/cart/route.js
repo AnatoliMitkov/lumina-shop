@@ -6,6 +6,10 @@ import {
   CART_SESSION_COOKIE,
   CART_SESSION_COOKIE_OPTIONS,
 } from '../../../utils/cart';
+import {
+  buildCatalogBackfilledCartSnapshot,
+  fetchCheckoutProductRecords,
+} from '../../../utils/checkout-server';
 import { createAdminClient, isAdminConfigured } from '../../../utils/supabase/admin';
 import { createClient as createServerClient } from '../../../utils/supabase/server';
 
@@ -29,19 +33,34 @@ function withCartSession(response, sessionId, shouldSetCookie) {
   return response;
 }
 
-function buildCartResponse(cartRecord) {
+function buildCartResponse(cartRecord, snapshot = null) {
   if (!cartRecord) {
     return buildCartSnapshot([]);
   }
 
-  const snapshot = buildCartSnapshot(cartRecord.items);
+  const resolvedSnapshot = snapshot || buildCartSnapshot(cartRecord.items);
 
   return {
     id: cartRecord.id,
-    ...snapshot,
+    ...resolvedSnapshot,
     status: cartRecord.status ?? 'active',
     updatedAt: cartRecord.updated_at ?? null,
   };
+}
+
+async function refreshCartSnapshot(supabase, items = []) {
+  const snapshot = buildCartSnapshot(items);
+
+  if (!supabase || snapshot.itemCount === 0) {
+    return snapshot;
+  }
+
+  try {
+    const productRecords = await fetchCheckoutProductRecords(supabase, snapshot.items);
+    return buildCatalogBackfilledCartSnapshot(snapshot.items, productRecords);
+  } catch {
+    return snapshot;
+  }
 }
 
 function formatCartError(error) {
@@ -86,8 +105,10 @@ export async function GET() {
       throw error;
     }
 
+    const cartSnapshot = await refreshCartSnapshot(supabase, data?.items);
+
     const response = NextResponse.json({
-      cart: buildCartResponse(data),
+      cart: buildCartResponse(data, cartSnapshot),
       persistence: 'supabase',
     });
 
@@ -111,6 +132,7 @@ export async function PUT(request) {
     const authClient = createServerClient(cookieStore);
     const { data: { user } } = await authClient.auth.getUser();
     const supabase = createAdminClient();
+    const persistedSnapshot = await refreshCartSnapshot(supabase, snapshot.items);
     const { data, error } = await supabase
       .from('carts')
       .upsert(
@@ -118,10 +140,10 @@ export async function PUT(request) {
           session_id: sessionId,
           user_id: user?.id ?? null,
           status: 'active',
-          currency: snapshot.currency,
-          item_count: snapshot.itemCount,
-          total: snapshot.total,
-          items: snapshot.items,
+          currency: persistedSnapshot.currency,
+          item_count: persistedSnapshot.itemCount,
+          total: persistedSnapshot.total,
+          items: persistedSnapshot.items,
           checked_out_at: null,
         },
         { onConflict: 'session_id' }
@@ -134,7 +156,7 @@ export async function PUT(request) {
     }
 
     const response = NextResponse.json({
-      cart: buildCartResponse(data),
+      cart: buildCartResponse(data, persistedSnapshot),
       persistence: 'supabase',
       message: 'Cart synced to your client session.',
     });
