@@ -30,7 +30,7 @@ async function fetchCaptchaChallenge() {
     return data;
 }
 
-export default function ContactForm({ initialValues }) {
+export default function ContactForm({ initialValues, hasProductContext = false }) {
     const { cartItems, cartTotal } = useCart();
     const siteCopy = useSiteCopy();
     const initialPhoneParts = splitStoredPhoneNumber(initialValues?.phone || '');
@@ -58,6 +58,7 @@ export default function ContactForm({ initialValues }) {
     const [location, setLocation] = useState(initialValues?.location || '');
     const [queryType, setQueryType] = useState(initialValues?.queryType || queryOptions[0]);
     const [message, setMessage] = useState('');
+    const [productContext, setProductContext] = useState(initialValues?.productContext || '');
     const [captchaPrompt, setCaptchaPrompt] = useState('Preparing a tiny human check...');
     const [captchaToken, setCaptchaToken] = useState('');
     const [captchaAnswer, setCaptchaAnswer] = useState('');
@@ -127,6 +128,10 @@ export default function ContactForm({ initialValues }) {
         setStatus({ type: 'idle', kicker: '', title: '', message: '', detail: '' });
 
         try {
+            const messageWithContext = productContext
+                ? `${productContext}\n\n${message}`
+                : message;
+
             const response = await fetch('/api/contact', {
                 method: 'POST',
                 headers: {
@@ -140,7 +145,7 @@ export default function ContactForm({ initialValues }) {
                     phoneCountryCode: selectedCountryOption?.dialCode || '',
                     location,
                     queryType,
-                    message,
+                    message: messageWithContext,
                     captchaToken,
                     captchaAnswer,
                     selectionItems: cartSnapshot.items,
@@ -191,6 +196,12 @@ export default function ContactForm({ initialValues }) {
 
     return (
         <form onSubmit={handleSubmit} className="border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm flex flex-col gap-5">
+            {hasProductContext && (
+                <div className="flex flex-col gap-2 pb-4 border-b border-[#1C1C1C]/10">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">About This Piece</p>
+                    <p className="text-sm font-serif text-[#1C1C1C]">{productContext}</p>
+                </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                     <EditableText contentKey="contact.form.full_name" fallback="Full Name" editorLabel="Contact form full name label" />

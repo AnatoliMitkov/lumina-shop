@@ -86,6 +86,7 @@ export default function AdminInquiriesPanel({
     const [queryTypeFilter, setQueryTypeFilter] = useState('all');
     const [sortMode, setSortMode] = useState('newest');
     const [updatingInquiryId, setUpdatingInquiryId] = useState('');
+    const [deletingInquiryId, setDeletingInquiryId] = useState('');
     const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -175,6 +176,33 @@ export default function AdminInquiriesPanel({
             setFeedback({ type: 'success', message: 'Review state saved in this browser. Run supabase/cart-orders.sql to persist it for all admins.' });
         } finally {
             setUpdatingInquiryId('');
+        }
+    };
+
+    const deleteInquiry = async (inquiryId) => {
+        setDeletingInquiryId(inquiryId);
+        setFeedback({ type: 'idle', message: '' });
+
+        try {
+            const response = await fetch('/api/admin/inquiries', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: inquiryId }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to delete this inquiry.');
+            }
+
+            onInquiriesChange((currentInquiries) => currentInquiries.filter((inquiry) => inquiry.id !== inquiryId));
+            setFeedback({ type: 'success', message: 'Inquiry deleted successfully.' });
+        } catch (error) {
+            setFeedback({ type: 'error', message: error.message || 'Unable to delete this inquiry.' });
+        } finally {
+            setDeletingInquiryId('');
         }
     };
 
@@ -278,6 +306,7 @@ export default function AdminInquiriesPanel({
                                             {ADMIN_ATTENTION_STATUS_OPTIONS.map((option) => (
                                                 <button
                                                     key={option.value}
+                                                    suppressHydrationWarning
                                                     type="button"
                                                     onClick={() => updateInquiryAttention(inquiry.id, option.value)}
                                                     disabled={updatingInquiryId === inquiry.id || attentionStatus === option.value}
@@ -286,6 +315,18 @@ export default function AdminInquiriesPanel({
                                                     {option.label}
                                                 </button>
                                             ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (window.confirm(`Delete this inquiry from ${inquiry.full_name || inquiry.email}? This cannot be undone.`)) {
+                                                        void deleteInquiry(inquiry.id);
+                                                    }
+                                                }}
+                                                disabled={deletingInquiryId === inquiry.id}
+                                                className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.22em] transition-colors border-red-400/40 bg-red-400/10 text-red-200 ${deletingInquiryId === inquiry.id ? 'opacity-60' : 'hover:bg-red-400/20'}`}
+                                            >
+                                                {deletingInquiryId === inquiry.id ? 'Deleting' : 'Delete'}
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

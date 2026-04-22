@@ -13,7 +13,7 @@ export const metadata = {
     },
 };
 
-export default async function ContactPage() {
+export default async function ContactPage({ searchParams }) {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
@@ -24,11 +24,21 @@ export default async function ContactPage() {
         profile = data;
     }
 
+    const params = await searchParams;
+    const productName = params?.product || '';
+    const selectedSize = params?.size || '';
+    const selectedTone = params?.tone || '';
+
+    const productContext = productName || selectedSize || selectedTone
+        ? `${productName}${selectedSize ? ` / Size ${selectedSize}` : ''}${selectedTone ? ` / ${selectedTone}` : ''}`
+        : '';
+
     const initialValues = {
         fullName: profile?.full_name || user?.user_metadata?.full_name || '',
         email: user?.email || '',
         phone: profile?.phone || '',
         location: profile?.location || '',
+        productContext,
     };
 
     return (
@@ -70,7 +80,7 @@ export default async function ContactPage() {
                 </section>
 
                 <section className="xl:pt-6">
-                    <ContactForm initialValues={initialValues} />
+                    <ContactForm initialValues={initialValues} hasProductContext={Boolean(productName)} />
                 </section>
             </div>
         </div>

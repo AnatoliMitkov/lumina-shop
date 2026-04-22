@@ -3,7 +3,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import ProductDetailAccordions from '../../../components/ProductDetailAccordions';
 import ProductGallery from '../../../components/ProductGallery';
-import ProductPurchaseControls from '../../../components/ProductPurchaseControls';
+import ProductContactWrapper from '../../../components/ProductContactWrapper';
 import EditableText from '../../../components/site-copy/EditableText';
 import { createClient } from '../../../utils/supabase/server';
 import {
@@ -341,12 +341,7 @@ export default async function ProductPage({ params }) {
                                 </div>
                             </div>
 
-                            <ProductPurchaseControls product={product} sizeOptions={sizeOptions} toneOptions={product.palette} />
-
-                            <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <a href="/contact" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors"><EditableText contentKey="product.cta.contact_atelier" fallback="Contact Atelier" editorLabel="Product contact atelier CTA" /></a>
-                                <a href="/collections" className="transition-link hover-target inline-flex items-center justify-center px-6 py-4 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium hover:bg-white transition-colors"><EditableText contentKey="product.cta.return_to_archive" fallback="Return To Archive" editorLabel="Product return to archive CTA" /></a>
-                            </div>
+                            <ProductContactWrapper product={product} sizeOptions={sizeOptions} toneOptions={product.palette} />
                         </div>
 
                         <ProductDetailAccordions sections={accordionSections} />

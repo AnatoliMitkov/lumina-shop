@@ -324,9 +324,11 @@ drop policy if exists "Users can update own profile" on public.profiles;
 drop policy if exists "Users can view own orders" on public.orders;
 drop policy if exists "Admins can view all orders" on public.orders;
 drop policy if exists "Admins can update all orders" on public.orders;
+drop policy if exists "Admins can delete all orders" on public.orders;
 drop policy if exists "Users can view own contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can view all contact inquiries" on public.contact_inquiries;
 drop policy if exists "Admins can update all contact inquiries" on public.contact_inquiries;
+drop policy if exists "Admins can delete all contact inquiries" on public.contact_inquiries;
 drop policy if exists "Public can view site copy entries" on public.site_copy_entries;
 drop policy if exists "Admins can insert site copy entries" on public.site_copy_entries;
 drop policy if exists "Admins can update site copy entries" on public.site_copy_entries;
@@ -401,6 +403,19 @@ with check (
   )
 );
 
+create policy "Admins can delete all orders"
+on public.orders
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
 create policy "Users can view own contact inquiries"
 on public.contact_inquiries
 for select
@@ -433,6 +448,19 @@ using (
   )
 )
 with check (
+  exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.is_admin = true
+  )
+);
+
+create policy "Admins can delete all contact inquiries"
+on public.contact_inquiries
+for delete
+to authenticated
+using (
   exists (
     select 1
     from public.profiles

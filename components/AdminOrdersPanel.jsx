@@ -122,6 +122,7 @@ export default function AdminOrdersPanel({
     const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const [isStatusSaving, setIsStatusSaving] = useState(false);
     const [isAttentionSaving, setIsAttentionSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortMode, setSortMode] = useState('newest');
@@ -246,6 +247,34 @@ export default function AdminOrdersPanel({
             setFeedback({ type: 'error', message: error.message || 'Unable to update the order right now.' });
         } finally {
             setSavingState(false);
+        }
+    };
+
+    const deleteOrder = async (orderId) => {
+        setIsDeleting(true);
+        setFeedback({ type: 'idle', message: '' });
+
+        try {
+            const response = await fetch('/api/admin/orders', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: orderId }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to delete this order.');
+            }
+
+            onOrdersChange((currentOrders) => currentOrders.filter((order) => order.id !== orderId));
+            setSelectedOrderId(recentOrders.length > 1 ? recentOrders.find((o) => o.id !== orderId)?.id || '' : '');
+            setFeedback({ type: 'success', message: 'Order deleted successfully.' });
+        } catch (error) {
+            setFeedback({ type: 'error', message: error.message || 'Unable to delete this order.' });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -427,6 +456,19 @@ export default function AdminOrdersPanel({
                                     </button>
                                 ))}
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm(`Delete order ${buildOrderReference(selectedOrder)}? This cannot be undone.`)) {
+                                        void deleteOrder(selectedOrder.id);
+                                    }
+                                }}
+                                disabled={isDeleting}
+                                className={`hover-target h-12 px-5 border border-[#FF0000] bg-red-400/10 text-[10px] uppercase tracking-[0.22em] text-[#1f1f1f] transition-colors ${isDeleting ? 'opacity-60' : 'hover:border-[#FF0000]/80'}`}
+                            >
+                                {isDeleting ? 'Deleting' : 'Delete Order'}
+                            </button>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4 flex flex-col gap-2">

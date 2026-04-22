@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '../../../../utils/supabase/server';
+import { createAdminClient, isAdminConfigured } from '../../../../utils/supabase/admin';
 import { orderStatusOptions } from '../../../../utils/checkout';
 import { ADMIN_ATTENTION_STATUS_OPTIONS } from '../../../../utils/admin-attention';
 
@@ -27,7 +28,7 @@ function toErrorResponse(error) {
         return NextResponse.json({ error: 'Order admin schema is missing. Run supabase/cart-orders.sql before reviewing structured orders.' }, { status: 503 });
     }
 
-    return NextResponse.json({ error: error?.message || 'Unable to update the order right now.' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Unable to complete the order request right now.' }, { status: 500 });
 }
 
 async function getAdminContext() {
@@ -123,6 +124,42 @@ export async function PATCH(request) {
         }
 
         return NextResponse.json({ order: data });
+    } catch (error) {
+        return toErrorResponse(error);
+    }
+}
+
+export async function DELETE(request) {
+    const context = await getAdminContext();
+
+    if (context.errorResponse) {
+        return context.errorResponse;
+    }
+
+    try {
+        const payload = await request.json();
+        const orderId = typeof payload?.id === 'string' ? payload.id.trim() : '';
+
+        if (!orderId) {
+            return NextResponse.json({ error: 'An order id is required.' }, { status: 400 });
+        }
+
+        const deleteClient = isAdminConfigured() ? createAdminClient() : context.supabase;
+        const { data, error } = await deleteClient
+            .from('orders')
+            .delete()
+            .eq('id', orderId)
+            .select('id');
+
+        if (error) {
+            throw error;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            return NextResponse.json({ error: 'The order could not be deleted. Confirm the admin delete policy or SUPABASE_SERVICE_ROLE_KEY configuration.' }, { status: 409 });
+        }
+
+        return NextResponse.json({ success: true, message: 'Order deleted successfully.' });
     } catch (error) {
         return toErrorResponse(error);
     }

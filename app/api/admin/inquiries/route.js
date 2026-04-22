@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '../../../../utils/supabase/server';
+import { createAdminClient, isAdminConfigured } from '../../../../utils/supabase/admin';
 import { ADMIN_ATTENTION_STATUS_OPTIONS } from '../../../../utils/admin-attention';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ function toErrorResponse(error) {
         return NextResponse.json({ error: 'Inquiry admin schema is missing. Run supabase/cart-orders.sql before using inbox attention states.' }, { status: 503 });
     }
 
-    return NextResponse.json({ error: error?.message || 'Unable to update the inquiry right now.' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Unable to complete the inquiry request right now.' }, { status: 500 });
 }
 
 async function getAdminContext() {
@@ -111,6 +112,42 @@ export async function PATCH(request) {
         }
 
         return NextResponse.json({ inquiry: data });
+    } catch (error) {
+        return toErrorResponse(error);
+    }
+}
+
+export async function DELETE(request) {
+    const context = await getAdminContext();
+
+    if (context.errorResponse) {
+        return context.errorResponse;
+    }
+
+    try {
+        const payload = await request.json();
+        const inquiryId = typeof payload?.id === 'string' ? payload.id.trim() : '';
+
+        if (!inquiryId) {
+            return NextResponse.json({ error: 'An inquiry id is required.' }, { status: 400 });
+        }
+
+        const deleteClient = isAdminConfigured() ? createAdminClient() : context.supabase;
+        const { data, error } = await deleteClient
+            .from('contact_inquiries')
+            .delete()
+            .eq('id', inquiryId)
+            .select('id');
+
+        if (error) {
+            throw error;
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+            return NextResponse.json({ error: 'The inquiry could not be deleted. Confirm the admin delete policy or SUPABASE_SERVICE_ROLE_KEY configuration.' }, { status: 409 });
+        }
+
+        return NextResponse.json({ success: true, message: 'Inquiry deleted successfully.' });
     } catch (error) {
         return toErrorResponse(error);
     }

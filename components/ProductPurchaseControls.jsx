@@ -31,7 +31,7 @@ function createEmptyCustomMeasurements() {
     }, {});
 }
 
-export default function ProductPurchaseControls({ product, sizeOptions = [], toneOptions = [] }) {
+export default function ProductPurchaseControls({ product, sizeOptions = [], toneOptions = [], onSizeChange, onToneChange }) {
     const [selectedSize, setSelectedSize] = useState(() => getInitialSize(sizeOptions));
     const [selectedTone, setSelectedTone] = useState(() => toneOptions[0] || '');
     const [customMeasurementUnit, setCustomMeasurementUnit] = useState('CM');
@@ -64,6 +64,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
 
     const handleSizeSelect = (sizeOption) => {
         setSelectedSize(sizeOption);
+        onSizeChange?.(sizeOption);
     };
 
     const handleCustomMeasurementChange = (fieldKey, nextValue) => {
@@ -163,7 +164,10 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                                 <button
                                     key={toneOption}
                                     type="button"
-                                    onClick={() => setSelectedTone(toneOption)}
+                                    onClick={() => {
+                                        setSelectedTone(toneOption);
+                                        onToneChange?.(toneOption);
+                                    }}
                                     aria-pressed={isActive}
                                     className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.24em] transition-colors ${isActive ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/12 bg-white/70 text-[#1C1C1C]/58 hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]'}`}
                                 >
