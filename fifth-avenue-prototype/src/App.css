@@ -778,11 +778,14 @@
 
 @media (max-width: 767px) {
 .app {
---mobile-stage-top-pad: clamp(3.45rem, calc(var(--app-height, 100svh) * 0.07), 4.8rem);
+--mobile-stage-top-pad: clamp(3.95rem, calc(var(--app-height, 100svh) * 0.09), 5.8rem);
 --mobile-visual-height: min(calc(var(--app-height, 100svh) * 0.5), 24rem);
 --mobile-piece-size: clamp(0.9rem, calc(var(--app-height, 100svh) * 0.025), 1.1rem);
 --mobile-word-top: calc(var(--app-height, 100svh) * 0.61);
 --mobile-word-bottom: calc(var(--app-height, 100svh) * 0.685);
+--mobile-portal-size: clamp(1.22rem, calc(var(--app-height, 100svh) * 0.039), 1.72rem);
+--mobile-portal-subline-size: clamp(0.54rem, calc(var(--app-height, 100svh) * 0.0125), 0.68rem);
+--mobile-topbar-gap: clamp(0.24rem, calc(var(--app-height, 100svh) * 0.0075), 0.52rem);
 }
 
 .stage {
@@ -793,7 +796,7 @@ gap: 0.25rem !important;
 
 .topbar {
 padding-top: max(0.7rem, calc(env(safe-area-inset-top) + 0.15rem)) !important;
-gap: 0.35rem !important;
+gap: var(--mobile-topbar-gap) !important;
 }
 
 .topbar__portal {
@@ -802,7 +805,13 @@ margin: 0 auto !important;
 }
 
 .topbar__portal-line {
-font-size: clamp(1.36rem, 6.2vw, 1.82rem) !important;
+font-size: var(--mobile-portal-size) !important;
+line-height: 1.06 !important;
+letter-spacing: -0.02em !important;
+}
+
+.topbar__portal-subline {
+font-size: var(--mobile-portal-subline-size) !important;
 }
 
 .stage__visual-group {
@@ -814,8 +823,7 @@ height: var(--mobile-visual-height) !important;
 
 .stage__copy {
 width: 90vw !important;
-margin: --2
-rem auto 0 !important;
+margin: -0.2rem auto 0 !important;
 gap: 0.5rem !important;
 }
 
