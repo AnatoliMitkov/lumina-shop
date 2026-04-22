@@ -213,6 +213,31 @@ function App({ collectionStageMediaOverrides = {} }) {
   }, [collectionEntries.length]);
 
   useEffect(() => {
+    const syncViewportHeight = () => {
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+
+      if (!rootRef.current || !viewportHeight) {
+        return;
+      }
+
+      rootRef.current.style.setProperty('--app-height', `${viewportHeight}px`);
+    };
+
+    const visualViewport = window.visualViewport;
+
+    syncViewportHeight();
+    window.addEventListener('resize', syncViewportHeight);
+    visualViewport?.addEventListener('resize', syncViewportHeight);
+    visualViewport?.addEventListener('scroll', syncViewportHeight);
+
+    return () => {
+      window.removeEventListener('resize', syncViewportHeight);
+      visualViewport?.removeEventListener('resize', syncViewportHeight);
+      visualViewport?.removeEventListener('scroll', syncViewportHeight);
+    };
+  }, []);
+
+  useEffect(() => {
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;

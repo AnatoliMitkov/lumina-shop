@@ -1,7 +1,9 @@
 .app {
   position: relative;
-  min-height: 100vh;
-  height: 100vh;
+  min-height: 100svh;
+  min-height: var(--app-height, 100svh);
+  height: 100svh;
+  height: var(--app-height, 100svh);
   overflow: hidden;
   background:
     radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.92), transparent 32%),
@@ -775,13 +777,22 @@
 }
 
 @media (max-width: 767px) {
+.app {
+--mobile-stage-top-pad: clamp(3.45rem, calc(var(--app-height, 100svh) * 0.07), 4.8rem);
+--mobile-visual-height: min(calc(var(--app-height, 100svh) * 0.5), 24rem);
+--mobile-piece-size: clamp(0.9rem, calc(var(--app-height, 100svh) * 0.025), 1.1rem);
+--mobile-word-top: calc(var(--app-height, 100svh) * 0.61);
+--mobile-word-bottom: calc(var(--app-height, 100svh) * 0.685);
+}
+
 .stage {
-padding-top: 7vh !important;
+padding-top: var(--mobile-stage-top-pad) !important;
+padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.45rem)) !important;
 gap: 0.25rem !important;
 }
 
 .topbar {
-padding-top: 0.7rem !important;
+padding-top: max(0.7rem, calc(env(safe-area-inset-top) + 0.15rem)) !important;
 gap: 0.35rem !important;
 }
 
@@ -798,7 +809,7 @@ font-size: clamp(1.36rem, 6.2vw, 1.82rem) !important;
 width: 90vw !important;
 max-width: 90vw !important;
 margin: 0 auto !important;
-height: min(50vh, 24rem) !important;
+height: var(--mobile-visual-height) !important;
 }
 
 .stage__copy {
@@ -817,7 +828,7 @@ display: inline-block !important;
 margin-left: auto !important;
 align-self: end !important;
 text-align: right !important;
-font-size: 2.5vh !important;
+font-size: var(--mobile-piece-size) !important;
 }
 
 .stage__subtitle {
@@ -825,14 +836,14 @@ margin-top: 0.05rem !important;
 }
 
 .stage__word--top {
-top: 61vh !important;
+top: var(--mobile-word-top) !important;
 bottom: auto !important;
 left: 15vh !important;
 transform: translateX(-50%) !important;
 }
 
 .stage__word--bottom {
-top: 68.5vh !important;
+top: var(--mobile-word-bottom) !important;
 bottom: auto !important;
 left: 26vh !important;
 right: auto !important;
