@@ -7,6 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import Lenis from 'lenis';
 import { useCart } from './CartProvider';
+import PromoCodePopup from './PromoCodePopup';
 import EditableText from './site-copy/EditableText';
 import { formatCustomMeasurementSummary } from '../utils/cart';
 import {
@@ -74,6 +75,7 @@ export default function ClientEngine({ children }) {
     const [hasMounted, setHasMounted] = useState(false);
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
     const [categoryMenuItems, setCategoryMenuItems] = useState(() => PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
+    const [isPromoPopupOpen, setIsPromoPopupOpen] = useState(false);
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const isImmersiveRoute = isSpotlightPath(pathname);
     const drawerNote = cartPersistenceMode === 'supabase'
@@ -154,6 +156,16 @@ export default function ClientEngine({ children }) {
         setIsCollectionsSubmenuOpen(false);
         setIsDesktopCollectionsMenuOpen(false);
     }, [pathname]);
+
+    useEffect(() => {
+        if (!isPromoPopupOpen) {
+            return;
+        }
+
+        setIsMobileMenuOpen(false);
+        setIsCollectionsSubmenuOpen(false);
+        setIsDesktopCollectionsMenuOpen(false);
+    }, [isPromoPopupOpen]);
 
     useEffect(() => {
         return () => {
@@ -612,18 +624,25 @@ export default function ClientEngine({ children }) {
               .to(preloaderRef.current, { yPercent: -100, duration: transitionTimings.preloaderLiftDuration, ease: "power4.inOut" })
               .to('.hero-img', { opacity: 1, scale: 1, duration: transitionTimings.heroDuration, ease: "power3.out" }, "-=0.45")
               .to('.hero-title', { y: '0%', duration: transitionTimings.heroTitleDuration, stagger: transitionTimings.heroTitleStagger, ease: "power4.out" }, "-=0.72")
-              .to('.hero-sub', { opacity: 1, duration: transitionTimings.heroSubDuration, stagger: 0.1, ease: "power3.out" }, "-=0.52")
-              .to(
-                  '#nav',
-                  {
-                      opacity: 1,
-                      duration: transitionTimings.navDuration,
-                      onComplete: () => {
-                          dispatchPageRevealComplete(pathname);
-                      },
-                  },
-                  "-=0.5"
-              );
+              .to('.hero-sub', { opacity: 1, duration: transitionTimings.heroSubDuration, stagger: 0.1, ease: "power3.out" }, "-=0.52");
+
+            if (isImmersiveRoute) {
+                tl.call(() => {
+                    dispatchPageRevealComplete(pathname);
+                }, null, "-=0.2");
+            } else {
+                tl.to(
+                    '#nav',
+                    {
+                        opacity: 1,
+                        duration: transitionTimings.navDuration,
+                        onComplete: () => {
+                            dispatchPageRevealComplete(pathname);
+                        },
+                    },
+                    "-=0.5"
+                );
+            }
         } else {
             gsap.set(preloaderRef.current, { yPercent: -100 });
             gsap.set('.loader-text', { y: '0%', opacity: 0 });
@@ -770,6 +789,8 @@ export default function ClientEngine({ children }) {
                     {loaderSub && <div className="overflow-hidden mt-6"><p className="loader-text font-sans text-xs md:text-sm tracking-[0.3em] uppercase opacity-0">{loaderSub}</p></div>}
                 </div>
 
+                <PromoCodePopup pathname={pathname} onOpenChange={setIsPromoPopupOpen} />
+
                 <div id="smooth-wrapper" className="relative z-10 h-screen w-screen overflow-hidden bg-[#EFECE8]">
                     <div id="smooth-content" className="h-full w-full">
                         {children}
@@ -792,7 +813,9 @@ export default function ClientEngine({ children }) {
                 {loaderSub && <div className="overflow-hidden mt-6"><p className="loader-text font-sans text-xs md:text-sm tracking-[0.3em] uppercase opacity-0">{loaderSub}</p></div>}
             </div>
 
-            <nav id="nav" className="fixed w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 z-50 opacity-0 mix-blend-difference text-white">
+            <PromoCodePopup pathname={pathname} onOpenChange={setIsPromoPopupOpen} />
+
+            <nav id="nav" className={`fixed w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 z-50 opacity-0 mix-blend-difference text-white ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="flex md:hidden items-center gap-3">
                     <button

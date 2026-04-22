@@ -134,6 +134,9 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
         ? null
         : discounts.find((record) => record.id === selectedDiscountId) || null;
     const activeCount = discounts.filter((record) => record.is_active).length;
+    const selectedDiscountRemainingUses = selectedDiscount?.usage_limit
+        ? Math.max(Number(selectedDiscount.usage_limit || 0) - Number(selectedDiscount.usage_count || 0), 0)
+        : null;
 
     const handleDraftChange = (field, value) => {
         setDraft((currentDraft) => ({
@@ -362,18 +365,22 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                     </label>
 
                     {selectedDiscount && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                             <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                                 <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Redemptions</p>
                                 <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscount.usage_count || 0}</p>
+                            </div>
+                            <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Remaining</p>
+                                <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscountRemainingUses == null ? 'Open' : selectedDiscountRemainingUses}</p>
                             </div>
                             <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
                                 <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Limit</p>
                                 <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscount.usage_limit || 'Open'}</p>
                             </div>
                             <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Updated</p>
-                                <p className="font-serif text-2xl font-light text-[#1C1C1C]">{formatDate(selectedDiscount.updated_at)}</p>
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Window</p>
+                                <p className="font-serif text-xl font-light text-[#1C1C1C] leading-tight">{buildStatusLabel(selectedDiscount)}</p>
                             </div>
                         </div>
                     )}

@@ -103,7 +103,7 @@ function normalizeAffiliateCommissionType(value) {
     return affiliateCommissionOptions.some((option) => option.value === value) ? value : 'percentage';
 }
 
-function isPromotionWindowOpen(record, now = new Date()) {
+export function isPromotionWindowOpen(record, now = new Date()) {
     const currentTime = now instanceof Date ? now.getTime() : new Date(now).getTime();
     const startsAt = record?.starts_at ? new Date(record.starts_at).getTime() : null;
     const endsAt = record?.ends_at ? new Date(record.ends_at).getTime() : null;
@@ -119,7 +119,7 @@ function isPromotionWindowOpen(record, now = new Date()) {
     return true;
 }
 
-function hasUsageCapacity(record) {
+export function hasUsageCapacity(record) {
     const usageLimit = Number(record?.usage_limit ?? 0);
 
     if (!Number.isFinite(usageLimit) || usageLimit <= 0) {
