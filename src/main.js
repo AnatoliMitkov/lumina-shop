@@ -95,16 +95,19 @@ if (document.querySelector('.hero-img')) {
 
 // Add parallax depth to the editorial grid images
 gsap.utils.toArray('.view-img img').forEach(img => {
-    gsap.to(img, {
-        yPercent: 20,
-        ease: "none",
-        scrollTrigger: {
-            trigger: img.parentElement,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true
+    gsap.fromTo(img,
+        { yPercent: -8 },
+        {
+            yPercent: 8,
+            ease: "none",
+            scrollTrigger: {
+                trigger: img.parentElement,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: true
+            }
         }
-    });
+    );
 });
 
 // --- 6. Scroll Text Reveal ---

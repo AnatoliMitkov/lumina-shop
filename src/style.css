@@ -35,12 +35,19 @@ body {
 }
 
 /* High-End Image Hover Distortion & Color Shift */
+.view-img { position: relative; overflow: hidden; }
 .view-img img {
-    transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    position: absolute;
+    top: -10%;
+    left: 0;
+    width: 100%;
+    height: 120%;
+    object-fit: cover;
+    object-position: center;
+    transition: filter 1.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
     filter: grayscale(15%) contrast(1.05) brightness(0.95);
 }
 .view-img:hover img {
-    transform: scale(1.06) rotate(1.5deg) !important;
     filter: grayscale(0%) contrast(1) brightness(1.05);
 }
 

@@ -223,7 +223,18 @@ body {
 }
 
 /* High-End Image Hover Distortion & Color Shift */
-.view-img img { transition: filter 1.2s cubic-bezier(0.25, 1, 0.5, 1) !important; filter: grayscale(15%) contrast(1.05) brightness(0.95); }
+.view-img { position: relative; overflow: hidden; }
+.view-img img {
+    position: absolute;
+    top: -10%;
+    left: 0;
+    width: 100%;
+    height: 120%;
+    object-fit: cover;
+    object-position: center;
+    transition: filter 1.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    filter: grayscale(15%) contrast(1.05) brightness(0.95);
+}
 .view-img:hover img { filter: grayscale(0%) contrast(1) brightness(1.05); }
 
 /* Marquee infinite scroll via CSS for 0% CPU footprint */

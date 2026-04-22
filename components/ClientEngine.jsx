@@ -640,10 +640,12 @@ export default function ClientEngine({ children }) {
         ScrollTrigger.refresh();
         
         gsap.utils.toArray('.view-img img').forEach(img => {
-            gsap.to(img, {
-                yPercent: 20, ease: "none",
-                scrollTrigger: { trigger: img.parentElement, start: "top bottom", end: "bottom top", scrub: true }
-            });
+            gsap.fromTo(img,
+                { yPercent: -8 },
+                { yPercent: 8, ease: "none",
+                  scrollTrigger: { trigger: img.parentElement, start: "top bottom", end: "bottom top", scrub: true }
+                }
+            );
         });
 
         gsap.utils.toArray('.reveal-text').forEach(text => {
