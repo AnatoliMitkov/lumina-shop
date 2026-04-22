@@ -332,6 +332,7 @@ export function createEmptyProductDraft(overrides = {}) {
 
   return {
     ...nextDraft,
+    compare_at_price: nextDraft.compare_at_price == null ? '' : String(nextDraft.compare_at_price),
     slug: toText(nextDraft.slug),
     gallery: Array.isArray(nextDraft.gallery) ? nextDraft.gallery.join('\n') : toText(nextDraft.gallery),
     highlights: Array.isArray(nextDraft.highlights) ? nextDraft.highlights.join('\n') : toText(nextDraft.highlights),

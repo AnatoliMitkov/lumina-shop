@@ -22,6 +22,11 @@ import {
     slugifyProductName,
     sortProducts,
 } from '../utils/products';
+import {
+    buildCollectionMediaKey,
+    parseCollectionMediaValue,
+    slugifyCollectionName,
+} from '../utils/fifth-avenue-stage-media';
 
 const supabase = createClient();
 const BULK_EDIT_FIELD_LABELS = {
@@ -969,6 +974,7 @@ export default function AdminDashboard({
     affiliateCodes,
     maintenanceMessage,
     promotionMessage,
+    initialCollectionStageMediaEntries = {},
 }) {
     const sortedInitialProducts = sortProducts(initialProducts ?? []);
     const [products, setProducts] = useState(sortedInitialProducts);
@@ -1008,6 +1014,12 @@ export default function AdminDashboard({
     const [isTaxonomyUpdating, setIsTaxonomyUpdating] = useState(false);
     const [isAttentionDialogOpen, setIsAttentionDialogOpen] = useState(false);
     const [hasAttentionDialogOpened, setHasAttentionDialogOpened] = useState(false);
+    const [collectionStageMediaEntries, setCollectionStageMediaEntries] = useState(initialCollectionStageMediaEntries);
+    const [stageCollection, setStageCollection] = useState(PRODUCT_COLLECTION_OPTIONS[0] || 'Collection');
+    const [stageMediaDraft, setStageMediaDraft] = useState({ primaryMedia: '', secondaryMedia: '' });
+    const [isStageMediaSaving, setIsStageMediaSaving] = useState(false);
+    const [isStageMediaUploading, setIsStageMediaUploading] = useState(false);
+    const [stageMediaFeedback, setStageMediaFeedback] = useState({ type: 'idle', message: '' });
 
     const activeCount = products.filter((product) => product.status === 'active').length;
     const draftCount = products.filter((product) => product.status === 'draft').length;
@@ -1019,7 +1031,31 @@ export default function AdminDashboard({
     const collectionOptions = buildManagedOptionList(PRODUCT_COLLECTION_OPTIONS, [
         ...products.map((product) => product.collection),
         draft.collection,
+        ...Object.keys(collectionStageMediaEntries),
     ]);
+
+    useEffect(() => {
+        setCollectionStageMediaEntries(initialCollectionStageMediaEntries || {});
+    }, [initialCollectionStageMediaEntries]);
+
+    useEffect(() => {
+        if (!collectionOptions.length) {
+            return;
+        }
+
+        if (!collectionOptions.includes(stageCollection)) {
+            setStageCollection(collectionOptions[0]);
+        }
+    }, [collectionOptions, stageCollection]);
+
+    useEffect(() => {
+        const currentEntry = collectionStageMediaEntries[stageCollection] || { primaryMedia: '', secondaryMedia: '' };
+
+        setStageMediaDraft({
+            primaryMedia: String(currentEntry.primaryMedia || ''),
+            secondaryMedia: String(currentEntry.secondaryMedia || ''),
+        });
+    }, [collectionStageMediaEntries, stageCollection]);
     const previewProduct = normalizeProductRecord({
         ...draft,
         gallery: draft.gallery,
@@ -1360,6 +1396,97 @@ export default function AdminDashboard({
         } finally {
             event.target.value = '';
             setIsUploading(false);
+        }
+    };
+
+    const handleStageMediaUpload = async (event, field) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        setIsStageMediaUploading(true);
+        setStageMediaFeedback({ type: 'idle', message: '' });
+
+        try {
+            const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const fileName = `${Date.now()}-${slugifyCollectionName(file.name.replace(/\.[^.]+$/, ''))}.${extension}`;
+            const filePath = `products/${fileName}`;
+            const { error } = await supabase.storage.from(PRODUCT_STORAGE_BUCKET).upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: file.type || undefined,
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            const { data } = supabase.storage.from(PRODUCT_STORAGE_BUCKET).getPublicUrl(filePath);
+            const uploadedUrl = data?.publicUrl || '';
+
+            if (!uploadedUrl) {
+                throw new Error('Upload finished, but URL generation failed.');
+            }
+
+            setStageMediaDraft((currentDraft) => ({
+                ...currentDraft,
+                [field]: uploadedUrl,
+            }));
+            setStageMediaFeedback({ type: 'success', message: 'Collection stage media uploaded. Save to publish it on 5th Avenue.' });
+        } catch (error) {
+            setStageMediaFeedback({ type: 'error', message: error.message || 'Unable to upload this media file.' });
+        } finally {
+            event.target.value = '';
+            setIsStageMediaUploading(false);
+        }
+    };
+
+    const handleStageMediaSave = async () => {
+        if (!stageCollection || isStageMediaSaving) {
+            return;
+        }
+
+        setIsStageMediaSaving(true);
+        setStageMediaFeedback({ type: 'idle', message: '' });
+
+        try {
+            const payload = {
+                collection: stageCollection,
+                primaryMedia: String(stageMediaDraft.primaryMedia || '').trim(),
+                secondaryMedia: String(stageMediaDraft.secondaryMedia || '').trim(),
+            };
+
+            const response = await fetch('/api/admin/site-copy', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    key: buildCollectionMediaKey(stageCollection),
+                    value: JSON.stringify(payload),
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to save collection stage media right now.');
+            }
+
+            const nextEntry = parseCollectionMediaValue(data?.entry?.value, stageCollection);
+            setCollectionStageMediaEntries((currentEntries) => ({
+                ...currentEntries,
+                [stageCollection]: {
+                    primaryMedia: nextEntry.primaryMedia,
+                    secondaryMedia: nextEntry.secondaryMedia,
+                },
+            }));
+            setStageMediaFeedback({ type: 'success', message: `${stageCollection} visuals saved for 5th Avenue.` });
+        } catch (error) {
+            setStageMediaFeedback({ type: 'error', message: error.message || 'Unable to save collection stage media right now.' });
+        } finally {
+            setIsStageMediaSaving(false);
         }
     };
 
@@ -1712,6 +1839,90 @@ export default function AdminDashboard({
                 <MetricCard label="Featured" value={String(featuredCount).padStart(2, '0')} copy="Lead products carrying the archive direction." />
                 <MetricCard label="Review" value={String(unresolvedActivityCount).padStart(2, '0')} copy="Orders and inbox items still waiting for a first look or final acknowledgement." />
                 <MetricCard label="Inbox" value={String(adminInquiries.length).padStart(2, '0')} copy={`${inquiryAttentionCounts.unseen} unseen and ${inquiryAttentionCounts.reviewing} reviewing in the current inbox.`} />
+            </section>
+
+            <section className="border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">5th Avenue / Collection Visuals</p>
+                    <h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-[0.12em] leading-none">Collection Stage Media</h2>
+                    <p className="text-sm leading-relaxed text-[#1C1C1C]/58">Set one primary and one secondary image per collection. These two visuals are what the 5th Avenue stage uses first for that collection.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)] gap-4 md:gap-5 items-end">
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        Collection
+                        <select
+                            value={stageCollection}
+                            onChange={(event) => {
+                                setStageCollection(event.target.value);
+                                setStageMediaFeedback({ type: 'idle', message: '' });
+                            }}
+                            className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                        >
+                            {collectionOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        Primary Stage Image
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+                            <input
+                                value={stageMediaDraft.primaryMedia}
+                                onChange={(event) => setStageMediaDraft((currentDraft) => ({ ...currentDraft, primaryMedia: event.target.value }))}
+                                className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                            />
+                            <label className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isStageMediaUploading ? 'opacity-60' : 'hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors cursor-pointer`}>
+                                {isStageMediaUploading ? 'Uploading' : 'Upload'}
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    className="hidden"
+                                    onChange={(event) => handleStageMediaUpload(event, 'primaryMedia')}
+                                    disabled={isStageMediaUploading}
+                                />
+                            </label>
+                        </div>
+                    </label>
+
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        Secondary Stage Image
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+                            <input
+                                value={stageMediaDraft.secondaryMedia}
+                                onChange={(event) => setStageMediaDraft((currentDraft) => ({ ...currentDraft, secondaryMedia: event.target.value }))}
+                                className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                            />
+                            <label className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isStageMediaUploading ? 'opacity-60' : 'hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors cursor-pointer`}>
+                                {isStageMediaUploading ? 'Uploading' : 'Upload'}
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    className="hidden"
+                                    onChange={(event) => handleStageMediaUpload(event, 'secondaryMedia')}
+                                    disabled={isStageMediaUploading}
+                                />
+                            </label>
+                        </div>
+                    </label>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                    <p className="text-xs leading-relaxed text-[#1C1C1C]/52">Tip: upload, then click save. This setting is collection-level and no longer tied to any individual product record.</p>
+                    <button
+                        type="button"
+                        onClick={handleStageMediaSave}
+                        disabled={isStageMediaSaving || isStageMediaUploading}
+                        className={`hover-target h-12 px-6 bg-[#1C1C1C] text-[#EFECE8] text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${isStageMediaSaving || isStageMediaUploading ? 'opacity-60' : 'hover:bg-black'}`}
+                    >
+                        {isStageMediaSaving ? 'Saving' : 'Save Collection Visuals'}
+                    </button>
+                </div>
+
+                {stageMediaFeedback.message && (
+                    <p className={`text-sm ${stageMediaFeedback.type === 'error' ? 'text-red-600' : 'text-[#1C1C1C]/68'}`}>{stageMediaFeedback.message}</p>
+                )}
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-8 md:gap-10 items-start">

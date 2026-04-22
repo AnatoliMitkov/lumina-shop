@@ -75,6 +75,7 @@ export default function ClientEngine({ children }) {
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
     const [categoryMenuItems, setCategoryMenuItems] = useState(() => PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
+    const isImmersiveRoute = isSpotlightPath(pathname);
     const drawerNote = cartPersistenceMode === 'supabase'
         ? 'Account sync is active, and the full selection can be archived from the cart page.'
         : 'This selection is being held in this browser while the full atelier archive comes online.';
@@ -754,6 +755,29 @@ export default function ClientEngine({ children }) {
             lenisRef.current?.start();
         }
     }, [isCartOpen, isMobileMenuOpen]);
+
+    if (isImmersiveRoute) {
+        return (
+            <>
+                <div ref={cursorRef} id="cursor" aria-hidden="true" className={baseCursorClassName}>
+                    <span className="cursor-shell"></span>
+                    <span className="cursor-core"></span>
+                    <span ref={cursorLabelRef} className="cursor-label"></span>
+                </div>
+
+                <div ref={preloaderRef} id="preloader" className="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center">
+                    <div className="overflow-hidden"><h1 className="loader-text font-serif text-5xl md:text-7xl font-light tracking-widest uppercase translate-y-full">{loaderTitle}</h1></div>
+                    {loaderSub && <div className="overflow-hidden mt-6"><p className="loader-text font-sans text-xs md:text-sm tracking-[0.3em] uppercase opacity-0">{loaderSub}</p></div>}
+                </div>
+
+                <div id="smooth-wrapper" className="relative z-10 h-screen w-screen overflow-hidden bg-[#EFECE8]">
+                    <div id="smooth-content" className="h-full w-full">
+                        {children}
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>

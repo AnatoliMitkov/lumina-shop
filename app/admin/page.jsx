@@ -2,7 +2,9 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import AdminDashboard from '../../components/AdminDashboard';
 import { isPromotionSetupError } from '../../utils/promotions';
+import { isSiteCopySetupError } from '../../utils/site-copy';
 import { createClient } from '../../utils/supabase/server';
+import { getCollectionMediaKeyPrefix, toCollectionMediaMap } from '../../utils/fifth-avenue-stage-media';
 import { sortProducts } from '../../utils/products';
 
 export const dynamic = 'force-dynamic';
@@ -79,12 +81,13 @@ export default async function AdminPage() {
         );
     }
 
-    const [productsResult, ordersResult, inquiriesResult, discountsResult, affiliatesResult] = await Promise.all([
+    const [productsResult, ordersResult, inquiriesResult, discountsResult, affiliatesResult, stageMediaResult] = await Promise.all([
         supabase.from('products').select('*').order('featured', { ascending: false }).order('sort_order', { ascending: true }).order('updated_at', { ascending: false }),
         supabase.from('orders').select(ADMIN_ORDER_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
         supabase.from('contact_inquiries').select(ADMIN_INQUIRY_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
         supabase.from('discount_codes').select(ADMIN_DISCOUNT_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
         supabase.from('affiliate_codes').select(ADMIN_AFFILIATE_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
+        supabase.from('site_copy_entries').select('key, value').ilike('key', `${getCollectionMediaKeyPrefix()}%`),
     ]);
 
     if (productsResult.error && isCatalogSetupError(productsResult.error)) {
@@ -100,6 +103,9 @@ export default async function AdminPage() {
     const maintenanceMessage = ordersResult.error || inquiriesResult.error
         ? 'Orders or inquiries could not be loaded. Re-run supabase/cart-orders.sql if those sections stay empty.'
         : '';
+    const initialCollectionStageMediaEntries = stageMediaResult.error && isSiteCopySetupError(stageMediaResult.error)
+        ? {}
+        : toCollectionMediaMap(stageMediaResult.data ?? []);
     const promotionMessage = isPromotionSetupError(discountsResult.error) || isPromotionSetupError(affiliatesResult.error)
         ? 'Discount and affiliate tables are not ready yet. Run supabase/cart-orders.sql again to enable live promotion management.'
         : discountsResult.error || affiliatesResult.error
@@ -141,6 +147,7 @@ export default async function AdminPage() {
                 affiliateCodes={affiliatesResult.data ?? []}
                 maintenanceMessage={maintenanceMessage}
                 promotionMessage={promotionMessage}
+                initialCollectionStageMediaEntries={initialCollectionStageMediaEntries}
             />
         </div>
     );
