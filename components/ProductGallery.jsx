@@ -6,6 +6,16 @@ function formatIndex(value) {
     return String(value).padStart(2, '0');
 }
 
+const DESKTOP_HOVER_ZOOM = 5;
+
+function supportsDesktopHoverZoom() {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return false;
+    }
+
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
 export default function ProductGallery({ productName, collection, category, gallery = [], palette = [] }) {
     const images = gallery.filter(Boolean);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -119,17 +129,35 @@ export default function ProductGallery({ productName, collection, category, gall
     };
 
     const handleLightboxPointerMove = (event) => {
+        if (!supportsDesktopHoverZoom()) {
+            return;
+        }
+
         const frameBounds = event.currentTarget.getBoundingClientRect();
         const originX = ((event.clientX - frameBounds.left) / frameBounds.width) * 100;
         const originY = ((event.clientY - frameBounds.top) / frameBounds.height) * 100;
 
         event.currentTarget.style.setProperty('--product-lightbox-origin-x', `${Math.min(100, Math.max(0, originX)).toFixed(2)}%`);
         event.currentTarget.style.setProperty('--product-lightbox-origin-y', `${Math.min(100, Math.max(0, originY)).toFixed(2)}%`);
+
+        if (lightboxZoomRef.current !== DESKTOP_HOVER_ZOOM) {
+            lightboxZoomRef.current = DESKTOP_HOVER_ZOOM;
+            setLightboxZoom(DESKTOP_HOVER_ZOOM);
+        }
     };
 
     const handleLightboxPointerLeave = (event) => {
         event.currentTarget.style.setProperty('--product-lightbox-origin-x', '50%');
         event.currentTarget.style.setProperty('--product-lightbox-origin-y', '50%');
+
+        if (!supportsDesktopHoverZoom()) {
+            return;
+        }
+
+        lightboxZoomRef.current = 1;
+        lightboxPanRef.current = { x: 0, y: 0 };
+        setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
     };
 
     const handleLightboxStep = (direction) => {
@@ -358,7 +386,7 @@ export default function ProductGallery({ productName, collection, category, gall
                                             draggable={false}
                                             style={{
                                                 transform: `scale(${lightboxZoom}) translate(${lightboxPan.x / lightboxZoom}px, ${lightboxPan.y / lightboxZoom}px)`,
-                                                transformOrigin: 'center center',
+                                                transformOrigin: 'var(--product-lightbox-origin-x, 50%) var(--product-lightbox-origin-y, 50%)',
                                                 willChange: lightboxZoom !== 1 ? 'transform' : 'auto',
                                             }}
                                         />
