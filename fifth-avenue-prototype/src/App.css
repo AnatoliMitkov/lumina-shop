@@ -774,6 +774,72 @@
   }
 }
 
+@media (max-width: 767px) {
+.stage {
+padding-top: 7vh !important;
+gap: 0.25rem !important;
+}
+
+.topbar {
+padding-top: 0.7rem !important;
+gap: 0.35rem !important;
+}
+
+.topbar__portal {
+width: 90vw !important;
+margin: 0 auto !important;
+}
+
+.topbar__portal-line {
+font-size: clamp(1.36rem, 6.2vw, 1.82rem) !important;
+}
+
+.stage__visual-group {
+width: 90vw !important;
+max-width: 90vw !important;
+margin: 0 auto !important;
+height: min(50vh, 24rem) !important;
+}
+
+.stage__copy {
+width: 90vw !important;
+margin: --2
+rem auto 0 !important;
+gap: 0.5rem !important;
+}
+
+.stage__title {
+margin: 0 !important;
+}
+
+.stage__piece-inline {
+display: inline-block !important;
+margin-left: auto !important;
+align-self: end !important;
+text-align: right !important;
+font-size: 2.5vh !important;
+}
+
+.stage__subtitle {
+margin-top: 0.05rem !important;
+}
+
+.stage__word--top {
+top: 61vh !important;
+bottom: auto !important;
+left: 15vh !important;
+transform: translateX(-50%) !important;
+}
+
+.stage__word--bottom {
+top: 68.5vh !important;
+bottom: auto !important;
+left: 26vh !important;
+right: auto !important;
+transform: translateX(-50%) !important;
+}
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app,
   .app::before,

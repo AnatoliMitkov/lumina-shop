@@ -100,7 +100,7 @@ export default function CartPage() {
 
                                         <div className="flex items-center gap-4 sm:gap-6 shrink-0">
                                             <p className="font-sans text-lg md:text-xl font-medium">€{Number(item.price).toFixed(2)}</p>
-                                            <button onClick={() => removeFromCart(index)} className="hover-target text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 hover:text-[#1C1C1C] transition-colors"><EditableText contentKey="cart.item.remove" fallback="Remove" editorLabel="Cart item remove" /></button>
+                                            <button onClick={() => removeFromCart(index)} className="hover-target text-[10px] uppercase tracking-[0.24em] text-red-600 hover:text-red-700 transition-colors"><EditableText contentKey="cart.item.remove" fallback="Remove" editorLabel="Cart item remove" /></button>
                                         </div>
                                     </div>
 
