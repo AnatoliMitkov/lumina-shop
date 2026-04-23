@@ -95,14 +95,14 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    body,
-    a,
-    button,
-    [role="button"],
-    .hover-target,
-    .hover-target *,
-    .transition-link,
-    .cursor-pointer {
+    html.lumina-custom-cursor-ready body,
+    html.lumina-custom-cursor-ready a,
+    html.lumina-custom-cursor-ready button,
+    html.lumina-custom-cursor-ready [role="button"],
+    html.lumina-custom-cursor-ready .hover-target,
+    html.lumina-custom-cursor-ready .hover-target *,
+    html.lumina-custom-cursor-ready .transition-link,
+    html.lumina-custom-cursor-ready .cursor-pointer {
         cursor: none !important;
     }
 }

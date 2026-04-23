@@ -408,63 +408,64 @@ function SiteCopyEditor({
         <div className="fixed inset-0 z-[260] flex items-end justify-center p-4 backdrop-blur-sm sm:items-center">
             <button type="button" aria-label="Close editor" onClick={onCancel} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
 
-            <div className={`relative flex w-full max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.55rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] selection:bg-[#EFE7DA] selection:text-[#121214] sm:max-h-[calc(100vh-3rem)] sm:p-7 ${modalWidthClassName}`}>
-                <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 pb-5">
-                    <div>
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : isRichTextEntry ? 'Semantic Copy Editor' : 'Inline Copy Editor'}</p>
-                        <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white">{activeEntry.label}</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-white/62">Key: {activeEntry.key}</p>
-                        {!isMediaEntry && (
-                            <div className="mt-4 flex flex-col gap-4">
-                                <div className="flex flex-col gap-2">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Language Variant</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {SUPPORTED_LANGUAGES.map((language) => (
-                                            <button
-                                                key={language}
-                                                type="button"
-                                                onClick={() => onTextVariantChange?.({ language })}
-                                                className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantLanguage === language ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
-                                            >
-                                                {TEXT_VARIANT_LANGUAGE_LABELS[language] || language.toUpperCase()}
-                                            </button>
-                                        ))}
+            <div className={`relative flex w-full max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.55rem] border border-white/10 bg-[rgba(12,12,14,0.94)] p-4 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] selection:bg-[#EFE7DA] selection:text-[#121214] sm:max-h-[calc(100vh-3rem)] sm:p-7 ${modalWidthClassName}`}>
+                <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                    <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : isRichTextEntry ? 'Semantic Copy Editor' : 'Inline Copy Editor'}</p>
+                            <h3 className="mt-3 font-serif text-[2rem] font-light uppercase tracking-[0.08em] text-white sm:text-3xl">{activeEntry.label}</h3>
+                            <p className="mt-3 text-sm leading-relaxed text-white/62">Key: {activeEntry.key}</p>
+                            {!isMediaEntry && (
+                                <div className="mt-4 flex flex-col gap-4">
+                                    <div className="flex flex-col gap-2">
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Language Variant</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {SUPPORTED_LANGUAGES.map((language) => (
+                                                <button
+                                                    key={language}
+                                                    type="button"
+                                                    onClick={() => onTextVariantChange?.({ language })}
+                                                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantLanguage === language ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
+                                                >
+                                                    {TEXT_VARIANT_LANGUAGE_LABELS[language] || language.toUpperCase()}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Viewport Variant</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {TEXT_VARIANT_VIEWPORT_OPTIONS.map((viewport) => (
-                                            <button
-                                                key={viewport}
-                                                type="button"
-                                                onClick={() => onTextVariantChange?.({ textViewport: viewport })}
-                                                className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantViewport === viewport ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
-                                            >
-                                                {TEXT_VARIANT_VIEWPORT_LABELS[viewport]}
-                                            </button>
-                                        ))}
+                                    <div className="flex flex-col gap-2">
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Viewport Variant</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {TEXT_VARIANT_VIEWPORT_OPTIONS.map((viewport) => (
+                                                <button
+                                                    key={viewport}
+                                                    type="button"
+                                                    onClick={() => onTextVariantChange?.({ textViewport: viewport })}
+                                                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantViewport === viewport ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
+                                                >
+                                                    {TEXT_VARIANT_VIEWPORT_LABELS[viewport]}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <p className="text-xs leading-relaxed text-white/48">
-                                    Live page right now: {TEXT_VARIANT_LANGUAGE_LABELS[resolvedCurrentLanguage] || resolvedCurrentLanguage.toUpperCase()} on {TEXT_VARIANT_VIEWPORT_LABELS[resolvedCurrentTextViewport]}.
-                                    Switch variants here without changing the whole page.
-                                </p>
-                            </div>
-                        )}
+                                    <p className="text-xs leading-relaxed text-white/48">
+                                        Live page right now: {TEXT_VARIANT_LANGUAGE_LABELS[resolvedCurrentLanguage] || resolvedCurrentLanguage.toUpperCase()} on {TEXT_VARIANT_VIEWPORT_LABELS[resolvedCurrentTextViewport]}.
+                                        Switch variants here without changing the whole page.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="hover-target shrink-0 rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
+                        >
+                            Close
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="hover-target rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
-                    >
-                        Close
-                    </button>
-                </div>
 
-                <div data-lenis-prevent-wheel className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1">
+                    <div className="mt-6">
                     {isMediaEntry ? (
                         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_22rem]">
                             <div className="flex flex-col gap-5">
@@ -746,9 +747,10 @@ function SiteCopyEditor({
                     )}
 
                     {saveError && <p className="text-sm leading-relaxed text-red-300">{saveError}</p>}
+                    </div>
                 </div>
 
-                <div className="mt-5 flex shrink-0 flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end">
+                <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-white/10 bg-[rgba(12,12,14,0.98)] pt-4 sm:flex-row sm:justify-end">
                     <button
                         type="button"
                         onClick={onCancel}
