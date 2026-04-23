@@ -221,6 +221,13 @@ const ALLOWED_ATTRS = new Set(['href', 'target', 'rel', 'style', 'class']);
 const ALLOWED_STYLE_PROPERTIES = new Set([
     'color', 'text-align', 'font-weight', 'font-style', 'text-decoration',
     'text-decoration-line', 'text-decoration-color', 'text-decoration-style', 'font-size',
+    'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+    'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+]);
+
+const SPACING_PROPERTIES = new Set([
+    'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+    'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
 ]);
 
 function sanitizeStyleAttribute(styleString = '') {
@@ -235,6 +242,7 @@ function sanitizeStyleAttribute(styleString = '') {
             const val = rule.slice(colonIndex + 1).trim();
             if (!ALLOWED_STYLE_PROPERTIES.has(prop)) return null;
             if (prop === 'font-size' && !/^\d+(?:\.\d+)?(?:px|pt|rem|em|%)$/i.test(val)) return null;
+            if (SPACING_PROPERTIES.has(prop) && !/^-?\d+(?:\.\d+)?(?:px|pt|rem|em|%)$/i.test(val)) return null;
             // Block url(), expression(), javascript:, etc.
             if (/url\(|expression\(|javascript:/i.test(val)) return null;
             return `${prop}: ${val}`;

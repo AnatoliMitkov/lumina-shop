@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Extension } from '@tiptap/core';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Underline } from '@tiptap/extension-underline';
 import { Link } from '@tiptap/extension-link';
@@ -63,6 +64,154 @@ const StyledText = TextStyle.extend({
         };
     },
 });
+
+const SPACING_KEYS = ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'];
+
+const SPACING_CSS_NAMES = {
+    marginTop: 'margin-top',
+    marginRight: 'margin-right',
+    marginBottom: 'margin-bottom',
+    marginLeft: 'margin-left',
+};
+
+function normalizeSpacingValue(value) {
+    const normalizedValue = String(value || '').trim();
+    if (!normalizedValue) return null;
+    if (/^-?\d+(?:\.\d+)?(?:px|pt|rem|em|%)$/i.test(normalizedValue)) return normalizedValue;
+    if (/^-?\d+(?:\.\d+)?$/.test(normalizedValue)) return `${normalizedValue}px`;
+    return null;
+}
+
+const BlockSpacing = Extension.create({
+    name: 'blockSpacing',
+    addOptions() {
+        return { types: ['heading', 'paragraph'] };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: SPACING_KEYS.reduce((acc, key) => {
+                    acc[key] = {
+                        default: null,
+                        parseHTML: (element) => normalizeSpacingValue(element.style?.[key]),
+                        renderHTML: (attributes) => {
+                            const value = normalizeSpacingValue(attributes[key]);
+                            if (!value) return {};
+                            return { style: `${SPACING_CSS_NAMES[key]}: ${value}` };
+                        },
+                    };
+                    return acc;
+                }, {}),
+            },
+        ];
+    },
+});
+
+function getActiveBlockSpacing(editor) {
+    if (!editor) return { marginTop: '', marginRight: '', marginBottom: '', marginLeft: '' };
+    const headingAttrs = editor.getAttributes('heading');
+    const paragraphAttrs = editor.getAttributes('paragraph');
+    const merged = { ...paragraphAttrs, ...headingAttrs };
+    return {
+        marginTop: merged.marginTop ? String(merged.marginTop).replace(/px$/, '') : '',
+        marginRight: merged.marginRight ? String(merged.marginRight).replace(/px$/, '') : '',
+        marginBottom: merged.marginBottom ? String(merged.marginBottom).replace(/px$/, '') : '',
+        marginLeft: merged.marginLeft ? String(merged.marginLeft).replace(/px$/, '') : '',
+    };
+}
+
+function SpacingPanel({ editor }) {
+    const [open, setOpen] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const handlePointerDown = (event) => {
+            if (!containerRef.current?.contains(event.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handlePointerDown);
+        return () => document.removeEventListener('mousedown', handlePointerDown);
+    }, [open]);
+
+    if (!editor) return null;
+
+    const active = getActiveBlockSpacing(editor);
+    const isInActiveBlock = editor.isActive('heading') || editor.isActive('paragraph');
+
+    const updateSpacing = (key, rawValue) => {
+        if (!isInActiveBlock) return;
+        const trimmed = String(rawValue ?? '').trim();
+        const value = trimmed === '' ? null : normalizeSpacingValue(trimmed);
+        if (trimmed !== '' && value === null) return;
+        const target = editor.isActive('heading') ? 'heading' : 'paragraph';
+        // Don't .focus() here — the user is typing in the panel input. Stealing focus
+        // back to the editor mid-keystroke causes "Applying a mismatched transaction".
+        editor.commands.updateAttributes(target, { [key]: value });
+    };
+
+    return (
+        <div className="relative" ref={containerRef}>
+            <ToolbarButton onClick={() => setOpen((prev) => !prev)} title="Block spacing (margins)" isActive={open}>
+                <span className="inline-flex items-center gap-1">
+                    <span aria-hidden="true">↕</span>
+                    <span className="hidden sm:inline">Spacing</span>
+                </span>
+            </ToolbarButton>
+            {open && (
+                <div className="absolute right-0 top-[calc(100%+0.4rem)] z-30 w-[19rem] space-y-3 rounded-[0.9rem] border border-white/10 bg-[#121214] p-3 shadow-2xl">
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/50">
+                        Block margins (px) — controls space around the current paragraph or heading
+                    </p>
+                    {!isInActiveBlock && (
+                        <p className="text-[10px] text-amber-300/80">Place the cursor inside a paragraph or heading to edit its spacing.</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                        {[
+                            { key: 'marginTop', label: 'Top' },
+                            { key: 'marginBottom', label: 'Bottom' },
+                            { key: 'marginLeft', label: 'Left (indent)' },
+                            { key: 'marginRight', label: 'Right' },
+                        ].map(({ key, label }) => (
+                            <label key={key} className="flex flex-col gap-1 text-[10px] uppercase tracking-[0.22em] text-white/60">
+                                {label}
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={active[key]}
+                                    onChange={(event) => updateSpacing(key, event.target.value)}
+                                    placeholder="0"
+                                    className="w-full rounded-[0.55rem] border border-white/12 bg-white/[0.04] px-2 py-1.5 text-sm text-white outline-none focus:border-white/30"
+                                />
+                            </label>
+                        ))}
+                    </div>
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                if (!isInActiveBlock) return;
+                                const target = editor.isActive('heading') ? 'heading' : 'paragraph';
+                                editor.commands.updateAttributes(target, {
+                                    marginTop: null,
+                                    marginRight: null,
+                                    marginBottom: null,
+                                    marginLeft: null,
+                                });
+                            }}
+                            className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-white/70 hover:bg-white/[0.08]"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function ToolbarButton({ isActive = false, onClick, title, disabled = false, children }) {
     return (
@@ -402,6 +551,7 @@ export default function LuminaTextEditor({
                     types: ['heading', 'paragraph'],
                     alignments: ['left', 'center', 'right', 'justify'],
                 }),
+                BlockSpacing,
             );
         }
         return list;
@@ -567,6 +717,9 @@ export default function LuminaTextEditor({
                         >
                             ☰
                         </ToolbarButton>
+
+                        <ToolbarDivider />
+                        <SpacingPanel editor={editor} />
                     </>
                 )}
 

@@ -1243,7 +1243,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                         <p className="text-[10px] uppercase tracking-[0.22em] text-white/36"><EditableText contentKey="shell.mobile_menu.badge" fallback={localizedFallback('Mobile', 'Мобилно')} editorLabel="Mobile menu badge" /></p>
                     </div>
 
-                    <div data-lenis-prevent-wheel className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div data-lenis-prevent data-lenis-prevent-wheel data-lenis-prevent-touch className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                         <div className="grid grid-cols-1 gap-3 text-[11px] uppercase tracking-[0.24em] font-medium">
                             <a href="/" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '30ms' : '0ms' }}><span><EditableText contentKey="shell.nav.home" fallback={localizedFallback('Home', 'Начало')} editorLabel="Navigation Home label" /></span></a>
 
@@ -1298,19 +1298,38 @@ export default function ClientEngine({ children, initialLanguage }) {
                                 <a href="mailto:sales@stylingbyva.com" className="hover-target transition-link text-sm text-white/78 hover:text-white">sales@stylingbyva.com</a>
                                 <p className="text-sm"><EditableText contentKey="shell.footer.location" fallback={localizedFallback('Ruse, Bulgaria', 'Русе, България')} editorLabel="Footer location" /></p>
                             </div>
+
+                            <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/8 pt-4">
+                                <span className="text-[10px] uppercase tracking-[0.24em] text-white/40"><EditableText contentKey="shell.footer.page_motion" fallback={localizedFallback('Page Motion', 'Анимации')} editorLabel="Footer page motion label" /></span>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={hasMounted ? isPageMotionEnabled : true}
+                                    aria-label={hasMounted && !isPageMotionEnabled
+                                        ? localize(localizedFallback('Turn page motion on', 'Включи анимациите на страницата'))
+                                        : localize(localizedFallback('Turn page motion off', 'Изключи анимациите на страницата'))}
+                                    onClick={togglePageMotion}
+                                    className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-white/72 transition-colors hover:bg-white/[0.08]"
+                                >
+                                    <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
+                                        <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
+                                    </span>
+                                    <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? localize(localizedFallback('Off', 'Изкл')) : localize(localizedFallback('On', 'Вкл'))}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] mb-[34rem] md:mb-[18rem] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
+            <div id="smooth-wrapper" className={`w-full min-h-screen relative z-10 bg-[#EFECE8] ${isUtilityRoute ? 'shadow-[0_16px_40px_rgba(0,0,0,0.18)]' : 'shadow-[0_20px_50px_rgba(0,0,0,0.3)]'}`}>
                 <div id="smooth-content">
                     {children}
                 </div>
             </div>
 
-            <footer className="fixed bottom-0 left-0 w-full h-[34rem] md:h-[18rem] z-0 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 py-5">
-                <div className="max-w-[1800px] mx-auto w-full h-full flex flex-col justify-between gap-4 md:gap-6">
+            <footer className="relative w-full z-10 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 pt-10 md:pt-12 pb-10 md:pb-12">
+                <div className="max-w-[1800px] mx-auto w-full flex flex-col gap-8 md:gap-10">
                     <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
                         <div className="col-span-2 flex max-w-sm flex-col gap-3 md:col-span-1 md:max-w-none">
                             <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
@@ -1358,25 +1377,6 @@ export default function ClientEngine({ children, initialLanguage }) {
                         </div>
                         <div className="mx-auto flex flex-col items-center justify-center gap-3 md:mx-0 md:flex-row">
                             <div className="flex items-center justify-center gap-3">
-                                <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback={localizedFallback('Page Motion', 'Анимации')} editorLabel="Footer page motion label" /></span>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={hasMounted ? isPageMotionEnabled : true}
-                                    aria-label={hasMounted && !isPageMotionEnabled
-                                        ? localize(localizedFallback('Turn page motion on', 'Включи анимациите на страницата'))
-                                        : localize(localizedFallback('Turn page motion off', 'Изключи анимациите на страницата'))}
-                                    onClick={togglePageMotion}
-                                    className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-white/72 transition-colors hover:bg-white/[0.08]"
-                                >
-                                    <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
-                                        <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
-                                    </span>
-                                    <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? localize(localizedFallback('Off', 'Изкл')) : localize(localizedFallback('On', 'Вкл'))}</span>
-                                </button>
-                            </div>
-
-                            <div className="flex items-center justify-center gap-3 md:hidden">
                                 <span className="text-white/34"><EditableText contentKey="shell.footer.language" fallback={localizedFallback('Language', 'Език')} editorLabel="Footer language label" /></span>
                                 <div className="inline-flex rounded-full border border-white/12 bg-white/[0.04] p-1">
                                     {['en', 'bg'].map((language) => (
@@ -1393,25 +1393,6 @@ export default function ClientEngine({ children, initialLanguage }) {
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-
-                            <div className="hidden items-center gap-2 ml-6 md:flex">
-                                <button
-                                    aria-label={localize(localizedFallback('Switch to English', 'Смени на английски'))}
-                                    onClick={() => void changeSiteLanguage('en')}
-                                    className={`hover-target rounded-full border-2 ${activeLanguage === 'en' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
-                                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                    <span role="img" aria-label={localize(localizedFallback('English', 'Английски'))} style={{ fontSize: 22 }}>🇬🇧</span>
-                                </button>
-                                <button
-                                    aria-label={localize(localizedFallback('Switch to Bulgarian', 'Смени на български'))}
-                                    onClick={() => void changeSiteLanguage('bg')}
-                                    className={`hover-target rounded-full border-2 ${activeLanguage === 'bg' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
-                                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                    <span role="img" aria-label={localize(localizedFallback('Bulgarian', 'Български'))} style={{ fontSize: 22 }}>🇧🇬</span>
-                                </button>
                             </div>
                         </div>
                         <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback={localizedFallback('Crafted by Victoria', 'Създадено от Victoria')} editorLabel="Footer credits" /></p>

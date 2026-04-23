@@ -264,28 +264,28 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                 </div>
                             </EditableMediaFrame>
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/40 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#11110f] via-[#11110f]/0 to-transparent"></div>
                     </div>
 
                     <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
                         <div className="w-full md:w-auto">
-                            <div className="overflow-hidden -mb-[0.5vw]">
+                            <div className="md:overflow-hidden md:-mb-[0.5vw]">
                                 <EditableRichText
                                     contentKey="home.hero.title.line_one"
                                     fallback={heroTitleLineOneFallback}
                                     editorLabel="Home hero title line one"
-                                    className="hero-title translate-y-full"
+                                    className="hero-title md:translate-y-full"
                                     blockBaseClassName="text-[#EFECE8]"
                                     blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>
-                            <div className="overflow-hidden">
+                            <div className="md:overflow-hidden">
                                 <EditableRichText
                                     contentKey="home.hero.title.line_two"
                                     fallback={heroTitleLineTwoFallback}
                                     editorLabel="Home hero title line two"
-                                    className="hero-title storefront-home-shift translate-y-full"
+                                    className="hero-title storefront-home-shift md:translate-y-full"
                                     blockBaseClassName="text-[#EFECE8]"
                                     blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
@@ -307,7 +307,7 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                     </div>
                 </div>
 
-                <div className="w-full py-6 overflow-hidden flex whitespace-nowrap bg-[#1C1C1C] text-[#EFECE8] border-b border-white/10 hover-target" data-cursor-text="Scroll">
+                <div className="w-full py-6 overflow-hidden flex whitespace-nowrap bg-[#11110f]/100 text-[#EFECE8] border-b border-white/10 hover-target" data-cursor-text="Scroll">
                     {[false, true].map((isDuplicate) => (
                         <div key={isDuplicate ? 'duplicate' : 'primary'} className="flex animate-marquee items-center" aria-hidden={isDuplicate}>
                             {marqueeItems.map((item) => (
