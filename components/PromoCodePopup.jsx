@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import EditableRichText from './site-copy/EditableRichText';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
+import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, resolveLocalizedValue } from '../utils/language';
 import { PAGE_REVEAL_COMPLETE_EVENT } from '../utils/page-motion';
 import { formatPromotionCurrency, normalizePromotionCode } from '../utils/promotions';
 import { createSiteCopyRichTextDocument } from '../utils/site-copy';
@@ -16,13 +17,22 @@ const SESSION_PAGE_COUNT_KEY = 'lumina-featured-promo-page-count';
 const SESSION_LAST_PATH_KEY = 'lumina-featured-promo-last-path';
 const VISITOR_DWELL_DELAY_MS = 10000;
 const VISITOR_PAGE_VIEW_THRESHOLD = 2;
-const PROMO_POPUP_HEADLINE_FALLBACK = createSiteCopyRichTextDocument([
-    {
-        type: 'heading1',
-        size: 'display',
-        text: 'A measured welcome, with a code worth keeping.',
-    },
-]);
+const PROMO_POPUP_HEADLINE_FALLBACK = localizedFallback(
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'A measured welcome, with a code worth keeping.',
+        },
+    ]),
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'Деликатно начало с код, който си струва да запазите.',
+        },
+    ])
+);
 const PROMO_POPUP_HEADLINE_SIZE_CLASS_NAMES = {
     xs: 'text-xl min-[420px]:text-2xl sm:text-[1.8rem] md:text-[2.25rem]',
     sm: 'text-[1.4rem] min-[420px]:text-[1.55rem] sm:text-[2rem] md:text-[2.7rem]',
@@ -68,7 +78,7 @@ function buildCountdown(endAt, nowTimestamp = Date.now()) {
             hasDeadline: false,
             isExpired: false,
             segments: [],
-            compactLabel: 'Open schedule',
+            compactLabel: 'open_schedule',
         };
     }
 
@@ -79,7 +89,7 @@ function buildCountdown(endAt, nowTimestamp = Date.now()) {
             hasDeadline: false,
             isExpired: false,
             segments: [],
-            compactLabel: 'Open schedule',
+            compactLabel: 'open_schedule',
         };
     }
 
@@ -94,13 +104,13 @@ function buildCountdown(endAt, nowTimestamp = Date.now()) {
         hasDeadline: true,
         isExpired: remainingMs <= 0,
         segments: [
-            { label: 'Days', value: String(days).padStart(2, '0') },
-            { label: 'Hours', value: String(hours).padStart(2, '0') },
-            { label: 'Minutes', value: String(minutes).padStart(2, '0') },
-            { label: 'Seconds', value: String(seconds).padStart(2, '0') },
+            { label: 'days', value: String(days).padStart(2, '0') },
+            { label: 'hours', value: String(hours).padStart(2, '0') },
+            { label: 'minutes', value: String(minutes).padStart(2, '0') },
+            { label: 'seconds', value: String(seconds).padStart(2, '0') },
         ],
         compactLabel: remainingMs <= 0
-            ? 'Closed'
+            ? 'closed'
             : `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`,
     };
 }
@@ -183,6 +193,13 @@ function CloseIcon() {
 export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
     const { t } = useTranslation();
     const siteCopy = useSiteCopy();
+    const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
+    const countdownSegmentFallbacks = {
+        days: localizedFallback('Days', 'Дни'),
+        hours: localizedFallback('Hours', 'Часове'),
+        minutes: localizedFallback('Minutes', 'Минути'),
+        seconds: localizedFallback('Seconds', 'Секунди'),
+    };
     const isAdmin = Boolean(siteCopy?.isAdmin);
     const isAdminEditing = Boolean(siteCopy?.isAdmin && siteCopy?.isEditMode);
     const canManagePromoCode = isAdmin;
@@ -570,12 +587,12 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                         <div className="flex items-start justify-between gap-3 sm:gap-4">
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.34em] text-[#F5D5B4]/72">
-                                    <EditableText contentKey="promo_popup.eyebrow" fallback="Private atelier offer" editorLabel="Promo popup eyebrow" />
+                                    <EditableText contentKey="promo_popup.eyebrow" fallback={localizedFallback('Private atelier offer', 'Лична оферта от ателието')} editorLabel="Promo popup eyebrow" />
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.24em] text-[#F7EFE6]/64 sm:mt-4">
                                     {promo?.label && <span className="rounded-full border border-white/12 bg-white/5 px-3 py-2">{promo.label}</span>}
                                     {promo?.discountSummary && <span className="rounded-full border border-[#F5D5B4]/20 bg-[#F5D5B4]/10 px-3 py-2 text-[#F5D5B4]">{promo.discountSummary}</span>}
-                                    {promo?.minimumSubtotal > 0 && <span className="rounded-full border border-white/12 bg-white/5 px-3 py-2">Min {promo.minimumSubtotalDisplay}</span>}
+                                    {promo?.minimumSubtotal > 0 && <span className="rounded-full border border-white/12 bg-white/5 px-3 py-2">{getText('promo_popup.minimum.short', localizedFallback('Min', 'Мин'))} {promo.minimumSubtotalDisplay}</span>}
                                 </div>
                             </div>
 
@@ -583,7 +600,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                 type="button"
                                 onClick={handleDismiss}
                                 className="hover-target inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/6 text-white/72 transition-colors hover:bg-white/12 hover:text-white sm:h-11 sm:w-11"
-                                aria-label="Dismiss promotion"
+                                aria-label={getText('promo_popup.dismiss', localizedFallback('Dismiss promotion', 'Затвори офертата'))}
                             >
                                 <CloseIcon />
                             </button>
@@ -604,10 +621,10 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                 sizeClassNames={PROMO_POPUP_HEADLINE_SIZE_CLASS_NAMES}
                             />
                             <p className="mt-2.5 max-w-[31rem] text-[12px] leading-relaxed text-[#F7EFE6]/76 sm:mt-4 sm:text-sm md:mt-5 md:text-[15px]">
-                                <EditableText contentKey="promo_popup.body" fallback="Claim the featured studio code at checkout while the window is still open. The popup stays elegant, but the value is immediate." editorLabel="Promo popup body" />
+                                <EditableText contentKey="promo_popup.body" fallback={localizedFallback('Claim the featured studio code at checkout while the window is still open. The popup stays elegant, but the value is immediate.', 'Вземете активния студиен код в checkout, докато прозорецът е още отворен. Popup-ът остава елегантен, а ползата е веднага.')} editorLabel="Promo popup body" />
                             </p>
                             <p className="mt-2.5 max-w-[32rem] text-[11px] leading-relaxed text-[#F7EFE6]/60 sm:mt-4 sm:text-sm">
-                                <EditableText contentKey="promo_popup.checkout_note" fallback="Paste the code exactly as shown at checkout. If a minimum subtotal applies, the discount resolves automatically once the cart qualifies." editorLabel="Promo popup checkout note" />
+                                <EditableText contentKey="promo_popup.checkout_note" fallback={localizedFallback('Paste the code exactly as shown at checkout. If a minimum subtotal applies, the discount resolves automatically once the cart qualifies.', 'Поставете кода точно както е изписан в checkout. Ако има минимална сума, отстъпката ще се приложи автоматично, щом количката я покрие.')} editorLabel="Promo popup checkout note" />
                             </p>
                         </div>
 
@@ -646,7 +663,11 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                         disabled={!isCodeDirty || isSavingCode}
                                         className={`hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] px-5 text-[11px] uppercase tracking-[0.2em] transition-colors sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem] ${!isCodeDirty || isSavingCode ? 'border border-white/10 bg-white/5 text-white/35' : 'bg-[#F5D5B4] text-[#141416] hover:bg-[#FFF7F0]'}`}
                                     >
-                                        {isSavingCode ? 'Saving' : isCodeDirty ? 'Save Code' : 'Saved'}
+                                        {isSavingCode
+                                            ? getText('promo_popup.save.saving', localizedFallback('Saving', 'Записва се'))
+                                            : isCodeDirty
+                                                ? getText('promo_popup.save.action', localizedFallback('Save Code', 'Запази кода'))
+                                                : getText('promo_popup.save.saved', localizedFallback('Saved', 'Запазено'))}
                                     </button>
                                 ) : (
                                     <button
@@ -668,18 +689,18 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
 
                         <div className={`mt-5 grid gap-3 sm:mt-6 ${infoGridClassName}`}>
                             <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] p-3 sm:rounded-[1.45rem] sm:p-4">
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Discount</p>
-                                <p className="mt-2.5 font-serif text-[1.8rem] font-light uppercase tracking-[0.08em] text-[#FFF7F0] sm:mt-3 sm:text-3xl">{promo?.discountSummary || 'Live promo'}</p>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">{getText('promo_popup.info.discount', localizedFallback('Discount', 'Отстъпка'))}</p>
+                                <p className="mt-2.5 font-serif text-[1.8rem] font-light uppercase tracking-[0.08em] text-[#FFF7F0] sm:mt-3 sm:text-3xl">{promo?.discountSummary || getText('promo_popup.info.live', localizedFallback('Live promo', 'Активна оферта'))}</p>
                             </div>
 
                             <div className="hidden rounded-[1.45rem] border border-white/10 bg-white/[0.04] p-4 sm:block">
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Deadline</p>
-                                <p className="mt-3 text-sm leading-tight text-[#FFF7F0] sm:text-base">{countdown.hasDeadline ? formatDeadline(promo?.endsAt) : 'Open schedule'}</p>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">{getText('promo_popup.info.deadline', localizedFallback('Deadline', 'Краен срок'))}</p>
+                                <p className="mt-3 text-sm leading-tight text-[#FFF7F0] sm:text-base">{countdown.hasDeadline ? formatDeadline(promo?.endsAt) : getText('promo_popup.info.open_schedule', localizedFallback('Open schedule', 'Без краен срок'))}</p>
                             </div>
 
                             {hasMinimumSubtotal && (
                                 <div className="rounded-[1.3rem] border border-white/10 bg-white/[0.04] p-3 sm:rounded-[1.45rem] sm:p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Minimum subtotal</p>
+                                    <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">{getText('promo_popup.info.minimum_subtotal', localizedFallback('Minimum subtotal', 'Минимална сума'))}</p>
                                     <p className="mt-2.5 font-serif text-[1.8rem] font-light uppercase tracking-[0.08em] text-[#FFF7F0] sm:mt-3 sm:text-3xl">{promo.minimumSubtotalDisplay}</p>
                                 </div>
                             )}
@@ -688,8 +709,8 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                         {isAdmin && !promo && (
                             <div className="mt-5 rounded-[1.25rem] border border-amber-200/16 bg-amber-100/8 px-4 py-3 text-[11px] uppercase tracking-[0.22em] text-amber-50/86">
                                 {savedCode
-                                    ? `The code ${savedCode} is not currently available to visitors. Activate it in the admin discounts panel or confirm its schedule and usage limit.`
-                                    : 'Save a live discount code to activate the visitor-facing popup. Once the code resolves, visitors can see it on any page after about 10 seconds or after 2 page views.'}
+                                    ? `${getText('promo_popup.admin.code_intro', localizedFallback('The code', 'Кодът'))} ${savedCode} ${getText('promo_popup.admin.code_unavailable', localizedFallback('is not currently available to visitors. Activate it in the admin discounts panel or confirm its schedule and usage limit.', 'в момента не е достъпен за посетителите. Активирайте го от админ панела за отстъпки или потвърдете графика и лимита му.'))}`
+                                    : getText('promo_popup.admin.save_live_code', localizedFallback('Save a live discount code to activate the visitor-facing popup. Once the code resolves, visitors can see it on any page after about 10 seconds or after 2 page views.', 'Запазете активен код за отстъпка, за да включите popup-а за посетители. Щом кодът стане валиден, посетителите ще го виждат на всяка страница след около 10 секунди или след 2 прегледа.'))}
                             </div>
                         )}
 
@@ -701,9 +722,9 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                     <aside className="px-4 pb-4 pt-0 sm:p-6 md:p-8 xl:p-10">
                         <div className="flex h-full flex-col justify-between rounded-[1.35rem] border border-white/12 bg-[rgba(255,255,255,0.06)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:rounded-[1.75rem] sm:p-5 xl:min-h-[100%]">
                             <div>
-                                <p className="font-serif text-[1.68rem] font-light uppercase tracking-[0.1em] text-[#FFF7F0] sm:text-2xl md:text-[2.15rem]">Time left</p>
+                                <p className="font-serif text-[1.68rem] font-light uppercase tracking-[0.1em] text-[#FFF7F0] sm:text-2xl md:text-[2.15rem]">{getText('promo_popup.timer.title', localizedFallback('Time left', 'Оставащо време'))}</p>
                                 {countdown.hasDeadline && (
-                                    <p className="mt-1.5 text-[9px] uppercase tracking-[0.2em] text-[#F7EFE6]/42 sm:mt-3 sm:text-[11px] sm:tracking-[0.24em]">Closes {formatDeadline(promo?.endsAt)}</p>
+                                    <p className="mt-1.5 text-[9px] uppercase tracking-[0.2em] text-[#F7EFE6]/42 sm:mt-3 sm:text-[11px] sm:tracking-[0.24em]">{getText('promo_popup.timer.closes', localizedFallback('Closes', 'Изтича'))} {formatDeadline(promo?.endsAt)}</p>
                                 )}
                             </div>
 
@@ -712,19 +733,19 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                     {countdown.segments.map((segment) => (
                                         <div key={segment.label} className="rounded-[0.9rem] border border-white/10 bg-[#0F1013]/45 px-1.5 py-2.5 text-center sm:rounded-[1.2rem] sm:px-3 sm:py-4">
                                             <p className="font-serif text-[1.45rem] font-light leading-none tracking-[0.08em] text-[#FFF7F0] sm:text-4xl">{segment.value}</p>
-                                            <p className="mt-1.5 text-[8px] uppercase tracking-[0.2em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">{segment.label}</p>
+                                            <p className="mt-1.5 text-[8px] uppercase tracking-[0.2em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">{getText(`promo_popup.timer.segment.${segment.label}`, countdownSegmentFallbacks[segment.label] || segment.label)}</p>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
                                 <div className="mt-4 rounded-[1rem] border border-white/10 bg-[#0F1013]/45 px-4 py-3.5 xl:my-auto xl:mt-6 xl:rounded-[1.2rem] xl:py-5">
-                                    <p className="font-serif text-[1.95rem] font-light uppercase tracking-[0.08em] text-[#FFF7F0] sm:text-4xl">Open</p>
-                                    <p className="mt-1.5 text-[9px] uppercase tracking-[0.22em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">No deadline set</p>
+                                    <p className="font-serif text-[1.95rem] font-light uppercase tracking-[0.08em] text-[#FFF7F0] sm:text-4xl">{getText('promo_popup.timer.open', localizedFallback('Open', 'Отворено'))}</p>
+                                    <p className="mt-1.5 text-[9px] uppercase tracking-[0.22em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">{getText('promo_popup.timer.no_deadline', localizedFallback('No deadline set', 'Няма зададен срок'))}</p>
                                 </div>
                             )}
                             <div className="mt-4 hidden flex-wrap gap-2 text-[10px] uppercase tracking-[0.24em] text-white/54 sm:flex sm:mt-6 xl:mt-8">
-                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">{countdown.compactLabel}</span>
-                                {promo?.minimumSubtotal > 0 && <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">Min {formatPromotionCurrency(promo.minimumSubtotal)}</span>}
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">{countdown.compactLabel === 'open_schedule' ? getText('promo_popup.info.open_schedule', localizedFallback('Open schedule', 'Без краен срок')) : countdown.compactLabel === 'closed' ? getText('promo_popup.timer.closed', localizedFallback('Closed', 'Приключила')) : countdown.compactLabel}</span>
+                                {promo?.minimumSubtotal > 0 && <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">{getText('promo_popup.minimum.short', localizedFallback('Min', 'Мин'))} {formatPromotionCurrency(promo.minimumSubtotal)}</span>}
                             </div>
                         </div>
                     </aside>

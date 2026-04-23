@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SiteCopyRichTextContent from './SiteCopyRichTextContent';
 import {
     SITE_COPY_RICH_TEXT_ALIGN_OPTIONS,
@@ -56,6 +56,242 @@ function WorkspaceToggle({ isActive = false, onClick, children }) {
         >
             {children}
         </button>
+    );
+}
+
+function EditorPill({ isActive = false, onClick, children }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.2em] transition-colors ${isActive ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/64 hover:text-white hover:bg-white/[0.08]'}`}
+        >
+            {children}
+        </button>
+    );
+}
+
+function resolveBlockEditorText(value = '', isListBlock = false) {
+    if (isListBlock) {
+        const normalizedValue = String(value || '').replace(/\r\n?/g, '\n');
+        return normalizedValue;
+    }
+
+    return String(value || '').replace(/\r\n?/g, '\n');
+}
+
+function RichTextBlockComposer({
+    block,
+    index,
+    onUpdateBlock,
+    onMoveBlock,
+    onDuplicateBlock,
+    onRemoveBlock,
+}) {
+    const editorRef = useRef(null);
+    const isListBlock = block.type === 'bullet-list' || block.type === 'numbered-list';
+    const editorValue = resolveBlockEditorText(block.text, isListBlock);
+    const toolbarHint = isListBlock
+        ? 'Enter adds a new list item line. Formatting applies to the whole block.'
+        : 'Use the toolbar or keyboard shortcuts. Formatting applies to the whole block.';
+
+    useEffect(() => {
+        if (!editorRef.current) {
+            return;
+        }
+
+        const nextValue = resolveBlockEditorText(block.text, isListBlock);
+
+        if (editorRef.current.innerText !== nextValue) {
+            editorRef.current.innerText = nextValue;
+        }
+    }, [block.text, isListBlock]);
+
+    const syncFromSurface = () => {
+        if (!editorRef.current) {
+            return;
+        }
+
+        onUpdateBlock(block.id, (currentBlock) => ({
+            ...currentBlock,
+            text: editorRef.current.innerText.replace(/\r\n?/g, '\n'),
+        }));
+    };
+
+    const handleKeyboardShortcut = (event) => {
+        if (!(event.metaKey || event.ctrlKey)) {
+            return;
+        }
+
+        const pressedKey = event.key.toLowerCase();
+
+        if (pressedKey === 'b') {
+            event.preventDefault();
+            onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, bold: !currentBlock.bold }));
+        }
+
+        if (pressedKey === 'i') {
+            event.preventDefault();
+            onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, italic: !currentBlock.italic }));
+        }
+
+        if (pressedKey === 'u') {
+            event.preventDefault();
+            onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, underline: !currentBlock.underline }));
+        }
+    };
+
+    return (
+        <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 md:p-5">
+            <div className="flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Block {String(index + 1).padStart(2, '0')}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-white/62">{toolbarHint}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <SurfaceButton onClick={() => onMoveBlock(block.id, -1)} isActive={false}>Up</SurfaceButton>
+                    <SurfaceButton onClick={() => onMoveBlock(block.id, 1)} isActive={false}>Down</SurfaceButton>
+                    <SurfaceButton onClick={() => onDuplicateBlock(block.id)} isActive={false}>Duplicate</SurfaceButton>
+                    <SurfaceButton onClick={() => onRemoveBlock(block.id)} isActive={false}>Delete</SurfaceButton>
+                </div>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-5">
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                        Block Type
+                        <select
+                            value={block.type}
+                            onChange={(event) => {
+                                const nextType = event.target.value;
+                                onUpdateBlock(block.id, (currentBlock) => ({
+                                    ...currentBlock,
+                                    type: nextType,
+                                }));
+                            }}
+                            className="h-12 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26"
+                        >
+                            {SITE_COPY_RICH_TEXT_BLOCK_TYPE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value} className="bg-[#121214] text-white">
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                        Size
+                        <select
+                            value={block.size}
+                            onChange={(event) => {
+                                const nextSize = event.target.value;
+                                onUpdateBlock(block.id, (currentBlock) => ({
+                                    ...currentBlock,
+                                    size: nextSize,
+                                }));
+                            }}
+                            className="h-12 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26"
+                        >
+                            {SITE_COPY_RICH_TEXT_SIZE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value} className="bg-[#121214] text-white">
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Quick Formatting</p>
+                    <div className="flex flex-wrap gap-2">
+                        <EditorPill isActive={block.bold} onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, bold: !currentBlock.bold }))}>Bold</EditorPill>
+                        <EditorPill isActive={block.italic} onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, italic: !currentBlock.italic }))}>Italic</EditorPill>
+                        <EditorPill isActive={block.underline} onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, underline: !currentBlock.underline }))}>Underline</EditorPill>
+                        {SITE_COPY_RICH_TEXT_ALIGN_OPTIONS.map((option) => (
+                            <EditorPill key={option.value} isActive={block.align === option.value} onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, align: option.value }))}>
+                                {option.label}
+                            </EditorPill>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Color</p>
+                        <button
+                            type="button"
+                            onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, color: '' }))}
+                            className="text-[10px] uppercase tracking-[0.24em] text-white/38 transition-colors hover:text-white/72"
+                        >
+                            Reset
+                        </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        {SITE_COPY_RICH_TEXT_COLOR_SWATCHES.map((color) => (
+                            <button
+                                key={color}
+                                type="button"
+                                onClick={() => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, color }))}
+                                className={`h-9 w-9 rounded-full border transition-transform hover:scale-[1.05] ${block.color === color ? 'border-white' : 'border-white/12'}`}
+                                style={{ backgroundColor: color }}
+                                aria-label={`Set color ${color}`}
+                            ></button>
+                        ))}
+
+                        <label className="ml-auto flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/52">
+                            Custom
+                            <input
+                                type="color"
+                                value={block.color || '#efece8'}
+                                onChange={(event) => onUpdateBlock(block.id, (currentBlock) => ({ ...currentBlock, color: event.target.value }))}
+                                className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
+                            />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.24em] text-white/48">
+                        <span>Writing Surface</span>
+                        <span className="text-white/32">Ctrl/Cmd+B, I, U</span>
+                    </div>
+
+                    <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        spellCheck
+                        onInput={syncFromSurface}
+                        onBlur={syncFromSurface}
+                        onKeyDown={handleKeyboardShortcut}
+                        className={`min-h-[12rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26 xl:min-h-[15rem] ${PREVIEW_BLOCK_CLASS_NAMES[block.type] || PREVIEW_BLOCK_CLASS_NAMES.paragraph} ${PREVIEW_SIZE_CLASS_NAMES[block.size] || PREVIEW_SIZE_CLASS_NAMES.body}`}
+                        style={{
+                            color: block.color || undefined,
+                            textAlign: block.align,
+                            whiteSpace: 'pre-wrap',
+                        }}
+                    >
+                        {editorValue}
+                    </div>
+
+                    <details className="rounded-[1rem] border border-white/10 bg-white/[0.02] px-4 py-3 text-white/62">
+                        <summary className="cursor-pointer text-[10px] uppercase tracking-[0.24em] text-white/48">Plain Text View</summary>
+                        <textarea
+                            value={block.text}
+                            onChange={(event) => onUpdateBlock(block.id, (currentBlock) => ({
+                                ...currentBlock,
+                                text: event.target.value,
+                            }))}
+                            rows={isListBlock ? 8 : 6}
+                            className="mt-3 min-h-[10rem] w-full rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-relaxed tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26"
+                            placeholder={isListBlock ? 'One line per list item' : 'Write the visible copy for this block'}
+                        />
+                    </details>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -193,140 +429,16 @@ export default function SiteCopyRichTextEditor({ activeEntry, draftValue, onChan
                 {showsEditorPane ? (
                     <div className="flex flex-col gap-4">
                         {resolvedDocument.blocks.map((block, index) => {
-                            const isListBlock = block.type === 'bullet-list' || block.type === 'numbered-list';
-
                             return (
-                                <div key={block.id} className="rounded-[1.4rem] border border-white/10 bg-white/[0.03] p-4 md:p-5">
-                                    <div className="flex flex-col gap-3 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Block {String(index + 1).padStart(2, '0')}</p>
-                                            <p className="mt-2 text-sm leading-relaxed text-white/62">{isListBlock ? 'Each line in the content box becomes a list item.' : 'You can combine semantic type, alignment, size, and color for this block.'}</p>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            <SurfaceButton onClick={() => moveBlock(block.id, -1)} isActive={false}>Up</SurfaceButton>
-                                            <SurfaceButton onClick={() => moveBlock(block.id, 1)} isActive={false}>Down</SurfaceButton>
-                                            <SurfaceButton onClick={() => duplicateBlock(block.id)} isActive={false}>Duplicate</SurfaceButton>
-                                            <SurfaceButton onClick={() => removeBlock(block.id)} isActive={false}>Delete</SurfaceButton>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                                            Block Type
-                                            <select
-                                                value={block.type}
-                                                onChange={(event) => {
-                                                    const nextType = event.target.value;
-                                                    updateBlock(block.id, (currentBlock) => ({
-                                                        ...currentBlock,
-                                                        type: nextType,
-                                                    }));
-                                                }}
-                                                className="h-12 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26"
-                                            >
-                                                {SITE_COPY_RICH_TEXT_BLOCK_TYPE_OPTIONS.map((option) => (
-                                                    <option key={option.value} value={option.value} className="bg-[#121214] text-white">
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
-
-                                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                                            Size
-                                            <select
-                                                value={block.size}
-                                                onChange={(event) => {
-                                                    const nextSize = event.target.value;
-                                                    updateBlock(block.id, (currentBlock) => ({
-                                                        ...currentBlock,
-                                                        size: nextSize,
-                                                    }));
-                                                }}
-                                                className="h-12 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26"
-                                            >
-                                                {SITE_COPY_RICH_TEXT_SIZE_OPTIONS.map((option) => (
-                                                    <option key={option.value} value={option.value} className="bg-[#121214] text-white">
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
-                                    </div>
-
-                                    <div className="mt-5 flex flex-col gap-5">
-                                        <div className="flex flex-col gap-3">
-                                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Alignment</p>
-                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                {SITE_COPY_RICH_TEXT_ALIGN_OPTIONS.map((option) => (
-                                                    <SurfaceButton key={option.value} isActive={block.align === option.value} onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, align: option.value }))}>
-                                                        {option.label}
-                                                    </SurfaceButton>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col gap-3">
-                                            <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Style</p>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <SurfaceButton isActive={block.bold} onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, bold: !currentBlock.bold }))}>Bold</SurfaceButton>
-                                                <SurfaceButton isActive={block.italic} onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, italic: !currentBlock.italic }))}>Italic</SurfaceButton>
-                                                <SurfaceButton isActive={block.underline} onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, underline: !currentBlock.underline }))}>Underline</SurfaceButton>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Color</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, color: '' }))}
-                                                    className="text-[10px] uppercase tracking-[0.24em] text-white/38 transition-colors hover:text-white/72"
-                                                >
-                                                    Reset
-                                                </button>
-                                            </div>
-
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                {SITE_COPY_RICH_TEXT_COLOR_SWATCHES.map((color) => (
-                                                    <button
-                                                        key={color}
-                                                        type="button"
-                                                        onClick={() => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, color }))}
-                                                        className={`h-9 w-9 rounded-full border transition-transform hover:scale-[1.05] ${block.color === color ? 'border-white' : 'border-white/12'}`}
-                                                        style={{ backgroundColor: color }}
-                                                        aria-label={`Set color ${color}`}
-                                                    ></button>
-                                                ))}
-
-                                                <label className="ml-auto flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/52">
-                                                    Custom
-                                                    <input
-                                                        type="color"
-                                                        value={block.color || '#efece8'}
-                                                        onChange={(event) => updateBlock(block.id, (currentBlock) => ({ ...currentBlock, color: event.target.value }))}
-                                                        className="h-6 w-8 cursor-pointer border-0 bg-transparent p-0"
-                                                    />
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.24em] text-white/48">
-                                            Content
-                                            <textarea
-                                                value={block.text}
-                                                onChange={(event) => updateBlock(block.id, (currentBlock) => ({
-                                                    ...currentBlock,
-                                                    text: event.target.value,
-                                                }))}
-                                                rows={isListBlock ? 8 : 6}
-                                                className="min-h-[12rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-relaxed tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/26 xl:min-h-[15rem]"
-                                                placeholder={isListBlock ? 'One line per list item' : 'Write the visible copy for this block'}
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
+                                <RichTextBlockComposer
+                                    key={block.id}
+                                    block={block}
+                                    index={index}
+                                    onUpdateBlock={updateBlock}
+                                    onMoveBlock={moveBlock}
+                                    onDuplicateBlock={duplicateBlock}
+                                    onRemoveBlock={removeBlock}
+                                />
                             );
                         })}
                     </div>

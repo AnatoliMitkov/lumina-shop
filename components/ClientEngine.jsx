@@ -30,6 +30,7 @@ import {
 import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
 import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
+import { createLocalizedValue as localizedFallback, resolveLocalizedValue } from '../utils/language';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
@@ -90,36 +91,39 @@ export default function ClientEngine({ children, initialLanguage }) {
     const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const isImmersiveRoute = isSpotlightPath(pathname);
+    const localize = (fallback) => resolveLocalizedValue(fallback, activeLanguage);
     const drawerNote = cartPersistenceMode === 'supabase'
-        ? 'Account sync is active, and the full selection can be archived from the cart page.'
-        : 'This selection is being held in this browser while the full atelier archive comes online.';
+        ? localizedFallback('Account sync is active, and the full selection can be archived from the cart page.', 'Профилът е синхронизиран и пълната селекция може да се запази от страницата на количката.')
+        : localizedFallback('This selection is being held in this browser while the full atelier archive comes online.', 'Тази селекция се пази в този браузър, докато пълният архив на ателието стане активен.');
     const drawerPrimaryHref = cartItems.length === 0 ? '/collections' : '/cart';
-    const drawerPrimaryLabel = cartItems.length === 0 ? 'Explore Pieces' : 'View Cart';
+    const drawerPrimaryLabel = cartItems.length === 0
+        ? localizedFallback('Explore Pieces', 'Разгледай модели')
+        : localizedFallback('View Cart', 'Виж количката');
     
     // Dynamically set cinematic loader text based on the route
     let loaderTitle = "The VA Store";
-    let loaderSub = "Editorial Macramé • Victoria";
+    let loaderSub = localize(localizedFallback('Editorial Macramé • Victoria', 'Редакционно макраме • Victoria'));
     if (pathname === '/collections') {
-        loaderTitle = "Collections";
+        loaderTitle = localize(localizedFallback('Collections', 'Колекции'));
         loaderSub = null;
     } else if (pathname === '/bespoke') {
         loaderTitle = "5th Avenue";
-        loaderSub = "Editorial Redirect";
+        loaderSub = localize(localizedFallback('Editorial Redirect', 'Редакционен преход'));
     } else if (isSpotlightPath(pathname)) {
         loaderTitle = "5th Avenue";
-        loaderSub = "Editorial Feature";
+        loaderSub = localize(localizedFallback('Editorial Feature', 'Редакционен акцент'));
     } else if (pathname === '/account') {
-        loaderTitle = "Account";
-        loaderSub = "Private Client Access";
+        loaderTitle = localize(localizedFallback('Account', 'Профил'));
+        loaderSub = localize(localizedFallback('Private Client Access', 'Достъп за частни клиенти'));
     } else if (pathname === '/contact') {
-        loaderTitle = "Contact";
-        loaderSub = "Atelier Correspondence";
+        loaderTitle = localize(localizedFallback('Contact', 'Контакт'));
+        loaderSub = localize(localizedFallback('Atelier Correspondence', 'Кореспонденция с ателието'));
     } else if (pathname === '/cart') {
-        loaderTitle = "Cart";
-        loaderSub = "Selection Review";
+        loaderTitle = localize(localizedFallback('Cart', 'Количка'));
+        loaderSub = localize(localizedFallback('Selection Review', 'Преглед на селекцията'));
     } else if (pathname === '/admin') {
-        loaderTitle = "Admin";
-        loaderSub = "Catalog Control";
+        loaderTitle = localize(localizedFallback('Admin', 'Админ'));
+        loaderSub = localize(localizedFallback('Catalog Control', 'Управление на каталога'));
     }
 
     const cursorRef = useRef(null);
@@ -858,7 +862,9 @@ export default function ClientEngine({ children, initialLanguage }) {
                         type="button"
                         aria-expanded={isMobileMenuOpen}
                         aria-controls="mobile-nav-panel"
-                        aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                        aria-label={isMobileMenuOpen
+                            ? localize(localizedFallback('Close navigation menu', 'Затвори навигацията'))
+                            : localize(localizedFallback('Open navigation menu', 'Отвори навигацията'))}
                         onClick={toggleMobileMenu}
                         className="hover-target relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/18 bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white/16"
                     >
@@ -877,14 +883,14 @@ export default function ClientEngine({ children, initialLanguage }) {
                         onBlurCapture={handleDesktopCollectionsBlur}
                     >
                         <a href="/collections" className="hover-target transition-link inline-flex items-center gap-2">
-                            <span><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></span>
+                            <span><EditableText contentKey="shell.nav.collections" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Navigation Collections label" /></span>
                             <span className="text-white/30">+</span>
                         </a>
                     </div>
-                    <a href={SPOTLIGHT_PATH} className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
-                    <a href="/account" className="hover-target transition-link"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
-                    <a href="/contact" className="hover-target transition-link"><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></a>
-                    <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
+                    <a href={SPOTLIGHT_PATH} className="hover-target transition-link"><EditableText contentKey="shell.nav.spotlight" fallback={localizedFallback('Spotlight', 'Акцент')} editorLabel="Navigation Spotlight label" /></a>
+                    <a href="/account" className="hover-target transition-link"><EditableText contentKey="shell.nav.account" fallback={localizedFallback('Account', 'Профил')} editorLabel="Navigation Account label" /></a>
+                    <a href="/contact" className="hover-target transition-link"><EditableText contentKey="shell.nav.contact" fallback={localizedFallback('Contact', 'Контакт')} editorLabel="Navigation Contact label" /></a>
+                    <a href="/cart" className="hover-target transition-link"><EditableText contentKey="shell.nav.cart" fallback={localizedFallback('Cart', 'Количка')} editorLabel="Navigation Cart label" /></a>
                 </div>
             </nav>
 
@@ -901,10 +907,10 @@ export default function ClientEngine({ children, initialLanguage }) {
                     <div className="min-w-[19rem] rounded-[1.75rem] border border-white/10 bg-[rgba(10,10,12,0.8)] p-5 text-[#F1F1F1] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                         <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-4">
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-[#F1F1F1]/45"><EditableText contentKey="shell.collections_menu.eyebrow" fallback="Collections" editorLabel="Collections menu eyebrow" /></p>
-                                <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em] text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.title" fallback="By Category" editorLabel="Collections menu title" /></p>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-[#F1F1F1]/45"><EditableText contentKey="shell.collections_menu.eyebrow" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Collections menu eyebrow" /></p>
+                                <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em] text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.title" fallback={localizedFallback('By Category', 'По категория')} editorLabel="Collections menu title" /></p>
                             </div>
-                            <a href="/collections" className="hover-target transition-link text-[10px] uppercase tracking-[0.22em] text-[#F1F1F1]/62 transition-colors hover:text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.view_all" fallback="View All" editorLabel="Collections menu view all" /></a>
+                            <a href="/collections" className="hover-target transition-link text-[10px] uppercase tracking-[0.22em] text-[#F1F1F1]/62 transition-colors hover:text-[#F1F1F1]"><EditableText contentKey="shell.collections_menu.view_all" fallback={localizedFallback('View All', 'Виж всички')} editorLabel="Collections menu view all" /></a>
                         </div>
 
                         <div className="mt-4 grid grid-cols-1 gap-2 text-[11px] uppercase tracking-[0.24em]">
@@ -927,13 +933,44 @@ export default function ClientEngine({ children, initialLanguage }) {
                 <div id="mobile-nav-panel" className={`absolute inset-x-4 top-[5.75rem] overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.72)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
                     <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="shell.mobile_menu.eyebrow" fallback="Navigation" editorLabel="Mobile menu eyebrow" /></p>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="shell.mobile_menu.eyebrow" fallback={localizedFallback('Navigation', 'Навигация')} editorLabel="Mobile menu eyebrow" /></p>
                             <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em]"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></p>
                         </div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36"><EditableText contentKey="shell.mobile_menu.badge" fallback="Mobile" editorLabel="Mobile menu badge" /></p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36"><EditableText contentKey="shell.mobile_menu.badge" fallback={localizedFallback('Mobile', 'Мобилно')} editorLabel="Mobile menu badge" /></p>
                     </div>
 
                     <div className="mt-5 grid grid-cols-1 gap-3 text-[11px] uppercase tracking-[0.24em] font-medium">
+                        <div className={`transition-all duration-300 ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '30ms' : '0ms' }}>
+                            <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.04] px-4 py-4">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/40"><EditableText contentKey="shell.mobile_menu.language.eyebrow" fallback={localizedFallback('Language', 'Език')} editorLabel="Mobile menu language eyebrow" /></p>
+                                        <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-white/68"><EditableText contentKey="shell.mobile_menu.language.copy" fallback={localizedFallback('Switch instantly between English and Bulgarian.', 'Сменяйте езика веднага между български и английски.')} editorLabel="Mobile menu language copy" /></p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            aria-label={localize(localizedFallback('Switch to English', 'Смени на английски'))}
+                                            onClick={() => void changeSiteLanguage('en')}
+                                            className={`hover-target inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] transition-colors ${activeLanguage === 'en' ? 'border-[#EFECE8] bg-[#EFECE8] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.03] text-white/72 hover:bg-white/[0.08]'}`}
+                                        >
+                                            <span aria-hidden="true">🇬🇧</span>
+                                            <span>EN</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-label={localize(localizedFallback('Switch to Bulgarian', 'Смени на български'))}
+                                            onClick={() => void changeSiteLanguage('bg')}
+                                            className={`hover-target inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.22em] transition-colors ${activeLanguage === 'bg' ? 'border-[#EFECE8] bg-[#EFECE8] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.03] text-white/72 hover:bg-white/[0.08]'}`}
+                                        >
+                                            <span aria-hidden="true">🇧🇬</span>
+                                            <span>BG</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className={`transition-all duration-300 ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '80ms' : '0ms' }}>
                             <button
                                 type="button"
@@ -941,13 +978,13 @@ export default function ClientEngine({ children, initialLanguage }) {
                                 onClick={() => setIsCollectionsSubmenuOpen((currentValue) => !currentValue)}
                                 className="hover-target flex w-full items-center justify-between rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-left text-white/88 transition-colors hover:bg-white/[0.08]"
                             >
-                                <span><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></span>
+                                <span><EditableText contentKey="shell.nav.collections" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Navigation Collections label" /></span>
                                 <span className={`text-white/26 transition-transform duration-300 ${isCollectionsSubmenuOpen ? 'rotate-45' : ''}`}>+</span>
                             </button>
 
                             <div className={`grid overflow-hidden transition-[grid-template-rows,opacity,margin] duration-300 ${isCollectionsSubmenuOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'}`}>
                                 <div className="min-h-0 flex flex-col gap-2 pl-4">
-                                    <a href="/collections" onClick={handleMobileNavClose} className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"><span><EditableText contentKey="shell.mobile_menu.view_all_collections" fallback="View All Collections" editorLabel="Mobile menu view all collections" /></span></a>
+                                    <a href="/collections" onClick={handleMobileNavClose} className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"><span><EditableText contentKey="shell.mobile_menu.view_all_collections" fallback={localizedFallback('View All Collections', 'Всички колекции')} editorLabel="Mobile menu view all collections" /></span></a>
                                     {categoryMenuItems.map((category) => (
                                         <a
                                             key={category}
@@ -962,10 +999,10 @@ export default function ClientEngine({ children, initialLanguage }) {
                             </div>
                         </div>
 
-                        <a href={SPOTLIGHT_PATH} onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></span></a>
-                        <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></span></a>
-                        <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback="Contact" editorLabel="Navigation Contact label" /></span></a>
-                        <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></span></a>
+                        <a href={SPOTLIGHT_PATH} onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '130ms' : '0ms' }}><span><EditableText contentKey="shell.nav.spotlight" fallback={localizedFallback('Spotlight', 'Акцент')} editorLabel="Navigation Spotlight label" /></span></a>
+                        <a href="/account" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '180ms' : '0ms' }}><span><EditableText contentKey="shell.nav.account" fallback={localizedFallback('Account', 'Профил')} editorLabel="Navigation Account label" /></span></a>
+                        <a href="/contact" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '230ms' : '0ms' }}><span><EditableText contentKey="shell.nav.contact" fallback={localizedFallback('Contact', 'Контакт')} editorLabel="Navigation Contact label" /></span></a>
+                        <a href="/cart" onClick={handleMobileNavClose} className={`hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.04] px-5 py-4 text-white/88 transition-all duration-300 hover:bg-white/[0.08] ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'}`} style={{ transitionDelay: isMobileMenuOpen ? '280ms' : '0ms' }}><span><EditableText contentKey="shell.nav.cart" fallback={localizedFallback('Cart', 'Количка')} editorLabel="Navigation Cart label" /></span></a>
                     </div>
                 </div>
             </div>
@@ -981,35 +1018,35 @@ export default function ClientEngine({ children, initialLanguage }) {
                     <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
                         <div className="col-span-2 flex max-w-sm flex-col gap-3 md:col-span-1 md:max-w-none">
                             <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
-                            <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback="Beautiful People Smile More" editorLabel="Footer slogan" /></p>
-                            <p className="hidden md:block text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback="Elevating traditional craftsmanship into avant-garde fashion." editorLabel="Footer brand copy" /></p>
+                            <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback={localizedFallback('Beautiful People Smile More', 'Красивите хора се усмихват повече')} editorLabel="Footer slogan" /></p>
+                            <p className="hidden md:block text-xs md:text-sm tracking-[0.2em] font-light uppercase text-white/50"><EditableText contentKey="shell.footer.brand_copy" fallback={localizedFallback('Elevating traditional craftsmanship into avant-garde fashion.', 'Превръщаме традиционната изработка в авангардна мода.')} editorLabel="Footer brand copy" /></p>
                         </div>
 
                         <div className="flex flex-col">
-                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.explore_title" fallback="Explore" editorLabel="Footer explore title" /></span>
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.explore_title" fallback={localizedFallback('Explore', 'Разгледай')} editorLabel="Footer explore title" /></span>
                             <div className="flex flex-col gap-3">
-                                <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.home" fallback="Home" editorLabel="Footer Home label" /></a>
-                                <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.collections" fallback="Collections" editorLabel="Navigation Collections label" /></a>
-                                <a href={SPOTLIGHT_PATH} className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback="Spotlight" editorLabel="Navigation Spotlight label" /></a>
+                                <a href="/" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.home" fallback={localizedFallback('Home', 'Начало')} editorLabel="Footer Home label" /></a>
+                                <a href="/collections" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.collections" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Navigation Collections label" /></a>
+                                <a href={SPOTLIGHT_PATH} className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.spotlight" fallback={localizedFallback('Spotlight', 'Акцент')} editorLabel="Navigation Spotlight label" /></a>
                             </div>
                         </div>
 
                         <div className="col-start-1 row-start-3 flex flex-col md:col-start-auto md:row-start-auto">
-                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback="Client" editorLabel="Footer client title" /></span>
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.client_title" fallback={localizedFallback('Client', 'Клиент')} editorLabel="Footer client title" /></span>
                             <div className="flex flex-col gap-3">
-                                <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.account" fallback="Account" editorLabel="Navigation Account label" /></a>
-                                <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.cart" fallback="Cart" editorLabel="Navigation Cart label" /></a>
-                                <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.contact_form" fallback="Contact Form" editorLabel="Footer contact form label" /></a>
+                                <a href="/account" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.account" fallback={localizedFallback('Account', 'Профил')} editorLabel="Navigation Account label" /></a>
+                                <a href="/cart" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.nav.cart" fallback={localizedFallback('Cart', 'Количка')} editorLabel="Navigation Cart label" /></a>
+                                <a href="/contact" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.contact_form" fallback={localizedFallback('Contact Form', 'Форма за контакт')} editorLabel="Footer contact form label" /></a>
                                 <a href="mailto:sales@stylingbyva.com" className="hover-target hover:text-white/70 transition-colors normal-case tracking-normal text-sm">sales@stylingbyva.com</a>
                             </div>
                         </div>
 
                         <div className="col-start-2 row-start-2 row-span-2 flex flex-col border-l border-white/10 pl-4 text-right md:col-span-1 md:col-start-auto md:row-start-auto md:row-span-1 md:pl-6 md:text-left">
-                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback="Atelier" editorLabel="Footer atelier title" /></span>
+                            <span className="mb-3 text-white/30"><EditableText contentKey="shell.footer.atelier_title" fallback={localizedFallback('Atelier', 'Ателие')} editorLabel="Footer atelier title" /></span>
                             <div className="flex h-full flex-col gap-2.5 normal-case tracking-normal text-sm font-normal text-white/55 md:h-auto">
-                                <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback="Ruse, Bulgaria" editorLabel="Footer location" /></p>
-                                <p><EditableText contentKey="shell.footer.atelier_name" fallback="Styling by VA Atelier" editorLabel="Footer atelier name" /></p>
-                                <p className="hidden md:block"><EditableText contentKey="shell.footer.atelier_copy" fallback="Editorial spotlight and personal support for signature pieces" editorLabel="Footer atelier copy" /></p>
+                                <p className="text-white/70"><EditableText contentKey="shell.footer.location" fallback={localizedFallback('Ruse, Bulgaria', 'Русе, България')} editorLabel="Footer location" /></p>
+                                <p><EditableText contentKey="shell.footer.atelier_name" fallback={localizedFallback('Styling by VA Atelier', 'Ателие Styling by VA')} editorLabel="Footer atelier name" /></p>
+                                <p className="hidden md:block"><EditableText contentKey="shell.footer.atelier_copy" fallback={localizedFallback('Editorial spotlight and personal support for signature pieces', 'Редакционен фокус и лично съдействие за отличителни модели')} editorLabel="Footer atelier copy" /></p>
                             </div>
                         </div>
                     </div>
@@ -1017,48 +1054,50 @@ export default function ClientEngine({ children, initialLanguage }) {
                     <div className="grid gap-3 border-t border-white/10 pt-4 text-[10px] md:text-xs uppercase tracking-[0.2em] text-white/40 md:flex md:items-center md:justify-between">
                         <p className="text-center md:text-left"><EditableText contentKey="shell.footer.copyright" fallback="© 2026 The VA Store." editorLabel="Footer copyright" /></p>
                         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center md:justify-start">
-                                <a href="/privacy-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.privacy_policy" fallback="Privacy Policy" editorLabel="Footer privacy policy label" /></a>
-                                <a href="/cookie-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.cookie_policy" fallback="Cookie Policy" editorLabel="Footer cookie policy label" /></a>
+                                <a href="/privacy-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.privacy_policy" fallback={localizedFallback('Privacy Policy', 'Политика за поверителност')} editorLabel="Footer privacy policy label" /></a>
+                                <a href="/cookie-policy" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.cookie_policy" fallback={localizedFallback('Cookie Policy', 'Политика за бисквитки')} editorLabel="Footer cookie policy label" /></a>
                                 <a href="https://www.instagram.com/va.storeofficial/" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.instagram" fallback="Instagram" editorLabel="Footer Instagram label" /></a>
                                 <a href="https://www.facebook.com/profile.php?id=61584052437151" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.facebook" fallback="Facebook" editorLabel="Footer Facebook label" /></a>
                                 <a href="https://www.tiktok.com/@2hotbyva" target="_blank" rel="noreferrer" className="hover-target transition-link hover:text-white/70 transition-colors"><EditableText contentKey="shell.footer.social.tiktok" fallback="TikTok" editorLabel="Footer TikTok label" /></a>
                         </div>
                         <div className="mx-auto flex items-center justify-center gap-3 md:mx-0">
-                            <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback="Page Motion" editorLabel="Footer page motion label" /></span>
+                            <span className="text-white/34"><EditableText contentKey="shell.footer.page_motion" fallback={localizedFallback('Page Motion', 'Анимации')} editorLabel="Footer page motion label" /></span>
                             <button
                                 type="button"
                                 role="switch"
                                 aria-checked={hasMounted ? isPageMotionEnabled : true}
-                                aria-label={hasMounted && !isPageMotionEnabled ? 'Turn page motion on' : 'Turn page motion off'}
+                                aria-label={hasMounted && !isPageMotionEnabled
+                                    ? localize(localizedFallback('Turn page motion on', 'Включи анимациите на страницата'))
+                                    : localize(localizedFallback('Turn page motion off', 'Изключи анимациите на страницата'))}
                                 onClick={togglePageMotion}
                                 className="hover-target inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-white/72 transition-colors hover:bg-white/[0.08]"
                             >
                                 <span className={`flex h-5 w-10 items-center rounded-full border border-white/10 px-1 transition-colors ${hasMounted && isPageMotionEnabled ? 'justify-end bg-white/12' : 'justify-start bg-transparent'}`}>
                                     <span className={`h-3 w-3 rounded-full transition-colors ${hasMounted && isPageMotionEnabled ? 'bg-[#EFECE8]' : 'bg-white/42'}`}></span>
                                 </span>
-                                <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
+                                <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? localize(localizedFallback('Off', 'Изкл')) : localize(localizedFallback('On', 'Вкл'))}</span>
                             </button>
                             {/* Language Switcher with Flags */}
                             <div className="flex items-center gap-2 ml-6">
                                 <button
-                                    aria-label="Switch to English"
+                                    aria-label={localize(localizedFallback('Switch to English', 'Смени на английски'))}
                                     onClick={() => void changeSiteLanguage('en')}
                                     className={`hover-target rounded-full border-2 ${activeLanguage === 'en' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
                                     style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                 >
-                                    <span role="img" aria-label="English" style={{ fontSize: 22 }}>🇬🇧</span>
+                                    <span role="img" aria-label={localize(localizedFallback('English', 'Английски'))} style={{ fontSize: 22 }}>🇬🇧</span>
                                 </button>
                                 <button
-                                    aria-label="Switch to Bulgarian"
+                                    aria-label={localize(localizedFallback('Switch to Bulgarian', 'Смени на български'))}
                                     onClick={() => void changeSiteLanguage('bg')}
                                     className={`hover-target rounded-full border-2 ${activeLanguage === 'bg' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
                                     style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                 >
-                                    <span role="img" aria-label="Bulgarian" style={{ fontSize: 22 }}>🇧🇬</span>
+                                    <span role="img" aria-label={localize(localizedFallback('Bulgarian', 'Български'))} style={{ fontSize: 22 }}>🇧🇬</span>
                                 </button>
                             </div>
                         </div>
-                        <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
+                        <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback={localizedFallback('Crafted by Victoria', 'Създадено от Victoria')} editorLabel="Footer credits" /></p>
                     </div>
                 </div>
             </footer>
@@ -1066,10 +1105,10 @@ export default function ClientEngine({ children, initialLanguage }) {
             <div id="cart-container" className="fixed inset-0 z-[200] invisible flex justify-end overflow-hidden">
             <div onClick={() => setIsCartOpen(false)} className="cart-overlay absolute inset-0 bg-[#1C1C1C]/60 backdrop-blur-md opacity-0 cursor-pointer"></div>
                 <div className="cart-panel relative w-full md:w-[30vw] h-full bg-[#EFECE8] translate-x-full flex flex-col shadow-2xl">
-                <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest"><EditableText contentKey="shell.cart_drawer.title" fallback="Cart" editorLabel="Cart drawer title" /></h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium"><EditableText contentKey="shell.cart_drawer.close" fallback="Close" editorLabel="Cart drawer close" /></button></div>
+                <div className="flex justify-between items-center p-8 md:p-12 border-b border-[#1C1C1C]/10"><h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest"><EditableText contentKey="shell.cart_drawer.title" fallback={localizedFallback('Cart', 'Количка')} editorLabel="Cart drawer title" /></h2><button onClick={() => setIsCartOpen(false)} className="hover-target text-xs uppercase tracking-widest font-medium"><EditableText contentKey="shell.cart_drawer.close" fallback={localizedFallback('Close', 'Затвори')} editorLabel="Cart drawer close" /></button></div>
                 <div data-lenis-prevent-wheel className="flex-1 p-8 md:p-12 flex flex-col gap-8 overflow-y-auto overscroll-contain">
                     {cartItems.length === 0 ? (
-                        <p className="text-sm uppercase tracking-widest text-gray-500"><EditableText contentKey="shell.cart_drawer.empty" fallback="Your cart is empty." editorLabel="Cart drawer empty state" /></p>
+                        <p className="text-sm uppercase tracking-widest text-gray-500"><EditableText contentKey="shell.cart_drawer.empty" fallback={localizedFallback('Your cart is empty.', 'Количката е празна.')} editorLabel="Cart drawer empty state" /></p>
                     ) : (
                         cartItems.map((item, i) => {
                             const customMeasurementSummary = formatCustomMeasurementSummary(item);
@@ -1080,17 +1119,17 @@ export default function ClientEngine({ children, initialLanguage }) {
                                 <div className="flex flex-col flex-1 gap-2">
                                     <div className="flex justify-between items-start">
                                         <h3 className="font-sans text-xs uppercase tracking-widest font-medium">{item.name}</h3>
-                                        <button onClick={() => removeFromCart(i)} className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-[#1C1C1C] transition-colors">Remove</button>
+                                        <button onClick={() => removeFromCart(i)} className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-[#1C1C1C] transition-colors">{localize(localizedFallback('Remove', 'Премахни'))}</button>
                                     </div>
                                     <p className="font-sans text-sm font-medium">€{Number(item.price).toFixed(2)}</p>
                                     {(item.selected_size || item.selected_tone) && (
                                         <div className="flex flex-wrap gap-2 pt-1 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/48">
-                                            {item.selected_size && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">Size {item.selected_size}</span>}
-                                            {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">Tone {item.selected_tone}</span>}
+                                            {item.selected_size && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{localize(localizedFallback('Size', 'Размер'))} {item.selected_size}</span>}
+                                            {item.selected_tone && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{localize(localizedFallback('Tone', 'Нюанс'))} {item.selected_tone}</span>}
                                         </div>
                                     )}
                                     {customMeasurementSummary && (
-                                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Custom {customMeasurementSummary}</p>
+                                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">{localize(localizedFallback('Custom', 'По мярка'))} {customMeasurementSummary}</p>
                                     )}
                                 </div>
                             </div>
@@ -1099,11 +1138,11 @@ export default function ClientEngine({ children, initialLanguage }) {
                     )}
                 </div>
                 <div className="p-8 md:p-12 border-t border-[#1C1C1C]/10 bg-[#EFECE8]">
-                    <div className="flex justify-between items-center mb-8 font-medium uppercase tracking-widest text-xs"><span><EditableText contentKey="shell.cart_drawer.total" fallback="Total" editorLabel="Cart drawer total label" /></span><span className="text-sm">€{cartTotal.toFixed(2)}</span></div>
+                    <div className="flex justify-between items-center mb-8 font-medium uppercase tracking-widest text-xs"><span><EditableText contentKey="shell.cart_drawer.total" fallback={localizedFallback('Total', 'Общо')} editorLabel="Cart drawer total label" /></span><span className="text-sm">€{cartTotal.toFixed(2)}</span></div>
                     <p className="mb-6 text-[10px] uppercase tracking-[0.18em] text-[#1C1C1C]/50"><EditableText contentKey={cartPersistenceMode === 'supabase' ? 'shell.cart_drawer.note.synced' : 'shell.cart_drawer.note.local'} fallback={drawerNote} editorLabel="Cart drawer note" /></p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <a href={drawerPrimaryHref} onClick={() => setIsCartOpen(false)} className="hover-target transition-link w-full py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium text-center transition-colors hover:bg-black"><EditableText contentKey={cartItems.length === 0 ? 'shell.cart_drawer.primary.explore' : 'shell.cart_drawer.primary.view_cart'} fallback={drawerPrimaryLabel} editorLabel="Cart drawer primary button" /></a>
-                        <button onClick={() => setIsCartOpen(false)} className="hover-target w-full py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium transition-colors hover:border-[#1C1C1C]/25 hover:bg-white/50"><EditableText contentKey="shell.cart_drawer.continue" fallback="Continue Shopping" editorLabel="Cart drawer continue shopping" /></button>
+                        <button onClick={() => setIsCartOpen(false)} className="hover-target w-full py-5 border border-[#1C1C1C]/12 text-[#1C1C1C] uppercase tracking-[0.2em] text-xs font-medium transition-colors hover:border-[#1C1C1C]/25 hover:bg-white/50"><EditableText contentKey="shell.cart_drawer.continue" fallback={localizedFallback('Continue Shopping', 'Продължи с разглеждането')} editorLabel="Cart drawer continue shopping" /></button>
                     </div>
                 </div>
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from 'react';
+import { DEFAULT_LANGUAGE, resolveLocalizedValue } from '../../utils/language';
 import { resolveSiteCopyRichTextEntry } from '../../utils/site-copy';
 import { useSiteCopy } from './SiteCopyProvider';
 import SiteCopyRichTextContent from './SiteCopyRichTextContent';
@@ -21,7 +22,7 @@ export default function EditableRichText({
     const isEditMode = context?.isEditMode;
     const resolvedDocument = context
         ? context.resolveRichTextEntry(contentKey, fallback)
-        : resolveSiteCopyRichTextEntry(undefined, fallback);
+        : resolveSiteCopyRichTextEntry(undefined, resolveLocalizedValue(fallback, DEFAULT_LANGUAGE));
     const hasVisibleContent = resolvedDocument.blocks.some((block) => String(block.text || '').trim());
     const highlightClassName = isAdmin && isEditMode
         ? 'rounded-[0.8rem] outline outline-1 outline-offset-[3px] outline-[#1C1C1C]/18 bg-[#EFE7DA]/20 cursor-pointer'

@@ -1,5 +1,6 @@
 import './globals.css';
 import { cookies, headers } from 'next/headers';
+import Script from 'next/script';
 import ClientEngine from '../components/ClientEngine';
 import { CartProvider } from '../components/CartProvider';
 import SiteCopyProvider from '../components/site-copy/SiteCopyProvider';
@@ -223,8 +224,14 @@ export default async function RootLayout({ children }) {
   return (
     <html lang={initialLanguage} data-page-motion="on" suppressHydrationWarning>
       <head>
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS1V41ZYQ4" />
-        <script
+        <Script
+          id="gtag-loader"
+          src="https://www.googletagmanager.com/gtag/js?id=G-HS1V41ZYQ4"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="gtag-init"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
@@ -236,12 +243,16 @@ gtag('config', 'G-HS1V41ZYQ4');`,
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-        <script
+        <Script
+          id="language-bootstrap"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: languageBootstrapScript,
           }}
         />
-        <script
+        <Script
+          id="page-motion-bootstrap"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function () {
   try {

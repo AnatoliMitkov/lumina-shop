@@ -2,8 +2,9 @@
 
 import { useCart } from './CartProvider';
 import EditableText from './site-copy/EditableText';
+import { createLocalizedValue as localizedFallback } from '../utils/language';
 
-export default function AddToCartBtn({ product, label = 'Add to Cart', labelKey, editorLabel, disabled = false }) {
+export default function AddToCartBtn({ product, label = localizedFallback('Add to Cart', 'Добави в количката'), labelKey, editorLabel, disabled = false }) {
     const { addToCart } = useCart();
     
     return (

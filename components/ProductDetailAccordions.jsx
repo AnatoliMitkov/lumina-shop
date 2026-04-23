@@ -3,6 +3,14 @@
 import { startTransition, useState } from 'react';
 import EditableText from './site-copy/EditableText';
 
+function renderEditableSectionItem(item, defaultEditorLabel) {
+    if (item && typeof item === 'object' && typeof item.contentKey === 'string') {
+        return <EditableText contentKey={item.contentKey} fallback={item.fallback} editorLabel={item.editorLabel || defaultEditorLabel} />;
+    }
+
+    return item;
+}
+
 function SizeMeasurementsTable({ rows = [] }) {
     return (
         <div className="min-w-0 overflow-x-auto rounded-sm border border-[#1C1C1C]/10 bg-white/82" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -88,16 +96,16 @@ export default function ProductDetailAccordions({ sections = [] }) {
 
                                     {section.chips?.length > 0 && (
                                         <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/44">
-                                            {section.chips.map((chip) => (
-                                                <span key={chip} className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">{chip}</span>
+                                            {section.chips.map((chip, index) => (
+                                                <span key={chip?.contentKey || chip?.fallback || chip || index} className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">{renderEditableSectionItem(chip, `${section.title} chip ${index + 1}`)}</span>
                                             ))}
                                         </div>
                                     )}
 
                                     {section.bullets?.length > 0 && (
                                         <div className="flex flex-col gap-2.5 pt-1 text-[11px] uppercase tracking-[0.22em] text-[#1C1C1C]/58">
-                                            {section.bullets.map((bullet) => (
-                                                <p key={bullet}>{bullet}</p>
+                                            {section.bullets.map((bullet, index) => (
+                                                <p key={bullet?.contentKey || bullet?.fallback || bullet || index}>{renderEditableSectionItem(bullet, `${section.title} bullet ${index + 1}`)}</p>
                                             ))}
                                         </div>
                                     )}

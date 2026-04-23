@@ -7,6 +7,7 @@ import EditableRichText from './site-copy/EditableRichText';
 import EditableText from './site-copy/EditableText';
 import { detectEditableMediaKind } from './site-copy/media-kind';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
+import { createLocalizedValue as localizedFallback } from '../utils/language';
 import { buildProductHref, formatProductCurrency, resolveStorefrontGallery } from '../utils/storefront-products';
 import { createSiteCopyRichTextDocument, resolveSiteCopyMediaEntry } from '../utils/site-copy';
 import { SPOTLIGHT_PATH } from '../utils/site-routes';
@@ -66,6 +67,75 @@ const storyCopySizeClassNames = {
     lg: 'text-lg md:text-xl',
     xl: 'text-xl md:text-2xl',
     display: 'text-2xl md:text-4xl',
+};
+
+const heroTitleLineOneFallback = localizedFallback(
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'Women',
+        },
+    ]),
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'Женствена',
+        },
+    ])
+);
+
+const heroTitleLineTwoFallback = localizedFallback(
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'Elegance',
+        },
+    ]),
+    createSiteCopyRichTextDocument([
+        {
+            type: 'heading1',
+            size: 'display',
+            text: 'Елегантност',
+        },
+    ])
+);
+
+const heroSubtextFallback = localizedFallback(
+    createSiteCopyRichTextDocument([
+        {
+            type: 'paragraph',
+            size: 'sm',
+            text: 'Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.',
+        },
+    ]),
+    createSiteCopyRichTextDocument([
+        {
+            type: 'paragraph',
+            size: 'sm',
+            text: 'Превръщаме традиционното занаятчийство в авангардна мода. Изработено на ръка от Victoria.',
+        },
+    ])
+);
+
+const heroTitleSizeClassNames = {
+    xs: 'text-4xl md:text-5xl xl:text-6xl',
+    sm: 'text-5xl md:text-6xl xl:text-7xl',
+    body: 'text-5xl md:text-6xl xl:text-7xl',
+    lg: 'text-6xl md:text-7xl xl:text-[8rem]',
+    xl: 'text-6xl md:text-7xl xl:text-[8rem]',
+    display: 'storefront-home-display',
+};
+
+const heroSubtextSizeClassNames = {
+    xs: 'text-[11px] md:text-xs',
+    sm: 'text-xs md:text-sm',
+    body: 'text-xs md:text-sm',
+    lg: 'text-sm md:text-base',
+    xl: 'text-base md:text-lg',
+    display: 'text-lg md:text-xl',
 };
 
 const categoryShowcaseItems = [
@@ -189,11 +259,36 @@ export default function HomePageExperience({ featuredProducts = [] }) {
 
                     <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
                         <div className="w-full md:w-auto">
-                            <div className="overflow-hidden -mb-[0.5vw]"><h1 className="hero-title storefront-home-display font-serif font-light uppercase translate-y-full"><EditableText contentKey="home.hero.title.line_one" fallback="Women" editorLabel="Home hero title line one" /></h1></div>
-                            <div className="overflow-hidden"><h1 className="hero-title storefront-home-display storefront-home-shift font-serif font-light uppercase translate-y-full"><EditableText contentKey="home.hero.title.line_two" fallback="Elegance" editorLabel="Home hero title line two" /></h1></div>
+                            <div className="overflow-hidden -mb-[0.5vw]">
+                                <EditableRichText
+                                    contentKey="home.hero.title.line_one"
+                                    fallback={heroTitleLineOneFallback}
+                                    editorLabel="Home hero title line one"
+                                    className="hero-title translate-y-full"
+                                    blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]"
+                                    sizeClassNames={heroTitleSizeClassNames}
+                                />
+                            </div>
+                            <div className="overflow-hidden">
+                                <EditableRichText
+                                    contentKey="home.hero.title.line_two"
+                                    fallback={heroTitleLineTwoFallback}
+                                    editorLabel="Home hero title line two"
+                                    className="hero-title storefront-home-shift translate-y-full"
+                                    blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]"
+                                    sizeClassNames={heroTitleSizeClassNames}
+                                />
+                            </div>
                         </div>
                         <div className="w-full md:w-[22rem] pb-4 md:pb-8 flex flex-col gap-4">
-                            <p className="hero-sub text-xs md:text-sm tracking-[0.2em] font-light uppercase opacity-0"><EditableText contentKey="home.hero.subtext" fallback="Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria." editorLabel="Home hero subtext" /></p>
+                            <EditableRichText
+                                contentKey="home.hero.subtext"
+                                fallback={heroSubtextFallback}
+                                editorLabel="Home hero subtext"
+                                className="hero-sub opacity-0"
+                                blockBaseClassName="tracking-[0.2em] font-light uppercase text-[#EFECE8]"
+                                sizeClassNames={heroSubtextSizeClassNames}
+                            />
                             <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
                             <p className="hero-sub text-xs tracking-widest uppercase opacity-0 hover-target cursor-pointer w-max"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
                         </div>

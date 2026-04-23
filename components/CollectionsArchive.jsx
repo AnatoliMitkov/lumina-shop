@@ -5,6 +5,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
+import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, resolveLocalizedValue } from '../utils/language';
 import {
     buildCollectionsHref,
     buildProductHref,
@@ -91,7 +92,7 @@ function FilterButton({ label, isActive, onClick, theme = 'light' }) {
     );
 }
 
-function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
+function StatCard({ label, labelKey, value, delayMs = 0 }) {
     const cardRef = useRef(null);
     const animationFrameRef = useRef(null);
     const startTimeoutRef = useRef(null);
@@ -212,13 +213,13 @@ function StatCard({ label, labelKey, value, copy, copyKey, delayMs = 0 }) {
 
     return (
         <div ref={cardRef} className="storefront-stat-card reveal-text opacity-0 translate-y-8 flex flex-col gap-2 rounded-sm border border-[#1C1C1C]/10 bg-white/50 p-3 md:gap-3 md:p-5">
-            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${label} stat label`} /></p>
+            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.24em] md:tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey={labelKey} fallback={label} editorLabel={`${labelKey} stat label`} /></p>
             <p className="storefront-stat-display font-serif text-2xl md:text-[2.65rem] font-light leading-none text-[#1C1C1C]">{String(displayValue).padStart(2, '0')}</p>
         </div>
     );
 }
 
-function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd }) {
+function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd, translations }) {
     const href = buildProductHref(product);
     const image = resolveProductGallery(product)[0] || product.image_main;
     const cardStyle = isFocused
@@ -244,7 +245,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
         >
             <div className="pointer-events-none absolute inset-x-3 top-4 bottom-20 -z-10 rounded-[1.4rem] md:inset-x-5 md:top-6 md:bottom-24 md:rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
 
-            <a href={href} className="transition-link w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text="Inspect">
+            <a href={href} className="transition-link w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text={translations.inspect}>
                 <img className={`w-full h-full object-cover transition-transform duration-[1.8s] ease-out ${isFocused ? 'scale-[1.08]' : 'group-hover:scale-[1.04]'}`} src={image} alt={product.name} />
             </a>
 
@@ -264,8 +265,8 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
                 </div>
 
                 <div className="flex flex-col gap-1.5 border-t border-[#1C1C1C]/10 pt-3 text-[9px] md:flex-row md:items-center md:justify-between md:gap-4 md:pt-4 md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.24em] text-[#1C1C1C]/45">
-                    <span>{product.inventory_count > 0 ? `${product.inventory_count} ready` : 'Made to order'}</span>
-                    <span className="hidden sm:inline">{product.lead_time_days} day lead time</span>
+                    <span>{product.inventory_count > 0 ? `${product.inventory_count} ${translations.ready}` : translations.madeToOrder}</span>
+                    <span className="hidden sm:inline">{product.lead_time_days} {translations.dayLeadTime}</span>
                 </div>
             </div>
         </article>
@@ -274,6 +275,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd })
 
 export default function CollectionsArchive({ products = [] }) {
     const siteCopy = useSiteCopy();
+    const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -302,7 +304,7 @@ export default function CollectionsArchive({ products = [] }) {
     }, [normalizedProducts]);
     const activeCollection = resolveFilterValue(searchParams.get('collection'), collectionOptions);
     const activeCategory = resolveFilterValue(searchParams.get('category'), categoryOptions);
-    const searchPlaceholder = siteCopy ? siteCopy.resolveText('collections.filters.search_placeholder', 'Search by collection, category, mood, or name') : 'Search by collection, category, mood, or name';
+    const searchPlaceholder = getText('collections.filters.search_placeholder', localizedFallback('Search by collection, category, mood, or name', 'Търсене по колекция, категория, настроение или име'));
     const filteredProducts = normalizedProducts.filter((product) => {
         const matchesCollection = activeCollection === 'All' || product.collection === activeCollection;
         const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
@@ -310,12 +312,27 @@ export default function CollectionsArchive({ products = [] }) {
 
         return matchesCollection && matchesCategory && matchesSearch;
     });
+    const readyToBrowseLabel = filteredProducts.length === 1
+        ? getText('collections.filters.ready_singular', localizedFallback('piece ready to browse', 'модел за разглеждане'))
+        : getText('collections.filters.ready_plural', localizedFallback('pieces ready to browse', 'модела за разглеждане'));
+    const visibleNowLabel = filteredProducts.length === 1
+        ? getText('collections.filters.visible_singular', localizedFallback('piece visible now', 'модел видим сега'))
+        : getText('collections.filters.visible_plural', localizedFallback('pieces visible now', 'модела видими сега'));
+    const formatFilterOptionLabel = (option) => option === 'All'
+        ? getText('collections.filters.option_all', localizedFallback('All', 'Всички'))
+        : option;
+    const productCardTranslations = {
+        inspect: getText('collections.card.inspect', localizedFallback('Inspect', 'Преглед')), 
+        ready: getText('collections.card.ready', localizedFallback('ready', 'готови')),
+        madeToOrder: getText('collections.card.made_to_order', localizedFallback('Made to order', 'По поръчка')),
+        dayLeadTime: getText('collections.card.day_lead_time', localizedFallback('day lead time', 'дни срок')),
+    };
     const hasActiveFilters = activeCollection !== 'All' || activeCategory !== 'All' || Boolean(searchValue);
     const activeFilterCount = [activeCollection !== 'All', activeCategory !== 'All', Boolean(searchValue)].filter(Boolean).length;
     const activeFilterLabels = [
         activeCollection !== 'All' ? activeCollection : '',
         activeCategory !== 'All' ? activeCategory : '',
-        searchValue ? `Search: ${searchValue}` : '',
+        searchValue ? `${getText('collections.filters.search_prefix', localizedFallback('Search:', 'Търсене:'))} ${searchValue}` : '',
     ].filter(Boolean);
 
     useEffect(() => {
@@ -490,17 +507,17 @@ export default function CollectionsArchive({ products = [] }) {
     return (
         <div ref={archiveRef}>
             <section className="mb-1 md:mb-4 grid grid-cols-3 gap-2 md:gap-5">
-                <StatCard label="Pieces" labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} copy="A concise edit of visible looks ready to browse at once." copyKey="collections.stats.pieces.copy" />
-                <StatCard label="Collections" labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} copy="Distinct storylines shaping the archive into easier visual paths." copyKey="collections.stats.collections.copy" />
-                <StatCard label="Categories" labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} copy="Focused entry points for shoppers who already know the silhouette they want." copyKey="collections.stats.categories.copy" />
+                <StatCard label={localizedFallback('Pieces', 'Модели')} labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} />
+                <StatCard label={localizedFallback('Collections', 'Колекции')} labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} />
+                <StatCard label={localizedFallback('Categories', 'Категории')} labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} />
             </section>
 
             <section className="mb-8 md:mb-10 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-4 md:p-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
                         <p className="mt-3 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
-                            {String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} ready to browse
+                            {String(filteredProducts.length).padStart(2, '0')} {readyToBrowseLabel}
                             {activeCollection !== 'All' ? ` / ${activeCollection}` : ''}
                             {activeCategory !== 'All' ? ` / ${activeCategory}` : ''}
                         </p>
@@ -509,7 +526,7 @@ export default function CollectionsArchive({ products = [] }) {
                     <div className="flex flex-wrap items-center gap-2">
                         {hasActiveFilters && (
                             <button type="button" onClick={handleReset} className="hover-target rounded-full border border-[#1C1C1C]/12 bg-white/70 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/62 transition-colors hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]">
-                                <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
+                                <EditableText contentKey="collections.filters.reset" fallback={localizedFallback('Reset Archive', 'Изчисти филтрите')} editorLabel="Collections reset archive" />
                             </button>
                         )}
 
@@ -518,7 +535,7 @@ export default function CollectionsArchive({ products = [] }) {
                             onClick={() => setIsFilterPanelOpen(true)}
                             className="hover-target inline-flex items-center gap-3 rounded-full border border-[#1C1C1C] bg-[#1C1C1C] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#EFECE8] transition-colors hover:bg-black"
                         >
-                            <EditableText contentKey="collections.filters.open_panel" fallback="Search & Filter" editorLabel="Collections open filter panel" />
+                            <EditableText contentKey="collections.filters.open_panel" fallback={localizedFallback('Search & Filter', 'Търси и филтрирай')} editorLabel="Collections open filter panel" />
                             <span className="rounded-full border border-white/12 bg-white/10 px-2 py-1 text-[9px] leading-none text-white/78">{String(activeFilterCount).padStart(2, '0')}</span>
                         </button>
                     </div>
@@ -537,13 +554,13 @@ export default function CollectionsArchive({ products = [] }) {
 
             {isFilterPanelOpen && (
                 <div className="fixed inset-0 z-[140] flex items-end justify-center p-4 backdrop-blur-sm md:items-center">
-                    <button type="button" aria-label="Close filter panel" onClick={() => setIsFilterPanelOpen(false)} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
+                    <button type="button" aria-label={getText('collections.filters.close_panel', localizedFallback('Close filter panel', 'Затвори панела с филтри'))} onClick={() => setIsFilterPanelOpen(false)} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
 
                     <div className="relative flex w-full max-w-4xl max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-[rgba(12,12,14,0.95)] text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] md:max-h-[calc(100vh-3rem)]" onClick={(event) => event.stopPropagation()}>
                         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 md:px-6">
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="collections.filters.eyebrow" fallback="Filter The Archive" editorLabel="Collections filter eyebrow" /></p>
-                                <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white"><EditableText contentKey="collections.filters.title" fallback="Archive Controls" editorLabel="Collections filter modal title" /></h3>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
+                                <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white"><EditableText contentKey="collections.filters.title" fallback={localizedFallback('Archive Controls', 'Контроли на архива')} editorLabel="Collections filter modal title" /></h3>
                             </div>
 
                             <button
@@ -551,14 +568,14 @@ export default function CollectionsArchive({ products = [] }) {
                                 onClick={() => setIsFilterPanelOpen(false)}
                                 className="hover-target rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
                             >
-                                Close
+                                {getText('collections.filters.close', localizedFallback('Close', 'Затвори'))}
                             </button>
                         </div>
 
                         <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
                             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem]">
                                 <label className="flex min-w-0 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
-                                    <EditableText contentKey="collections.filters.search_label" fallback="Search Pieces" editorLabel="Collections search label" />
+                                    <EditableText contentKey="collections.filters.search_label" fallback={localizedFallback('Search Pieces', 'Търси модели')} editorLabel="Collections search label" />
                                     <input
                                         value={searchValue}
                                         onChange={(event) => setSearchValue(event.target.value)}
@@ -568,7 +585,7 @@ export default function CollectionsArchive({ products = [] }) {
                                 </label>
 
                                 <div className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
-                                    <p><EditableText contentKey="collections.filters.cards_per_row" fallback="Cards Per Row" editorLabel="Collections cards per row label" /></p>
+                                    <p><EditableText contentKey="collections.filters.cards_per_row" fallback={localizedFallback('Cards Per Row', 'Карти на ред')} editorLabel="Collections cards per row label" /></p>
                                     <div className="flex flex-wrap gap-2">
                                         {cardsPerRowOptions.map((option) => (
                                             <FilterButton
@@ -585,19 +602,19 @@ export default function CollectionsArchive({ products = [] }) {
 
                             <div className="mt-6 flex flex-col gap-6">
                                 <section>
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.collection_title" fallback="Collections" editorLabel="Collections filter collection title" /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.collection_title" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Collections filter collection title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {collectionOptions.map((option) => (
-                                            <FilterButton key={option} label={option} theme="dark" isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
+                                            <FilterButton key={option} label={formatFilterOptionLabel(option)} theme="dark" isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
                                         ))}
                                     </div>
                                 </section>
 
                                 <section>
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.category_title" fallback="Categories" editorLabel="Collections filter category title" /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.category_title" fallback={localizedFallback('Categories', 'Категории')} editorLabel="Collections filter category title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {categoryOptions.map((option) => (
-                                            <FilterButton key={option} label={option} theme="dark" isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
+                                            <FilterButton key={option} label={formatFilterOptionLabel(option)} theme="dark" isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
                                         ))}
                                     </div>
                                 </section>
@@ -605,17 +622,17 @@ export default function CollectionsArchive({ products = [] }) {
                         </div>
 
                         <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 text-[10px] uppercase tracking-[0.24em] text-white/42 sm:flex-row sm:items-center sm:justify-between md:px-6">
-                            <p>{String(filteredProducts.length).padStart(2, '0')} piece{filteredProducts.length === 1 ? '' : 's'} visible now</p>
+                            <p>{String(filteredProducts.length).padStart(2, '0')} {visibleNowLabel}</p>
 
                             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                 {hasActiveFilters && (
                                     <button type="button" onClick={handleReset} className="hover-target rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/66 transition-colors hover:bg-white/[0.08] hover:text-white">
-                                        <EditableText contentKey="collections.filters.reset" fallback="Reset Archive" editorLabel="Collections reset archive" />
+                                        <EditableText contentKey="collections.filters.reset" fallback={localizedFallback('Reset Archive', 'Изчисти филтрите')} editorLabel="Collections reset archive" />
                                     </button>
                                 )}
 
                                 <button type="button" onClick={() => setIsFilterPanelOpen(false)} className="hover-target rounded-full bg-[#EFE7DA] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors hover:bg-white">
-                                    View Pieces
+                                    {getText('collections.filters.view_pieces', localizedFallback('View Pieces', 'Виж моделите'))}
                                 </button>
                             </div>
                         </div>
@@ -625,9 +642,9 @@ export default function CollectionsArchive({ products = [] }) {
 
             {filteredProducts.length === 0 ? (
                 <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-8 md:p-10 flex flex-col gap-5">
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey="collections.empty.eyebrow" fallback="No Matches" editorLabel="Collections empty eyebrow" /></p>
-                    <p className="font-serif text-3xl md:text-5xl font-light leading-tight max-w-2xl"><EditableText contentKey="collections.empty.title" fallback="Nothing matched that filter. Try a broader collection or clear the search phrase." editorLabel="Collections empty title" /></p>
-                    <button type="button" onClick={handleReset} className="hover-target w-max px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium"><EditableText contentKey="collections.empty.reset" fallback="Reset Archive" editorLabel="Collections empty reset" /></button>
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey="collections.empty.eyebrow" fallback={localizedFallback('No Matches', 'Няма резултати')} editorLabel="Collections empty eyebrow" /></p>
+                    <p className="font-serif text-3xl md:text-5xl font-light leading-tight max-w-2xl"><EditableText contentKey="collections.empty.title" fallback={localizedFallback('Nothing matched that filter. Try a broader collection or clear the search phrase.', 'Нищо не съвпадна с този филтър. Опитайте по-широка колекция или изчистете търсенето.')} editorLabel="Collections empty title" /></p>
+                    <button type="button" onClick={handleReset} className="hover-target w-max px-8 py-4 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium"><EditableText contentKey="collections.empty.reset" fallback={localizedFallback('Reset Archive', 'Изчисти филтрите')} editorLabel="Collections empty reset" /></button>
                 </div>
             ) : (
                 <div
@@ -642,6 +659,7 @@ export default function CollectionsArchive({ products = [] }) {
                         <ProductCard
                             key={product.id || product.slug}
                             product={product}
+                            translations={productCardTranslations}
                             isFocused={focusedProductId === (product.id || product.slug)}
                             isDimmed={Boolean(focusedProductId) && focusedProductId !== (product.id || product.slug)}
                             onHoverStart={() => handleProductHoverStart(product.id || product.slug)}

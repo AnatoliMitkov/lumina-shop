@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import EditableMediaAsset from './EditableMediaAsset';
 import SiteCopyRichTextEditor from './SiteCopyRichTextEditor';
 import { detectEditableMediaKind } from './media-kind';
-import { DEFAULT_LANGUAGE, normalizeLanguage } from '../../utils/language';
+import { DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
 import {
     createDefaultMediaSettings,
     extractSiteCopyPlainText,
@@ -59,12 +59,14 @@ function getLocalizedSiteCopyKey(key = '', language) {
 }
 
 function resolveLocalizedSiteCopyEntry(entries = {}, key = '', fallback = '', language) {
+    const localizedFallback = resolveLocalizedValue(fallback, language);
     const localizedKey = getLocalizedSiteCopyKey(key, language);
 
     if (localizedKey !== key && hasSiteCopyEntry(entries, localizedKey)) {
         return {
             value: entries[localizedKey],
             storageKey: localizedKey,
+            fallback: localizedFallback,
         };
     }
 
@@ -72,12 +74,14 @@ function resolveLocalizedSiteCopyEntry(entries = {}, key = '', fallback = '', la
         return {
             value: entries[key],
             storageKey: localizedKey || key,
+            fallback: localizedFallback,
         };
     }
 
     return {
-        value: fallback,
+        value: localizedFallback,
         storageKey: localizedKey || key,
+        fallback: localizedFallback,
     };
 }
 
@@ -694,13 +698,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const resolveText = useCallback((key, fallback) => {
         const resolvedEntry = resolveLocalizedSiteCopyEntry(entries, key, fallback, activeLanguage);
 
-        return extractSiteCopyPlainText(resolvedEntry.value, fallback);
+        return extractSiteCopyPlainText(resolvedEntry.value, resolvedEntry.fallback);
     }, [activeLanguage, entries]);
 
     const resolveRichTextEntry = useCallback((key, fallback) => {
         const resolvedEntry = resolveLocalizedSiteCopyEntry(entries, key, fallback, activeLanguage);
 
-        return resolveSiteCopyRichTextEntry(resolvedEntry.value, fallback);
+        return resolveSiteCopyRichTextEntry(resolvedEntry.value, resolvedEntry.fallback);
     }, [activeLanguage, entries]);
 
     const resolveMedia = useCallback((key, fallback) => {
@@ -726,6 +730,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
         setActiveEntry({
             ...entry,
+            fallback: resolvedEntry.fallback,
             storageKey: resolvedEntry.storageKey,
             language: activeLanguage,
         });
@@ -741,12 +746,12 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         } else if (entry.entryType === 'rich-text') {
             setDraftRichTextValue(resolveSiteCopyRichTextEntry(
                 resolvedEntry.value,
-                entry.fallback,
+                resolvedEntry.fallback,
             ));
             setDraftTextValue('');
             setDraftMediaValue(null);
         } else {
-            setDraftTextValue(extractSiteCopyPlainText(resolvedEntry.value, entry.fallback));
+            setDraftTextValue(extractSiteCopyPlainText(resolvedEntry.value, resolvedEntry.fallback));
             setDraftRichTextValue(null);
             setDraftMediaValue(null);
         }

@@ -81,6 +81,37 @@ export default function Example() {
 
 Ако редактирате български, системата автоматично пази отделна стойност за българския език и я използва веднага при смяна на езика.
 
+## Как работи редакцията на product page
+
+Product page вече има отделен `Site Copy` слой върху каталожните данни.
+
+Това значи, че можете да отворите даден продукт и да редактирате визуално:
+
+- името на продукта;
+- subtitle и description;
+- collection и category label-ите;
+- tone / color label-ите;
+- story текста;
+- highlight bullet-ите;
+- CTA текстовете и част от purchase flow copy-то.
+
+Ключовете се генерират по slug на продукта.
+
+Примери:
+
+- `product.catalog.the-monaco-liquid-gold-aesthetic-top.name`
+- `product.catalog.the-monaco-liquid-gold-aesthetic-top.description`
+- `product.catalog.the-monaco-liquid-gold-aesthetic-top.collection`
+- `product.catalog.the-monaco-liquid-gold-aesthetic-top.palette.gold`
+
+Това е важно, защото:
+
+- не се налага да променяте самата product таблица, за да имате BG версия;
+- английската каталожна стойност остава fallback;
+- българската версия може да се пази отделно през inline editor-а.
+
+Ако на BG още виждате английски product текст, това не е бъг. Това означава, че за този конкретен product key още няма записана българска стойност и в момента се вижда fallback-ът.
+
 ## Как да редактирате заглавието на promo popup-а
 
 Заглавието на popup-а вече е на `EditableRichText`, не на обикновен `EditableText`.
@@ -115,6 +146,28 @@ export default function Example() {
 
 - Ако текстът е кратък UI label, бутон, статус или системно съобщение: сложете го в `locales/en.json` и `locales/bg.json`.
 - Ако текстът е секция от storefront-а, headline, body copy или popup content, който искате да редактирате визуално: използвайте `EditableText` или `EditableRichText`.
+
+### Ако fallback-ът е директно в кода
+
+Когато не искате да чакате нов `Site Copy` запис или нов ключ в `locales/*.json`, можете да подадете двуезичен fallback директно в компонента чрез `createLocalizedValue(en, bg)` от `utils/language.js`.
+
+Пример:
+
+```jsx
+import { createLocalizedValue as localizedFallback } from '../utils/language';
+
+<EditableText
+   contentKey="cart.primary.continue_checkout"
+   fallback={localizedFallback('Continue To Checkout', 'Продължи към checkout')}
+   editorLabel="Cart continue checkout"
+/>
+```
+
+Така:
+
+- английският и българският fallback стоят в кода;
+- `Site Copy` ключът остава същият;
+- ако после редактирате текста inline от админ режима, системата пак ще пази отделно EN и BG стойности.
 
 ## Файлове, които управляват езиците
 

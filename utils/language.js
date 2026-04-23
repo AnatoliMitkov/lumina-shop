@@ -4,6 +4,13 @@ export const LANGUAGE_STORAGE_KEY = 'lumina-language';
 export const LANGUAGE_COOKIE_KEY = 'lumina-language';
 export const LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
+export function createLocalizedValue(englishValue, bulgarianValue) {
+  return {
+    en: englishValue,
+    bg: bulgarianValue,
+  };
+}
+
 export function normalizeLanguage(value) {
   if (typeof value !== 'string') {
     return null;
@@ -18,6 +25,37 @@ export function normalizeLanguage(value) {
   const [baseLanguage] = normalizedValue.split(/[-_]/);
 
   return SUPPORTED_LANGUAGES.includes(baseLanguage) ? baseLanguage : null;
+}
+
+export function isLocalizedValueMap(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  const valueKeys = Object.keys(value);
+
+  return valueKeys.length > 0 && valueKeys.every((key) => Boolean(normalizeLanguage(key)));
+}
+
+export function resolveLocalizedValue(value, language = DEFAULT_LANGUAGE) {
+  if (!isLocalizedValueMap(value)) {
+    return value;
+  }
+
+  const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+  const localizedEntry = Object.entries(value).find(([key]) => normalizeLanguage(key) === normalizedLanguage);
+
+  if (localizedEntry) {
+    return localizedEntry[1];
+  }
+
+  const defaultEntry = Object.entries(value).find(([key]) => normalizeLanguage(key) === DEFAULT_LANGUAGE);
+
+  if (defaultEntry) {
+    return defaultEntry[1];
+  }
+
+  return Object.values(value)[0];
 }
 
 export function detectPreferredLanguageFromList(values = []) {

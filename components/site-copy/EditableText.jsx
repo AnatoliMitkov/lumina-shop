@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from 'react';
+import { DEFAULT_LANGUAGE, resolveLocalizedValue } from '../../utils/language';
 import { useSiteCopy } from './SiteCopyProvider';
 
 export default function EditableText({
@@ -14,7 +15,7 @@ export default function EditableText({
     const textRef = useRef(null);
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
-    const resolvedText = context ? context.resolveText(contentKey, fallback) : fallback;
+    const resolvedText = context ? context.resolveText(contentKey, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
     const visibleText = resolvedText === '' && isAdmin && isEditMode ? '[Empty text]' : resolvedText;
     const highlightClassName = isAdmin && isEditMode
         ? 'rounded-[0.35rem] outline outline-1 outline-offset-[3px] outline-[#1C1C1C]/18 bg-[#EFE7DA]/45 cursor-pointer'

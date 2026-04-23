@@ -4,7 +4,10 @@ import { notFound } from 'next/navigation';
 import ProductDetailAccordions from '../../../components/ProductDetailAccordions';
 import ProductGallery from '../../../components/ProductGallery';
 import ProductContactWrapper from '../../../components/ProductContactWrapper';
+import EditableRichText from '../../../components/site-copy/EditableRichText';
 import EditableText from '../../../components/site-copy/EditableText';
+import { createLocalizedValue as localizedFallback } from '../../../utils/language';
+import { getProductFieldCopyKey, getProductIndexedCopyKey, getProductOptionCopyKey } from '../../../utils/product-copy';
 import { createClient } from '../../../utils/supabase/server';
 import {
     buildProductHref,
@@ -49,6 +52,24 @@ const SIZE_MEASUREMENTS = [
         cm: { bust: '114 - 135', waist: '97 - 117', hips: '119 - 140', back: '41 - 46' },
     },
 ];
+
+const productBodySizeClassNames = {
+    xs: 'text-xs md:text-sm',
+    sm: 'text-sm md:text-base',
+    body: 'text-sm md:text-base',
+    lg: 'text-base md:text-lg',
+    xl: 'text-lg md:text-xl',
+    display: 'text-xl md:text-2xl',
+};
+
+const productQuoteSizeClassNames = {
+    xs: 'text-base md:text-lg',
+    sm: 'text-lg md:text-xl',
+    body: 'text-lg md:text-xl',
+    lg: 'text-xl md:text-2xl',
+    xl: 'text-2xl md:text-3xl',
+    display: 'text-3xl md:text-4xl',
+};
 
 const getCatalog = cache(async () => {
     const cookieStore = await cookies();
@@ -166,6 +187,10 @@ function DetailCard({ eyebrow, eyebrowKey, title, titleKey, copy, copyKey, wide 
 function RelatedPieceCard({ product }) {
     const href = buildProductHref(product);
     const image = resolveProductGallery(product)[0] || product.image_main;
+    const productCollectionKey = getProductFieldCopyKey(product, 'collection');
+    const productCategoryKey = getProductFieldCopyKey(product, 'category');
+    const productNameKey = getProductFieldCopyKey(product, 'name');
+    const productSubtitleKey = getProductFieldCopyKey(product, 'subtitle');
 
     return (
         <article className="flex flex-col gap-4 md:gap-5">
@@ -175,14 +200,14 @@ function RelatedPieceCard({ product }) {
 
             <div className="reveal-text opacity-0 translate-y-8 flex flex-col gap-3">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2">{product.collection}</span>
-                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2">{product.category}</span>
+                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} related collection`} /></span>
+                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} related category`} /></span>
                 </div>
 
                 <div className="flex items-end justify-between gap-4">
                     <div>
-                        <a href={href} className="transition-link font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] hover-target">{product.name}</a>
-                        {product.subtitle && <p className="mt-3 max-w-md text-sm leading-relaxed text-[#1C1C1C]/58">{product.subtitle}</p>}
+                        <a href={href} className="transition-link font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] hover-target"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} related title`} /></a>
+                        {product.subtitle && <p className="mt-3 max-w-md text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={productSubtitleKey} fallback={product.subtitle} editorLabel={`${product.name || 'Product'} related subtitle`} /></p>}
                     </div>
 
                     <p className="shrink-0 text-sm uppercase tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
@@ -212,19 +237,44 @@ export default async function ProductPage({ params }) {
     const materialsCopy = [product.materials, product.care].filter(Boolean).join(' ');
     const paletteLabel = buildPaletteLabel(product);
     const sizeOptions = [...SIZE_MEASUREMENTS.map((entry) => entry.label), 'Custom'];
+    const productNameKey = getProductFieldCopyKey(product, 'name');
+    const productSubtitleKey = getProductFieldCopyKey(product, 'subtitle');
+    const productDescriptionKey = getProductFieldCopyKey(product, 'description');
+    const productStoryKey = getProductFieldCopyKey(product, 'story');
+    const productArtisanNoteKey = getProductFieldCopyKey(product, 'artisan_note');
+    const productCollectionKey = getProductFieldCopyKey(product, 'collection');
+    const productCategoryKey = getProductFieldCopyKey(product, 'category');
+    const productAvailabilityLabelKey = getProductFieldCopyKey(product, 'availability_label');
+    const productLeadTimeLabelKey = getProductFieldCopyKey(product, 'lead_time_label');
+    const productPaletteLabelKey = getProductFieldCopyKey(product, 'palette_label');
+    const productColorCopyKey = getProductFieldCopyKey(product, 'color_copy');
+    const productDispatchCopyKey = getProductFieldCopyKey(product, 'dispatch_copy');
+    const productMaterialsCareKey = getProductFieldCopyKey(product, 'materials_care');
+    const productFitNotesKey = getProductFieldCopyKey(product, 'fit_notes');
+    const productNotesCopyKey = getProductFieldCopyKey(product, 'notes_copy');
+    const highlightItems = buildHighlightList(product).map((item, index) => ({
+        contentKey: getProductIndexedCopyKey(product, 'highlights', index),
+        fallback: item,
+        editorLabel: `${product.name || 'Product'} highlight ${index + 1}`,
+    }));
+    const paletteItems = product.palette.map((tone) => ({
+        contentKey: getProductOptionCopyKey(product, 'palette', tone),
+        fallback: tone,
+        editorLabel: `${product.name || 'Product'} palette ${tone}`,
+    }));
     const accordionSections = [
         {
             title: 'Product Notes',
             copy: product.tags.length > 0 ? `Filed under ${product.tags.join(', ')}.` : defaultProductNotesCopy,
             titleKey: 'product.accordion.product_notes.title',
-            copyKey: product.tags.length > 0 ? null : 'product.accordion.product_notes.copy',
-            bullets: highlightList,
+            copyKey: productNotesCopyKey,
+            bullets: highlightItems,
         },
         {
             title: 'Size & Fit',
             copy: product.fit_notes || defaultFitCopy,
             titleKey: 'product.accordion.size_fit.title',
-            copyKey: product.fit_notes ? null : 'product.accordion.size_fit.copy',
+            copyKey: productFitNotesKey,
         },
         {
             title: 'Size & Measurements',
@@ -237,14 +287,14 @@ export default async function ProductPage({ params }) {
             title: 'Color & Palette',
             copy: buildColorCopy(product),
             titleKey: 'product.accordion.color_palette.title',
-            copyKey: product.palette.length > 0 ? null : 'product.accordion.color_palette.copy',
-            chips: product.palette,
+            copyKey: productColorCopyKey,
+            chips: paletteItems,
         },
         {
             title: 'Materials & Care',
             copy: materialsCopy || defaultCareCopy,
             titleKey: 'product.accordion.materials_care.title',
-            copyKey: materialsCopy ? null : 'product.accordion.materials_care.copy',
+            copyKey: productMaterialsCareKey,
         },
         {
             title: 'Shipping & Returns',
@@ -260,21 +310,23 @@ export default async function ProductPage({ params }) {
             title: product.artisan_note ? 'Hand-tensioned final pass' : 'Finished in small runs',
             titleKey: product.artisan_note ? null : 'product.detail_cards.atelier_finish.title',
             copy: product.artisan_note || 'Every piece is checked by hand so the structure stays controlled, directional, and easy to wear around other tailored layers.',
-            copyKey: product.artisan_note ? null : 'product.detail_cards.atelier_finish.copy',
+            copyKey: productArtisanNoteKey,
         },
         {
             eyebrow: 'Dispatch',
             eyebrowKey: 'product.detail_cards.dispatch.eyebrow',
             title: buildAvailabilityLabel(product),
+            titleKey: productAvailabilityLabelKey,
             copy: buildDispatchCopy(product),
+            copyKey: productDispatchCopyKey,
         },
         {
             eyebrow: 'Palette & Mood',
             eyebrowKey: 'product.detail_cards.palette.eyebrow',
             title: paletteLabel,
-            titleKey: product.palette.length > 0 ? null : 'product.detail_cards.palette.title',
+            titleKey: productPaletteLabelKey,
             copy: buildColorCopy(product),
-            copyKey: product.palette.length > 0 ? null : 'product.detail_cards.palette.copy',
+            copyKey: productColorCopyKey,
             wide: true,
         },
     ];
@@ -284,17 +336,26 @@ export default async function ProductPage({ params }) {
             <section className="mb-10 md:mb-14 border-b border-[#1C1C1C]/10 pb-8 md:pb-10">
                 <div className="grid grid-cols-1 xl:grid-cols-[1.04fr_0.96fr] gap-6 md:gap-8 items-end">
                     <div>
-                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.hero.eyebrow_prefix" fallback="Product" editorLabel="Product hero eyebrow prefix" /> / {product.collection}</p>
-                        <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full">{product.name}</h1></div>
+                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.hero.eyebrow_prefix" fallback={localizedFallback('Product', 'Продукт')} editorLabel="Product hero eyebrow prefix" /> / <EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} collection`} /></p>
+                        <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} title`} /></h1></div>
                     </div>
 
                     <div className="flex flex-col gap-4 max-w-2xl xl:justify-self-end xl:pl-8">
-                        {product.subtitle && <p className="hero-sub storefront-copy-measure opacity-0 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">{product.subtitle}</p>}
+                        {product.subtitle && (
+                            <EditableRichText
+                                contentKey={productSubtitleKey}
+                                fallback={product.subtitle}
+                                editorLabel={`${product.name || 'Product'} subtitle`}
+                                className="hero-sub storefront-copy-measure opacity-0"
+                                blockBaseClassName="leading-relaxed text-[#1C1C1C]/62"
+                                sizeClassNames={productBodySizeClassNames}
+                            />
+                        )}
                         <div className="hero-sub opacity-0 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{product.category}</span>
-                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{buildAvailabilityLabel(product)}</span>
+                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} category`} /></span>
+                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} availability label`} /></span>
                             {product.palette.slice(0, 3).map((tone) => (
-                                <span key={tone} className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2">{tone}</span>
+                                <span key={tone} className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={getProductOptionCopyKey(product, 'palette', tone)} fallback={tone} editorLabel={`${product.name || 'Product'} hero tone ${tone}`} /></span>
                             ))}
                         </div>
                     </div>
@@ -311,7 +372,7 @@ export default async function ProductPage({ params }) {
                         <div className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8 flex flex-col gap-6 md:gap-7">
                             <div className="flex flex-wrap items-end justify-between gap-5 border-b border-[#1C1C1C]/10 pb-5">
                                 <div className="flex flex-col gap-2">
-                                    <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">{product.collection} / {product.category}</p>
+                                    <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} purchase collection`} /> / <EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} purchase category`} /></p>
                                     <p className="hero-sub opacity-0 font-serif text-4xl md:text-5xl font-light leading-none text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
                                     {product.compare_at_price && product.compare_at_price > product.price && (
                                         <p className="hero-sub opacity-0 text-xs uppercase tracking-[0.24em] text-[#1C1C1C]/40 line-through">{formatProductCurrency(product.compare_at_price)}</p>
@@ -319,25 +380,32 @@ export default async function ProductPage({ params }) {
                                 </div>
 
                                 <div className="hero-sub opacity-0 flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 xl:text-right">
-                                    <span>{buildAvailabilityLabel(product)}</span>
-                                    <span>{buildLeadTimeLabel(product)}</span>
+                                    <span><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} price card availability`} /></span>
+                                    <span><EditableText contentKey={productLeadTimeLabelKey} fallback={buildLeadTimeLabel(product)} editorLabel={`${product.name || 'Product'} lead time`} /></span>
                                 </div>
                             </div>
 
-                            <p className="hero-sub opacity-0 text-sm md:text-base leading-relaxed text-[#1C1C1C]/65">{product.description}</p>
+                            <EditableRichText
+                                contentKey={productDescriptionKey}
+                                fallback={product.description}
+                                editorLabel={`${product.name || 'Product'} description`}
+                                className="hero-sub opacity-0"
+                                blockBaseClassName="leading-relaxed text-[#1C1C1C]/65"
+                                sizeClassNames={productBodySizeClassNames}
+                            />
 
                             <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback="Availability" editorLabel="Product availability label" /></p>
-                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{buildAvailabilityState(product)}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback={localizedFallback('Availability', 'Наличност')} editorLabel="Product availability label" /></p>
+                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'availability_state')} fallback={localizedFallback(buildAvailabilityState(product), product.inventory_count > 0 ? 'Налично' : 'Изработка')} editorLabel={`${product.name || 'Product'} availability state`} /></p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback="Lead Time" editorLabel="Product lead time label" /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback={localizedFallback('Lead Time', 'Срок')} editorLabel="Product lead time label" /></p>
                                     <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{product.lead_time_days}d</p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback="Piece Type" editorLabel="Product piece type label" /></p>
-                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{product.category}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback={localizedFallback('Piece Type', 'Тип изделие')} editorLabel="Product piece type label" /></p>
+                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} summary category`} /></p>
                                 </div>
                             </div>
 
@@ -352,12 +420,26 @@ export default async function ProductPage({ params }) {
             <section className="mx-auto max-w-[1540px] mb-14 md:mb-16 grid grid-cols-1 xl:grid-cols-[0.9fr_1fr] gap-5 md:gap-6 items-stretch">
                 <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 justify-between">
                     <div className="flex flex-col gap-6">
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-white/42"><EditableText contentKey="product.story.eyebrow" fallback="Atelier Story" editorLabel="Product story eyebrow" /></p>
-                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.08em]"><EditableText contentKey="product.story.title" fallback="A piece should read with clarity from the first glance and hold attention once you move closer." editorLabel="Product story title" /></h2>
-                        <p className="reveal-text opacity-0 translate-y-8 text-sm leading-relaxed text-white/70">{productStory}</p>
+                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-white/42"><EditableText contentKey="product.story.eyebrow" fallback={localizedFallback('Atelier Story', 'История на ателието')} editorLabel="Product story eyebrow" /></p>
+                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.08em]"><EditableText contentKey="product.story.title" fallback={localizedFallback('A piece should read with clarity from the first glance and hold attention once you move closer.', 'Една дреха трябва да се чете ясно от пръв поглед и да задържа вниманието, когато се приближите.')} editorLabel="Product story title" /></h2>
+                        <EditableRichText
+                            contentKey={productStoryKey}
+                            fallback={productStory}
+                            editorLabel={`${product.name || 'Product'} story`}
+                            className="reveal-text opacity-0 translate-y-8"
+                            blockBaseClassName="leading-relaxed text-white/70"
+                            sizeClassNames={productBodySizeClassNames}
+                        />
                     </div>
 
-                    <p className="reveal-text opacity-0 translate-y-8 text-lg md:text-xl font-serif font-light leading-relaxed text-white/84">"{product.artisan_note || 'Finished by hand so the structure stays controlled, tactile, and easy to style around.'}"</p>
+                    <EditableRichText
+                        contentKey={productArtisanNoteKey}
+                        fallback={product.artisan_note || 'Finished by hand so the structure stays controlled, tactile, and easy to style around.'}
+                        editorLabel={`${product.name || 'Product'} artisan note`}
+                        className="reveal-text opacity-0 translate-y-8"
+                        blockBaseClassName="font-serif font-light leading-relaxed text-white/84"
+                        sizeClassNames={productQuoteSizeClassNames}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
@@ -371,10 +453,10 @@ export default async function ProductPage({ params }) {
                 <section>
                     <div className="mb-10 md:mb-12 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#1C1C1C]/10 pb-8">
                         <div>
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.related.eyebrow" fallback="Continue The Story" editorLabel="Product related eyebrow" /></p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]"><EditableText contentKey="product.related.title" fallback="Related Pieces" editorLabel="Product related title" /></h2>
+                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.related.eyebrow" fallback={localizedFallback('Continue The Story', 'Продължете историята')} editorLabel="Product related eyebrow" /></p>
+                            <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]"><EditableText contentKey="product.related.title" fallback={localizedFallback('Related Pieces', 'Свързани модели')} editorLabel="Product related title" /></h2>
                         </div>
-                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium"><EditableText contentKey="product.related.view_archive" fallback="View Full Archive" editorLabel="Product related view archive CTA" /></a>
+                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium"><EditableText contentKey="product.related.view_archive" fallback={localizedFallback('View Full Archive', 'Вижте целия архив')} editorLabel="Product related view archive CTA" /></a>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
