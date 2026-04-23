@@ -242,6 +242,23 @@ export function serializeSiteCopyRichTextEntry(value, fallback = '') {
 }
 
 export function extractSiteCopyPlainText(value, fallback = '') {
+    // New Lumina text format (lumina-text-v1) carries a plain-text fallback
+    // alongside the HTML for exactly this kind of read.
+    const parsedAsObject = isPlainObject(value) ? value : parsePossibleJsonObject(value);
+    if (isPlainObject(parsedAsObject) && parsedAsObject.kind === 'lumina-text-v1') {
+        if (typeof parsedAsObject.text === 'string' && parsedAsObject.text.length > 0) {
+            return parsedAsObject.text;
+        }
+        // Best-effort strip of HTML tags for legacy rows missing the .text mirror.
+        const stripped = String(parsedAsObject.html || '')
+            .replace(/<br\s*\/?>(?=\s|$|<)/gi, '\n')
+            .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .trim();
+        return stripped || fallback;
+    }
+
     const parsedDocument = parseSiteCopyRichTextDocument(value);
 
     if (!parsedDocument) {

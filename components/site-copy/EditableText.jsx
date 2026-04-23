@@ -3,6 +3,8 @@
 import { useRef } from 'react';
 import { DEFAULT_LANGUAGE, resolveLocalizedValue } from '../../utils/language';
 import { useSiteCopy } from './SiteCopyProvider';
+import { isLuminaTextValue } from '../../utils/lumina-text';
+import LuminaTextRenderer from './LuminaTextRenderer';
 
 export default function EditableText({
     contentKey,
@@ -15,6 +17,8 @@ export default function EditableText({
     const textRef = useRef(null);
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
+    const rawEntry = context?.getRawEntry?.(contentKey);
+    const isRichEntry = isLuminaTextValue(rawEntry);
     const resolvedText = context ? context.resolveText(contentKey, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
     const visibleText = resolvedText === '' && isAdmin && isEditMode ? '[Empty text]' : resolvedText;
     const highlightClassName = isAdmin && isEditMode
@@ -65,7 +69,11 @@ export default function EditableText({
             onClick={handleClick}
             suppressHydrationWarning
         >
-            {visibleText}
+            {isRichEntry ? (
+                <LuminaTextRenderer value={rawEntry} fallback={fallback} mode="inline" inline />
+            ) : (
+                visibleText
+            )}
         </span>
     );
 }

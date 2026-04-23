@@ -739,6 +739,66 @@ export default function ClientEngine({ children, initialLanguage }) {
         });
     }, { dependencies: [pathname] });
 
+    // --- 3b. Reveal Safety Net ---
+    // After router.refresh() (e.g. login, cart updates) the pathname does not change,
+    // so the GSAP timeline above does not re-run. New DOM nodes that ship with
+    // .hero-title (translate-y-full), .hero-sub (opacity-0), or .reveal-text
+    // (opacity-0 translate-y-8) would otherwise stay invisible until a hard refresh.
+    // Watch for newly-mounted ones and animate them in.
+    useEffect(() => {
+        const REVEALED_ATTR = 'data-lumina-revealed';
+
+        const revealHeroTitle = (element) => {
+            if (element.getAttribute(REVEALED_ATTR)) return;
+            element.setAttribute(REVEALED_ATTR, 'true');
+            gsap.to(element, { y: '0%', duration: 1.2, ease: 'power4.out' });
+        };
+
+        const revealHeroSub = (element) => {
+            if (element.getAttribute(REVEALED_ATTR)) return;
+            element.setAttribute(REVEALED_ATTR, 'true');
+            gsap.to(element, { opacity: 1, duration: 1.2, ease: 'power3.out' });
+        };
+
+        const revealOnScroll = (element) => {
+            if (element.getAttribute(REVEALED_ATTR)) return;
+            element.setAttribute(REVEALED_ATTR, 'true');
+            gsap.to(element, {
+                y: 0,
+                opacity: 1,
+                duration: 1.2,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: element, start: 'top 90%' },
+            });
+        };
+
+        const sweep = (root) => {
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            root.querySelectorAll(`.hero-title:not([${REVEALED_ATTR}])`).forEach(revealHeroTitle);
+            root.querySelectorAll(`.hero-sub:not([${REVEALED_ATTR}])`).forEach(revealHeroSub);
+            root.querySelectorAll(`.reveal-text:not([${REVEALED_ATTR}])`).forEach(revealOnScroll);
+        };
+
+        // The original useGSAP timeline above handles the initial DOM (rendered on mount).
+        // The MutationObserver below handles elements added AFTER the initial render —
+        // for example, the account dashboard appearing after login, or cart items added later.
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType !== 1) return;
+                    if (node.classList?.contains('hero-title')) revealHeroTitle(node);
+                    if (node.classList?.contains('hero-sub')) revealHeroSub(node);
+                    if (node.classList?.contains('reveal-text')) revealOnScroll(node);
+                    sweep(node);
+                });
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => observer.disconnect();
+    }, []);
+
     // --- 4. Page Transition Interceptor ---
     useEffect(() => {
         const handleLinkClick = (event) => {

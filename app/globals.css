@@ -697,3 +697,30 @@ body {
         max-height: none;
     }
 }
+
+/* ===== Lumina Text Editor (TipTap) surface styles ===== */
+/* These styles only apply inside the admin editor surface so the live site is unaffected. */
+.lumina-text-editor .lumina-text-surface { font-family: var(--font-sans); line-height: 1.55; }
+.lumina-text-editor .lumina-text-surface p { margin: 0 0 0.6rem 0; }
+.lumina-text-editor .lumina-text-surface p:last-child { margin-bottom: 0; }
+.lumina-text-editor .lumina-text-surface h1 { font-family: var(--font-serif); font-weight: 300; font-size: 2.1rem; line-height: 1.05; margin: 0.4rem 0 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.lumina-text-editor .lumina-text-surface h2 { font-family: var(--font-serif); font-weight: 300; font-size: 1.7rem; line-height: 1.1; margin: 0.4rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.lumina-text-editor .lumina-text-surface h3 { font-family: var(--font-serif); font-weight: 400; font-size: 1.35rem; line-height: 1.15; margin: 0.4rem 0 0.4rem; }
+.lumina-text-editor .lumina-text-surface ul { list-style: disc; padding-left: 1.4rem; margin: 0.4rem 0; }
+.lumina-text-editor .lumina-text-surface ol { list-style: decimal; padding-left: 1.4rem; margin: 0.4rem 0; }
+.lumina-text-editor .lumina-text-surface li { margin: 0.15rem 0; }
+.lumina-text-editor .lumina-text-surface blockquote { border-left: 2px solid rgba(255,255,255,0.18); padding-left: 0.9rem; color: rgba(255,255,255,0.75); font-style: italic; margin: 0.6rem 0; }
+.lumina-text-editor .lumina-text-surface a { color: #c8b893; text-decoration: underline; text-underline-offset: 0.18em; }
+.lumina-text-editor .lumina-text-surface strong { font-weight: 600; }
+.lumina-text-editor .lumina-text-surface em { font-style: italic; }
+.lumina-text-editor .lumina-text-surface u { text-decoration: underline; text-underline-offset: 0.18em; }
+.lumina-text-editor .lumina-text-surface s { text-decoration: line-through; }
+.lumina-text-editor .lumina-text-surface .ProseMirror-focused { outline: none; }
+
+/* Live site rendering of saved Lumina text. Inherit ambient typography but
+   ensure inline marks display correctly even where the parent strips them. */
+.lumina-text-content a { text-decoration: underline; text-underline-offset: 0.18em; }
+.lumina-text-content strong { font-weight: 600; }
+.lumina-text-content em { font-style: italic; }
+.lumina-text-content u { text-decoration: underline; text-underline-offset: 0.18em; }
+.lumina-text-content s { text-decoration: line-through; }

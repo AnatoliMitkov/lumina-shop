@@ -3,8 +3,10 @@
 import { useRef } from 'react';
 import { DEFAULT_LANGUAGE, resolveLocalizedValue } from '../../utils/language';
 import { resolveSiteCopyRichTextEntry } from '../../utils/site-copy';
+import { isLuminaTextValue } from '../../utils/lumina-text';
 import { useSiteCopy } from './SiteCopyProvider';
 import SiteCopyRichTextContent from './SiteCopyRichTextContent';
+import LuminaTextRenderer from './LuminaTextRenderer';
 
 export default function EditableRichText({
     contentKey,
@@ -20,10 +22,12 @@ export default function EditableRichText({
     const containerRef = useRef(null);
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
+    const rawEntry = context?.getRawEntry?.(contentKey);
+    const isLuminaEntry = isLuminaTextValue(rawEntry);
     const resolvedDocument = context
         ? context.resolveRichTextEntry(contentKey, fallback)
         : resolveSiteCopyRichTextEntry(undefined, resolveLocalizedValue(fallback, DEFAULT_LANGUAGE));
-    const hasVisibleContent = resolvedDocument.blocks.some((block) => String(block.text || '').trim());
+    const hasVisibleContent = isLuminaEntry || resolvedDocument.blocks.some((block) => String(block.text || '').trim());
     const highlightClassName = isAdmin && isEditMode
         ? 'rounded-[0.8rem] outline outline-1 outline-offset-[3px] outline-[#1C1C1C]/18 bg-[#EFE7DA]/20 cursor-pointer'
         : '';
@@ -71,14 +75,27 @@ export default function EditableRichText({
             suppressHydrationWarning
         >
             {hasVisibleContent ? (
-                <SiteCopyRichTextContent
-                    document={resolvedDocument}
-                    className="flex flex-col gap-4"
-                    blockBaseClassName={blockBaseClassName}
-                    blockClassNames={blockClassNames}
-                    sizeClassNames={sizeClassNames}
-                    listClassName={listClassName}
-                />
+                isLuminaEntry ? (
+                    <LuminaTextRenderer
+                        value={rawEntry}
+                        fallback={fallback}
+                        mode="block"
+                        className="flex flex-col gap-4"
+                        blockBaseClassName={blockBaseClassName}
+                        blockClassNames={blockClassNames}
+                        sizeClassNames={sizeClassNames}
+                        listClassName={listClassName}
+                    />
+                ) : (
+                    <SiteCopyRichTextContent
+                        document={resolvedDocument}
+                        className="flex flex-col gap-4"
+                        blockBaseClassName={blockBaseClassName}
+                        blockClassNames={blockClassNames}
+                        sizeClassNames={sizeClassNames}
+                        listClassName={listClassName}
+                    />
+                )
             ) : (
                 isAdmin && isEditMode ? <span>[Empty content]</span> : null
             )}

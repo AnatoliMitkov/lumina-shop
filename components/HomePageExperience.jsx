@@ -129,6 +129,16 @@ const heroTitleSizeClassNames = {
     display: 'storefront-home-display',
 };
 
+const heroTitleBlockClassNames = {
+    heading1: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]',
+    heading2: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.92] text-[#EFECE8]',
+    heading3: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.96] text-[#EFECE8]',
+    paragraph: 'max-w-[24rem] font-sans text-[#EFECE8] normal-case tracking-[0.14em] leading-[1.35]',
+    quote: 'max-w-[24rem] border-l border-white/20 pl-4 font-sans italic text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.3]',
+    'bullet-list': 'max-w-[24rem] list-disc pl-5 space-y-2 font-sans text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.35]',
+    'numbered-list': 'max-w-[24rem] list-decimal pl-5 space-y-2 font-sans text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.35]',
+};
+
 const heroSubtextSizeClassNames = {
     xs: 'text-[11px] md:text-xs',
     sm: 'text-xs md:text-sm',
@@ -265,7 +275,8 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                     fallback={heroTitleLineOneFallback}
                                     editorLabel="Home hero title line one"
                                     className="hero-title translate-y-full"
-                                    blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]"
+                                    blockBaseClassName="text-[#EFECE8]"
+                                    blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>
@@ -275,7 +286,8 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                     fallback={heroTitleLineTwoFallback}
                                     editorLabel="Home hero title line two"
                                     className="hero-title storefront-home-shift translate-y-full"
-                                    blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]"
+                                    blockBaseClassName="text-[#EFECE8]"
+                                    blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>

@@ -89,36 +89,83 @@ function RichTextBlockComposer({
     onRemoveBlock,
 }) {
     const editorRef = useRef(null);
+    const isComposingRef = useRef(false);
     const isListBlock = block.type === 'bullet-list' || block.type === 'numbered-list';
-    const editorValue = resolveBlockEditorText(block.text, isListBlock);
     const toolbarHint = isListBlock
         ? 'Enter adds a new list item line. Formatting applies to the whole block.'
         : 'Use the toolbar or keyboard shortcuts. Formatting applies to the whole block.';
 
+    // Sync external text changes into the contentEditable surface only when the
+    // user is NOT actively editing it. Touching innerText while focused would
+    // collapse the selection to the start of the node, causing each newly typed
+    // character to be inserted at position 0 (which produced the "reversed"
+    // typing glitch). We also skip while an IME composition is in progress so
+    // Cyrillic / Bulgarian input keeps working.
     useEffect(() => {
-        if (!editorRef.current) {
+        const surface = editorRef.current;
+        if (!surface) {
+            return;
+        }
+
+        if (typeof document !== 'undefined' && document.activeElement === surface) {
+            return;
+        }
+
+        if (isComposingRef.current) {
             return;
         }
 
         const nextValue = resolveBlockEditorText(block.text, isListBlock);
 
-        if (editorRef.current.innerText !== nextValue) {
-            editorRef.current.innerText = nextValue;
+        if (surface.innerText !== nextValue) {
+            surface.innerText = nextValue;
         }
     }, [block.text, isListBlock]);
 
     const syncFromSurface = () => {
+        if (isComposingRef.current) {
+            return;
+        }
+
         if (!editorRef.current) {
             return;
         }
 
-        onUpdateBlock(block.id, (currentBlock) => ({
-            ...currentBlock,
-            text: editorRef.current.innerText.replace(/\r\n?/g, '\n'),
-        }));
+        const nextText = editorRef.current.innerText.replace(/\r\n?/g, '\n');
+
+        onUpdateBlock(block.id, (currentBlock) => {
+            if (currentBlock.text === nextText) {
+                return currentBlock;
+            }
+            return { ...currentBlock, text: nextText };
+        });
+    };
+
+    const handleCompositionStart = () => {
+        isComposingRef.current = true;
+    };
+
+    const handleCompositionEnd = () => {
+        isComposingRef.current = false;
+        syncFromSurface();
     };
 
     const handleKeyboardShortcut = (event) => {
+        // Normalize Enter so the browser doesn't insert a new <div> block,
+        // which would break inherited formatting (especially underline) on the
+        // following line. We insert a clean <br> via execCommand so the editor
+        // stays a single flow and styles propagate consistently.
+        if (event.key === 'Enter' && !event.shiftKey && !isListBlock) {
+            event.preventDefault();
+            if (typeof document !== 'undefined' && document.queryCommandSupported && document.queryCommandSupported('insertLineBreak')) {
+                document.execCommand('insertLineBreak');
+            } else if (typeof document !== 'undefined') {
+                document.execCommand('insertHTML', false, '<br><br>');
+            }
+            // Let the input event fire and sync back to state
+            return;
+        }
+
         if (!(event.metaKey || event.ctrlKey)) {
             return;
         }
@@ -266,15 +313,20 @@ function RichTextBlockComposer({
                         onInput={syncFromSurface}
                         onBlur={syncFromSurface}
                         onKeyDown={handleKeyboardShortcut}
+                        onCompositionStart={handleCompositionStart}
+                        onCompositionEnd={handleCompositionEnd}
                         className={`min-h-[12rem] rounded-[1.2rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/26 xl:min-h-[15rem] ${PREVIEW_BLOCK_CLASS_NAMES[block.type] || PREVIEW_BLOCK_CLASS_NAMES.paragraph} ${PREVIEW_SIZE_CLASS_NAMES[block.size] || PREVIEW_SIZE_CLASS_NAMES.body}`}
                         style={{
                             color: block.color || undefined,
                             textAlign: block.align,
                             whiteSpace: 'pre-wrap',
+                            fontWeight: block.bold ? 600 : undefined,
+                            fontStyle: block.italic ? 'italic' : undefined,
+                            textDecoration: block.underline ? 'underline' : undefined,
+                            textDecorationSkipInk: block.underline ? 'auto' : undefined,
+                            textUnderlineOffset: block.underline ? '0.18em' : undefined,
                         }}
-                    >
-                        {editorValue}
-                    </div>
+                    />
 
                     <details className="rounded-[1rem] border border-white/10 bg-white/[0.02] px-4 py-3 text-white/62">
                         <summary className="cursor-pointer text-[10px] uppercase tracking-[0.24em] text-white/48">Plain Text View</summary>
