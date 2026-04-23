@@ -1,9 +1,12 @@
 "use client";
 
+import '../../i18n';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import EditableMediaAsset from './EditableMediaAsset';
 import SiteCopyRichTextEditor from './SiteCopyRichTextEditor';
 import { detectEditableMediaKind } from './media-kind';
+import { DEFAULT_LANGUAGE, normalizeLanguage } from '../../utils/language';
 import {
     createDefaultMediaSettings,
     extractSiteCopyPlainText,
@@ -39,6 +42,43 @@ function areSiteCopyEntryMapsEqual(leftEntries = {}, rightEntries = {}) {
     }
 
     return leftKeys.every((key) => leftEntries[key] === rightEntries[key]);
+}
+
+function hasSiteCopyEntry(entries = {}, key = '') {
+    return Boolean(key) && Object.prototype.hasOwnProperty.call(entries || {}, key);
+}
+
+function getLocalizedSiteCopyKey(key = '', language) {
+    const normalizedLanguage = normalizeLanguage(language);
+
+    if (!key || !normalizedLanguage || normalizedLanguage === DEFAULT_LANGUAGE) {
+        return key;
+    }
+
+    return `${normalizedLanguage}::${key}`;
+}
+
+function resolveLocalizedSiteCopyEntry(entries = {}, key = '', fallback = '', language) {
+    const localizedKey = getLocalizedSiteCopyKey(key, language);
+
+    if (localizedKey !== key && hasSiteCopyEntry(entries, localizedKey)) {
+        return {
+            value: entries[localizedKey],
+            storageKey: localizedKey,
+        };
+    }
+
+    if (hasSiteCopyEntry(entries, key)) {
+        return {
+            value: entries[key],
+            storageKey: localizedKey || key,
+        };
+    }
+
+    return {
+        value: fallback,
+        storageKey: localizedKey || key,
+    };
 }
 
 const MEDIA_PRESET_OPTIONS = [
@@ -594,7 +634,8 @@ function SiteCopyEditor({
     );
 }
 
-export default function SiteCopyProvider({ children, initialEntries = {}, isAdmin = false }) {
+export default function SiteCopyProvider({ children, initialEntries = {}, isAdmin = false, initialLanguage }) {
+    const { i18n } = useTranslation();
     const [entries, setEntries] = useState(initialEntries);
     const [isEditMode, setIsEditMode] = useState(false);
     const [hoveredEntry, setHoveredEntry] = useState(null);
@@ -608,6 +649,8 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const [saveError, setSaveError] = useState('');
     const hoverClearTimeoutRef = useRef(null);
     const lastInitialEntriesRef = useRef(initialEntries);
+    const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
+    const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
 
     useEffect(() => {
         if (areSiteCopyEntryMapsEqual(lastInitialEntriesRef.current, initialEntries)) {
@@ -625,6 +668,22 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, [isAdmin, isEditMode]);
 
     useEffect(() => {
+        setActiveLanguage(normalizedInitialLanguage);
+    }, [normalizedInitialLanguage]);
+
+    useEffect(() => {
+        const handleLanguageChanged = (language) => {
+            setActiveLanguage(normalizeLanguage(language) || normalizedInitialLanguage);
+        };
+
+        i18n.on('languageChanged', handleLanguageChanged);
+
+        return () => {
+            i18n.off('languageChanged', handleLanguageChanged);
+        };
+    }, [i18n, normalizedInitialLanguage]);
+
+    useEffect(() => {
         return () => {
             if (hoverClearTimeoutRef.current) {
                 window.clearTimeout(hoverClearTimeoutRef.current);
@@ -633,37 +692,47 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, []);
 
     const resolveText = useCallback((key, fallback) => {
-        if (Object.prototype.hasOwnProperty.call(entries, key)) {
-            return extractSiteCopyPlainText(entries[key], fallback);
-        }
+        const resolvedEntry = resolveLocalizedSiteCopyEntry(entries, key, fallback, activeLanguage);
 
-        return fallback;
-    }, [entries]);
+        return extractSiteCopyPlainText(resolvedEntry.value, fallback);
+    }, [activeLanguage, entries]);
 
-    const resolveRichTextEntry = useCallback((key, fallback) => resolveSiteCopyRichTextEntry(
-        Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
-        fallback,
-    ), [entries]);
+    const resolveRichTextEntry = useCallback((key, fallback) => {
+        const resolvedEntry = resolveLocalizedSiteCopyEntry(entries, key, fallback, activeLanguage);
+
+        return resolveSiteCopyRichTextEntry(resolvedEntry.value, fallback);
+    }, [activeLanguage, entries]);
 
     const resolveMedia = useCallback((key, fallback) => {
         return resolveSiteCopyMediaEntry(
-            Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
+            hasSiteCopyEntry(entries, key) ? entries[key] : fallback,
             fallback,
         ).src;
     }, [entries]);
 
     const resolveMediaEntry = useCallback((key, fallback, defaultMediaSettings) => resolveSiteCopyMediaEntry(
-        Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : fallback,
+        hasSiteCopyEntry(entries, key) ? entries[key] : fallback,
         fallback,
         defaultMediaSettings,
     ), [entries]);
 
     const openEditor = useCallback((entry) => {
-        setActiveEntry(entry);
+        const resolvedEntry = entry.entryType === 'media'
+            ? {
+                value: hasSiteCopyEntry(entries, entry.key) ? entries[entry.key] : entry.fallback,
+                storageKey: entry.key,
+            }
+            : resolveLocalizedSiteCopyEntry(entries, entry.key, entry.fallback, activeLanguage);
+
+        setActiveEntry({
+            ...entry,
+            storageKey: resolvedEntry.storageKey,
+            language: activeLanguage,
+        });
         setIsUploadingMedia(false);
         if (entry.entryType === 'media') {
             setDraftMediaValue(resolveSiteCopyMediaEntry(
-                Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback,
+                resolvedEntry.value,
                 entry.fallback,
                 entry.defaultMediaSettings || {},
             ));
@@ -671,21 +740,19 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
             setDraftRichTextValue(null);
         } else if (entry.entryType === 'rich-text') {
             setDraftRichTextValue(resolveSiteCopyRichTextEntry(
-                Object.prototype.hasOwnProperty.call(entries, entry.key) ? entries[entry.key] : entry.fallback,
+                resolvedEntry.value,
                 entry.fallback,
             ));
             setDraftTextValue('');
             setDraftMediaValue(null);
         } else {
-            setDraftTextValue(Object.prototype.hasOwnProperty.call(entries, entry.key)
-                ? extractSiteCopyPlainText(entries[entry.key], entry.fallback)
-                : entry.fallback);
+            setDraftTextValue(extractSiteCopyPlainText(resolvedEntry.value, entry.fallback));
             setDraftRichTextValue(null);
             setDraftMediaValue(null);
         }
         setUploadFeedback({ type: 'idle', message: '' });
         setSaveError('');
-    }, [entries]);
+    }, [activeLanguage, entries]);
 
     const registerHoverTarget = useCallback((entry) => {
         if (!isAdmin || !isEditMode || !entry?.element) {
@@ -799,12 +866,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                 : activeEntry.entryType === 'rich-text'
                     ? serializeSiteCopyRichTextEntry(draftRichTextValue, activeEntry.fallback)
                     : draftTextValue;
+            const entryStorageKey = activeEntry.storageKey || activeEntry.key;
             const response = await fetch('/api/admin/site-copy', {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ key: activeEntry.key, value: nextValue }),
+                body: JSON.stringify({ key: entryStorageKey, value: nextValue }),
             });
             const data = await response.json().catch(() => ({}));
 
@@ -814,7 +882,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
             setEntries((currentEntries) => ({
                 ...currentEntries,
-                [activeEntry.key]: data.entry?.value ?? nextValue,
+                [entryStorageKey]: data.entry?.value ?? nextValue,
             }));
             setActiveEntry(null);
             setUploadFeedback({ type: 'idle', message: '' });

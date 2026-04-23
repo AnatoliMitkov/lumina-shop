@@ -1,5 +1,5 @@
 import './globals.css';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import ClientEngine from '../components/ClientEngine';
 import { CartProvider } from '../components/CartProvider';
 import SiteCopyProvider from '../components/site-copy/SiteCopyProvider';
@@ -7,6 +7,15 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { createClient, isSupabaseConfigured, resolveSupabaseWithTimeout } from '../utils/supabase/server';
 import { isSiteCopySetupError, toSiteCopyMap } from '../utils/site-copy';
+import {
+  DEFAULT_LANGUAGE,
+  detectPreferredLanguageFromHeader,
+  LANGUAGE_COOKIE_KEY,
+  LANGUAGE_COOKIE_MAX_AGE,
+  LANGUAGE_STORAGE_KEY,
+  normalizeLanguage,
+  SUPPORTED_LANGUAGES,
+} from '../utils/language';
 import { absoluteSiteUrl, getSiteUrl } from '../utils/seo';
 
 const siteUrl = getSiteUrl();
@@ -85,12 +94,11 @@ export const viewport = {
   viewportFit: 'cover',
 };
 
-async function loadSiteCopyState() {
+async function loadSiteCopyState(cookieStore) {
   if (!isSupabaseConfigured()) {
     return { initialEntries: {}, isAdmin: false };
   }
 
-  const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const authResult = await resolveSupabaseWithTimeout(
     () => supabase.auth.getUser(),
@@ -123,10 +131,97 @@ async function loadSiteCopyState() {
 }
 
 export default async function RootLayout({ children }) {
-  const { initialEntries, isAdmin } = await loadSiteCopyState();
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const storedLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value);
+  const browserLanguage = detectPreferredLanguageFromHeader(headerStore.get('accept-language'));
+  const initialLanguage = storedLanguage || browserLanguage || DEFAULT_LANGUAGE;
+  const { initialEntries, isAdmin } = await loadSiteCopyState(cookieStore);
+  const languageBootstrapScript = `(function () {
+  try {
+    var defaultLanguage = ${JSON.stringify(DEFAULT_LANGUAGE)};
+    var storageKey = ${JSON.stringify(LANGUAGE_STORAGE_KEY)};
+    var cookieKey = ${JSON.stringify(LANGUAGE_COOKIE_KEY)};
+    var cookieMaxAge = ${LANGUAGE_COOKIE_MAX_AGE};
+    var supportedLanguages = ${JSON.stringify(SUPPORTED_LANGUAGES)};
+    var seededLanguage = ${JSON.stringify(initialLanguage)};
+
+    function normalizeLanguage(value) {
+      if (typeof value !== 'string') {
+        return null;
+      }
+
+      var normalizedValue = value.trim().toLowerCase();
+
+      if (!normalizedValue) {
+        return null;
+      }
+
+      var baseLanguage = normalizedValue.split(/[-_]/)[0];
+
+      return supportedLanguages.indexOf(baseLanguage) >= 0 ? baseLanguage : null;
+    }
+
+    function readCookie(name) {
+      var prefix = name + '=';
+      var parts = String(document.cookie || '').split(';');
+
+      for (var index = 0; index < parts.length; index += 1) {
+        var part = parts[index].trim();
+
+        if (part.indexOf(prefix) === 0) {
+          return decodeURIComponent(part.slice(prefix.length));
+        }
+      }
+
+      return '';
+    }
+
+    var storedLanguage = '';
+
+    try {
+      storedLanguage = window.localStorage.getItem(storageKey) || '';
+    } catch (error) {
+      storedLanguage = '';
+    }
+
+    var cookieLanguage = readCookie(cookieKey);
+    var preferredLanguage = normalizeLanguage(seededLanguage)
+      || normalizeLanguage(cookieLanguage)
+      || normalizeLanguage(storedLanguage)
+      || normalizeLanguage(window.__luminaInitialLanguage);
+
+    if (!preferredLanguage) {
+      var browserLanguages = [navigator.language].concat(navigator.languages || []);
+
+      for (var languageIndex = 0; languageIndex < browserLanguages.length; languageIndex += 1) {
+        preferredLanguage = normalizeLanguage(browserLanguages[languageIndex]);
+
+        if (preferredLanguage) {
+          break;
+        }
+      }
+    }
+
+    preferredLanguage = preferredLanguage || defaultLanguage;
+    window.__luminaInitialLanguage = preferredLanguage;
+    document.documentElement.lang = preferredLanguage;
+
+    try {
+      window.localStorage.setItem(storageKey, preferredLanguage);
+    } catch (error) {
+      // Ignore localStorage write failures.
+    }
+
+    document.cookie = cookieKey + '=' + encodeURIComponent(preferredLanguage) + '; path=/; max-age=' + cookieMaxAge + '; SameSite=Lax';
+  } catch (error) {
+    window.__luminaInitialLanguage = ${JSON.stringify(initialLanguage)};
+    document.documentElement.lang = ${JSON.stringify(initialLanguage)};
+  }
+})();`;
 
   return (
-    <html lang="en" data-page-motion="on" suppressHydrationWarning>
+    <html lang={initialLanguage} data-page-motion="on" suppressHydrationWarning>
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS1V41ZYQ4" />
         <script
@@ -141,6 +236,11 @@ gtag('config', 'G-HS1V41ZYQ4');`,
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: languageBootstrapScript,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function () {
@@ -159,9 +259,9 @@ gtag('config', 'G-HS1V41ZYQ4');`,
       </head>
       
       <body suppressHydrationWarning className="bg-[#1C1C1C] text-[#1C1C1C] font-sans overflow-x-hidden selection:bg-[#1C1C1C] selection:text-[#EFECE8]">
-        <SiteCopyProvider initialEntries={initialEntries} isAdmin={isAdmin}>
+        <SiteCopyProvider initialEntries={initialEntries} isAdmin={isAdmin} initialLanguage={initialLanguage}>
           <CartProvider>
-            <ClientEngine>
+            <ClientEngine initialLanguage={initialLanguage}>
               {children}
             </ClientEngine>
           </CartProvider>

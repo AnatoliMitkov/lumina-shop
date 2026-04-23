@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import EditableRichText from './site-copy/EditableRichText';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { PAGE_REVEAL_COMPLETE_EVENT } from '../utils/page-motion';
 import { formatPromotionCurrency, normalizePromotionCode } from '../utils/promotions';
+import { createSiteCopyRichTextDocument } from '../utils/site-copy';
 
 const FEATURED_PROMO_CODE_KEY = 'promo_popup.featured_code';
 const SESSION_DISMISS_KEY = 'lumina-featured-promo-dismissed-code';
@@ -13,6 +16,21 @@ const SESSION_PAGE_COUNT_KEY = 'lumina-featured-promo-page-count';
 const SESSION_LAST_PATH_KEY = 'lumina-featured-promo-last-path';
 const VISITOR_DWELL_DELAY_MS = 10000;
 const VISITOR_PAGE_VIEW_THRESHOLD = 2;
+const PROMO_POPUP_HEADLINE_FALLBACK = createSiteCopyRichTextDocument([
+    {
+        type: 'heading1',
+        size: 'display',
+        text: 'A measured welcome, with a code worth keeping.',
+    },
+]);
+const PROMO_POPUP_HEADLINE_SIZE_CLASS_NAMES = {
+    xs: 'text-xl min-[420px]:text-2xl sm:text-[1.8rem] md:text-[2.25rem]',
+    sm: 'text-[1.4rem] min-[420px]:text-[1.55rem] sm:text-[2rem] md:text-[2.7rem]',
+    body: 'text-[1.56rem] min-[420px]:text-[1.72rem] sm:text-[2.35rem] md:text-[3.05rem]',
+    lg: 'text-[1.68rem] min-[420px]:text-[1.92rem] sm:text-[2.8rem] md:text-[3.8rem]',
+    xl: 'text-[1.78rem] min-[420px]:text-[2.05rem] sm:text-[3.4rem] md:text-[4.5rem]',
+    display: 'text-[1.78rem] min-[420px]:text-[2.05rem] sm:text-[3.4rem] md:text-[4.5rem] xl:text-[5rem]',
+};
 
 function parseStoredPageCount(value) {
     const parsedValue = Number.parseInt(String(value || ''), 10);
@@ -163,6 +181,7 @@ function CloseIcon() {
 }
 
 export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
+    const { t } = useTranslation();
     const siteCopy = useSiteCopy();
     const isAdmin = Boolean(siteCopy?.isAdmin);
     const isAdminEditing = Boolean(siteCopy?.isAdmin && siteCopy?.isEditMode);
@@ -530,6 +549,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
     }
 
     return (
+        <>
         <div className={`fixed inset-0 z-[245] flex items-start justify-center overflow-y-auto p-2 sm:items-center sm:p-4 md:p-8 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(237,212,180,0.18),transparent_36%),linear-gradient(180deg,rgba(8,8,10,0.22),rgba(8,8,10,0.72))] backdrop-blur-[10px]" onClick={handleDismiss}></div>
 
@@ -570,9 +590,19 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                         </div>
 
                         <div className="mt-5 max-w-[35rem] sm:mt-10">
-                            <h2 className="font-serif text-[1.78rem] font-light uppercase leading-[0.95] tracking-[0.08em] text-[#FFF7F0] min-[420px]:text-[2.05rem] sm:text-[3.4rem] md:text-[4.5rem]">
-                                <EditableText contentKey="promo_popup.headline" fallback="A measured welcome, with a code worth keeping." editorLabel="Promo popup headline" />
-                            </h2>
+                            <EditableRichText
+                                contentKey="promo_popup.headline"
+                                fallback={PROMO_POPUP_HEADLINE_FALLBACK}
+                                editorLabel="Promo popup headline"
+                                className="max-w-[35rem]"
+                                blockBaseClassName="font-serif font-light uppercase leading-[0.95] tracking-[0.08em] text-[#FFF7F0]"
+                                blockClassNames={{
+                                    quote: 'font-serif font-light italic leading-[1.02] tracking-[0.04em] text-[#FFF7F0]/86 border-l border-white/20 pl-5',
+                                    'bullet-list': 'font-serif font-light leading-[1.02] tracking-[0.08em] text-[#FFF7F0] list-disc pl-6',
+                                    'numbered-list': 'font-serif font-light leading-[1.02] tracking-[0.08em] text-[#FFF7F0] list-decimal pl-6',
+                                }}
+                                sizeClassNames={PROMO_POPUP_HEADLINE_SIZE_CLASS_NAMES}
+                            />
                             <p className="mt-2.5 max-w-[31rem] text-[12px] leading-relaxed text-[#F7EFE6]/76 sm:mt-4 sm:text-sm md:mt-5 md:text-[15px]">
                                 <EditableText contentKey="promo_popup.body" fallback="Claim the featured studio code at checkout while the window is still open. The popup stays elegant, but the value is immediate." editorLabel="Promo popup body" />
                             </p>
@@ -624,7 +654,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                         onClick={handleCopyCode}
                                         className="hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] bg-[#F5D5B4] px-5 text-[11px] uppercase tracking-[0.2em] text-[#141416] transition-colors hover:bg-[#FFF7F0] sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem]"
                                     >
-                                        {copyFeedback === 'success' ? 'Copied' : copyFeedback === 'error' ? 'Copy Failed' : 'Copy Code'}
+                                        {copyFeedback === 'success' ? t('copied') : copyFeedback === 'error' ? t('copy_failed') : t('copy_code')}
                                     </button>
                                 )}
                             </div>
@@ -701,5 +731,6 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                 </div>
             </section>
         </div>
+        </>
     );
 }

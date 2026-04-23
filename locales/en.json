@@ -1,0 +1,9 @@
+{
+  "promo_code": "Promo Code",
+  "copy_code": "Copy Code",
+  "copied": "Copied",
+  "copy_failed": "Copy Failed",
+  "apply": "Apply",
+  "invalid_code": "Invalid promo code.",
+  "success": "Promo code applied successfully!"
+}

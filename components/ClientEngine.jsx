@@ -1,6 +1,8 @@
 "use client";
 
+import '../i18n';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePathname, useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -10,6 +12,13 @@ import { useCart } from './CartProvider';
 import PromoCodePopup from './PromoCodePopup';
 import EditableText from './site-copy/EditableText';
 import { formatCustomMeasurementSummary } from '../utils/cart';
+import {
+    applyPreferredLanguage,
+    changeSiteLanguage,
+    DEFAULT_LANGUAGE,
+    normalizeLanguage,
+    syncDocumentLanguage,
+} from '../i18n';
 import {
     PAGE_MOTION_STORAGE_KEY,
     PAGE_REVEAL_COMPLETE_EVENT,
@@ -63,7 +72,8 @@ function buildCategoryMenuItems(values = []) {
     return [...seededMatches, ...customMatches];
 }
 
-export default function ClientEngine({ children }) {
+export default function ClientEngine({ children, initialLanguage }) {
+    const { i18n } = useTranslation();
     const pathname = usePathname();
     const router = useRouter();
     const { cartItems, removeFromCart, cartTotal, isCartOpen, setIsCartOpen, cartPersistenceMode } = useCart();
@@ -76,6 +86,8 @@ export default function ClientEngine({ children }) {
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
     const [categoryMenuItems, setCategoryMenuItems] = useState(() => PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
     const [isPromoPopupOpen, setIsPromoPopupOpen] = useState(false);
+    const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
+    const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const isImmersiveRoute = isSpotlightPath(pathname);
     const drawerNote = cartPersistenceMode === 'supabase'
@@ -120,6 +132,30 @@ export default function ClientEngine({ children }) {
     const desktopCollectionsMenuRef = useRef(null);
     const desktopCollectionsCloseTimeoutRef = useRef(null);
     const desktopCollectionsUnmountTimeoutRef = useRef(null);
+
+    useEffect(() => {
+        setActiveLanguage(normalizedInitialLanguage);
+        syncDocumentLanguage(normalizedInitialLanguage);
+    }, [normalizedInitialLanguage]);
+
+    useEffect(() => {
+        applyPreferredLanguage();
+    }, []);
+
+    useEffect(() => {
+        const handleLanguageChanged = (language) => {
+            const resolvedLanguage = normalizeLanguage(language) || normalizedInitialLanguage;
+
+            setActiveLanguage(resolvedLanguage);
+            syncDocumentLanguage(resolvedLanguage);
+        };
+
+        i18n.on('languageChanged', handleLanguageChanged);
+
+        return () => {
+            i18n.off('languageChanged', handleLanguageChanged);
+        };
+    }, [i18n, normalizedInitialLanguage]);
 
     useEffect(() => {
         const lenis = new Lenis({
@@ -1002,6 +1038,25 @@ export default function ClientEngine({ children }) {
                                 </span>
                                 <span suppressHydrationWarning>{hasMounted && !isPageMotionEnabled ? 'Off' : 'On'}</span>
                             </button>
+                            {/* Language Switcher with Flags */}
+                            <div className="flex items-center gap-2 ml-6">
+                                <button
+                                    aria-label="Switch to English"
+                                    onClick={() => void changeSiteLanguage('en')}
+                                    className={`hover-target rounded-full border-2 ${activeLanguage === 'en' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
+                                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <span role="img" aria-label="English" style={{ fontSize: 22 }}>🇬🇧</span>
+                                </button>
+                                <button
+                                    aria-label="Switch to Bulgarian"
+                                    onClick={() => void changeSiteLanguage('bg')}
+                                    className={`hover-target rounded-full border-2 ${activeLanguage === 'bg' ? 'border-white' : 'border-transparent'} bg-white/10 p-1 transition-colors`}
+                                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <span role="img" aria-label="Bulgarian" style={{ fontSize: 22 }}>🇧🇬</span>
+                                </button>
+                            </div>
                         </div>
                         <p className="hover-target text-center md:text-right"><EditableText contentKey="shell.footer.credits" fallback="Crafted by Victoria" editorLabel="Footer credits" /></p>
                     </div>
