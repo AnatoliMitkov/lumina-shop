@@ -88,7 +88,7 @@ export default function ProductGallery({ productName, collection, category, gall
         return (
             <div className="border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-8 md:p-10 min-h-[32rem] flex items-end">
                 <div className="max-w-lg flex flex-col gap-4">
-                    <p className="text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/42">Product Imagery</p>
+                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.32em] text-[#1C1C1C]/42">Product Imagery</p>
                     <p className="font-serif text-3xl md:text-5xl font-light leading-tight uppercase tracking-[0.08em] text-[#1C1C1C]">Imagery for this piece is still being prepared.</p>
                 </div>
             </div>
@@ -256,7 +256,7 @@ export default function ProductGallery({ productName, collection, category, gall
                                     aria-pressed={isActive}
                                     className={`group shrink-0 text-left ${isActive ? 'opacity-100' : 'opacity-55 hover:opacity-100'}`}
                                 >
-                                    <span className="mb-2 block text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/42">{formatIndex(index + 1)}</span>
+                                    <span className="mb-2 block text-[11px] lg:text-[1rem] uppercase tracking-[0.26em] text-[#1C1C1C]/42">{formatIndex(index + 1)}</span>
                                     <span className={`block aspect-[4/5] w-20 overflow-hidden rounded-sm border bg-[#1C1C1C] transition-all duration-300 ${isActive ? 'border-[#1C1C1C]/28 shadow-[0_18px_34px_rgba(28,28,28,0.12)]' : 'border-[#1C1C1C]/10'}`}>
                                         <img src={image} alt={`${productName} thumbnail ${index + 1}`} className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" />
                                     </span>
@@ -267,7 +267,7 @@ export default function ProductGallery({ productName, collection, category, gall
                 )}
 
                 <div className="order-1 relative overflow-hidden rounded-sm border border-[#1C1C1C]/10 bg-[#F5F0EA] product-gallery-stage">
-                    <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
+                    <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
                         <span>{collection}</span>
                         <span>/</span>
                         <span>{category}</span>
@@ -284,7 +284,7 @@ export default function ProductGallery({ productName, collection, category, gall
                         </div>
                     )}
 
-                    <div className="absolute right-4 top-4 z-10 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
+                    <div className="absolute right-4 top-4 z-10 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
                         {formatIndex(activeIndex + 1)} / {formatIndex(images.length)}
                     </div>
 
@@ -297,7 +297,7 @@ export default function ProductGallery({ productName, collection, category, gall
                     >
                         <img key={`stage-${activeImage}`} src={activeImage} alt={productName} className="product-gallery-frame h-full w-full object-cover object-center transition-transform duration-[1800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06]" />
                         <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/28 via-transparent to-black/8"></span>
-                        <span className="pointer-events-none absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/24 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-white/76 backdrop-blur-sm">Open Frame</span>
+                        <span className="pointer-events-none absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/24 px-3 py-2 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-white/76 backdrop-blur-sm">Open Frame</span>
                     </button>
                 </div>
 
@@ -305,16 +305,16 @@ export default function ProductGallery({ productName, collection, category, gall
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
                     <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Gallery</p>
+                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Gallery</p>
                         <p className="font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] text-[#1C1C1C]">{images.length} frames</p>
                     </div>
                     <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Palette</p>
+                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Palette</p>
                         <p className="font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] text-[#1C1C1C]">{palette.length > 0 ? formatIndex(palette.length) : '01'}</p>
                     </div>
                     <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Tone Notes</p>
-                        <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{paletteLabel}</p>
+                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Tone Notes</p>
+                        <p className="text-base lg:text-[1.12rem] leading-relaxed text-[#1C1C1C]/58">{paletteLabel}</p>
                     </div>
                 </div>
             </section>
@@ -334,8 +334,8 @@ export default function ProductGallery({ productName, collection, category, gall
                     <div className="product-lightbox-panel mx-auto flex h-[100dvh] w-full max-w-[1820px] flex-col gap-4 overflow-hidden px-4 pb-4 pt-24 md:px-8 md:pb-6 md:pt-28 xl:px-12 xl:pb-8 xl:pt-32">
                         <div className="relative z-20 flex items-center justify-between gap-4 px-1 text-white md:px-2">
                             <div className="flex flex-col gap-2">
-                                <p className="text-[10px] uppercase tracking-[0.32em] text-white/45">Fullscreen Gallery</p>
-                                <div className="flex flex-wrap items-center gap-3 text-sm md:text-base uppercase tracking-[0.18em] text-white/78">
+                                <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.32em] text-white/45">Fullscreen Gallery</p>
+                                <div className="flex flex-wrap items-center gap-3 text-base lg:text-[1.1rem] uppercase tracking-[0.18em] text-white/78">
                                     <span>{productName}</span>
                                     <span className="text-white/35">{formatIndex(activeIndex + 1)} / {formatIndex(images.length)}</span>
                                 </div>
@@ -347,7 +347,7 @@ export default function ProductGallery({ productName, collection, category, gall
                                     event.stopPropagation();
                                     handleCloseLightbox();
                                 }}
-                                className="hover-target relative z-20 inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-5 text-[10px] uppercase tracking-[0.24em] text-white/74 transition-colors hover:bg-white hover:text-[#121211]"
+                                className="hover-target relative z-20 inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-5 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-white/74 transition-colors hover:bg-white hover:text-[#121211]"
                             >
                                 Close
                             </button>
@@ -396,8 +396,8 @@ export default function ProductGallery({ productName, collection, category, gall
 
                             <div className="hidden xl:flex min-h-0 flex-col gap-4 overflow-hidden xl:max-h-none">
                                 <div className="shrink-0 rounded-[1.5rem] border border-white/10 bg-white/[0.05] px-5 py-5 text-white">
-                                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/45 mb-3">Frame Notes</p>
-                                    <div className="flex flex-col gap-2 text-sm leading-relaxed text-white/72">
+                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.3em] text-white/45 mb-3">Frame Notes</p>
+                                    <div className="flex flex-col gap-2 text-base lg:text-[1.12rem] leading-relaxed text-white/72">
                                         <p>{collection} / {category}</p>
                                         <p>{paletteLabel}</p>
                                     </div>
@@ -405,7 +405,7 @@ export default function ProductGallery({ productName, collection, category, gall
 
                                 {hasMultipleImages && (
                                     <div className="flex min-h-0 flex-1 flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-4 overflow-hidden" data-lenis-prevent-wheel>
-                                        <div className="mb-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.28em] text-white/42">
+                                        <div className="mb-3 flex items-center justify-between gap-3 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-white/42">
                                             <span>Frames</span>
                                             <span>{formatIndex(images.length)}</span>
                                         </div>
@@ -422,7 +422,7 @@ export default function ProductGallery({ productName, collection, category, gall
                                                         aria-pressed={isActive}
                                                         className={`group shrink-0 text-left transition-opacity ${isActive ? 'opacity-100' : 'opacity-55 hover:opacity-100'}`}
                                                     >
-                                                        <span className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/45">{formatIndex(index + 1)}</span>
+                                                        <span className="mb-2 block text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-white/45">{formatIndex(index + 1)}</span>
                                                         <span className={`block overflow-hidden rounded-[1.1rem] border bg-black ${isActive ? 'border-white/22 shadow-[0_24px_50px_rgba(0,0,0,0.3)]' : 'border-white/10'}`}>
                                                             <img src={image} alt={`${productName} lightbox thumbnail ${index + 1}`} className="h-28 w-24 object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] xl:h-36 xl:w-full" />
                                                         </span>

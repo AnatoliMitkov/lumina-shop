@@ -17,16 +17,17 @@ export default function EditableText({
     const textRef = useRef(null);
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
+    const canEditText = isAdmin && isEditMode && Boolean(context?.canEditEntryType?.('text'));
     const rawEntry = context?.getRawEntry?.(contentKey);
     const isRichEntry = isLuminaTextValue(rawEntry);
     const resolvedText = context ? context.resolveText(contentKey, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
-    const visibleText = resolvedText === '' && isAdmin && isEditMode ? '[Empty text]' : resolvedText;
-    const highlightClassName = isAdmin && isEditMode
+    const isEmptyEditableText = resolvedText === '' && canEditText;
+    const highlightClassName = canEditText
         ? 'rounded-[0.35rem] outline outline-1 outline-offset-[3px] outline-[#1C1C1C]/18 bg-[#EFE7DA]/45 cursor-pointer'
         : '';
 
     const registerHover = () => {
-        if (!context || !textRef.current || !isAdmin || !isEditMode) {
+        if (!context || !textRef.current || !canEditText) {
             return;
         }
 
@@ -41,7 +42,7 @@ export default function EditableText({
     };
 
     const handleClick = (event) => {
-        if (!context || !isAdmin || !isEditMode) {
+        if (!context || !canEditText) {
             return;
         }
 
@@ -60,7 +61,7 @@ export default function EditableText({
     return (
         <span
             ref={textRef}
-            className={`${className} ${highlightClassName}`.trim()}
+            className={`${className} ${highlightClassName} ${isEmptyEditableText ? 'inline-flex min-h-[1em] min-w-[1.5rem] items-center' : ''}`.trim()}
             onMouseEnter={registerHover}
             onMouseMove={registerHover}
             onMouseLeave={() => context?.clearHoverTarget()}
@@ -72,7 +73,7 @@ export default function EditableText({
             {isRichEntry ? (
                 <LuminaTextRenderer value={rawEntry} fallback={fallback} mode="inline" inline />
             ) : (
-                visibleText
+                isEmptyEditableText ? <span aria-hidden="true">&nbsp;</span> : resolvedText
             )}
         </span>
     );

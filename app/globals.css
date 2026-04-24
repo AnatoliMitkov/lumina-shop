@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', sans-serif;
-  --font-serif: 'Cormorant Garamond', serif;
+    --font-sans: 'Cormorant Garamond', serif;
+        --font-serif: 'Cormorant Garamond', serif;
 }
 
 :root {

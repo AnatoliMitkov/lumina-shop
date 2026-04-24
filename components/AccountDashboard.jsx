@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { createClient, isSupabaseConfigured } from '../utils/supabase/client';
@@ -173,6 +173,9 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     const [saveState, setSaveState] = useState({ type: 'idle', message: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
+    const [desktopOrdersPanelHeight, setDesktopOrdersPanelHeight] = useState(null);
+    const savedAccountSectionRef = useRef(null);
+    const requestThreadSectionRef = useRef(null);
 
     useEffect(() => {
         setHasHydrated(true);
@@ -216,6 +219,54 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     const profileStorageLabel = profileStorageMode === 'metadata'
         ? getText('account.dashboard.storage.metadata_active', localizedFallback('Metadata fallback active', 'Активен профил от метаданни'))
         : getText('account.dashboard.storage.table_active', localizedFallback('Profile table active', 'Активна профилна таблица'));
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const desktopMediaQuery = window.matchMedia('(min-width: 1280px)');
+
+        const syncDesktopOrdersPanelHeight = () => {
+            if (!desktopMediaQuery.matches || !savedAccountSectionRef.current || !requestThreadSectionRef.current) {
+                setDesktopOrdersPanelHeight(null);
+                return;
+            }
+
+            const savedAccountBounds = savedAccountSectionRef.current.getBoundingClientRect();
+            const requestThreadBounds = requestThreadSectionRef.current.getBoundingClientRect();
+            const nextHeight = Math.max(560, Math.round(requestThreadBounds.bottom - savedAccountBounds.top));
+
+            setDesktopOrdersPanelHeight(nextHeight);
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            syncDesktopOrdersPanelHeight();
+        });
+
+        if (savedAccountSectionRef.current) {
+            resizeObserver.observe(savedAccountSectionRef.current);
+        }
+
+        if (requestThreadSectionRef.current) {
+            resizeObserver.observe(requestThreadSectionRef.current);
+        }
+
+        syncDesktopOrdersPanelHeight();
+
+        const handleViewportChange = () => {
+            syncDesktopOrdersPanelHeight();
+        };
+
+        desktopMediaQuery.addEventListener('change', handleViewportChange);
+        window.addEventListener('resize', handleViewportChange);
+
+        return () => {
+            resizeObserver.disconnect();
+            desktopMediaQuery.removeEventListener('change', handleViewportChange);
+            window.removeEventListener('resize', handleViewportChange);
+        };
+    }, []);
 
     const handleSave = async (event) => {
         event.preventDefault();
@@ -287,9 +338,9 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     };
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-10 md:gap-12">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-10 md:gap-12 xl:items-start">
             <div className="flex flex-col gap-10">
-                <section className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
+            <section ref={savedAccountSectionRef} className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
                     <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 mb-3">{getText('account.dashboard.profile_card.eyebrow', localizedFallback('Saved Account', 'Вашият профил'))}</p>
@@ -373,7 +424,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                     </form>
                 </section>
 
-                <section className="account-surface border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] p-6 md:p-8 rounded-sm">
+                <section ref={requestThreadSectionRef} className="account-surface border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] p-6 md:p-8 rounded-sm">
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-white/40 mb-3">{getText('account.dashboard.requests.eyebrow', localizedFallback('Submitted Requests', 'Изпратени запитвания'))}</p>
@@ -402,7 +453,10 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                 </section>
             </div>
 
-            <section className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm h-fit xl:sticky xl:top-28">
+            <section
+                className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm xl:self-start xl:flex xl:min-h-0 xl:flex-col"
+                style={desktopOrdersPanelHeight ? { height: `${desktopOrdersPanelHeight}px` } : undefined}
+            >
                 <div className="flex flex-col gap-3 mb-8">
                     <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">{getText('account.dashboard.orders.eyebrow', localizedFallback('Order Tracking', 'Проследяване на поръчки'))}</p>
                     <h2 className="font-serif text-3xl md:text-4xl font-light uppercase tracking-widest">{getText('account.dashboard.orders.title', localizedFallback('Your Orders', 'Вашите поръчки'))}</h2>
@@ -420,7 +474,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div data-lenis-prevent-wheel className="flex flex-col gap-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-2">
                     {orders.length === 0 ? (
                         <p className="text-sm text-[#1C1C1C]/60 leading-relaxed">{getText('account.dashboard.orders.empty', localizedFallback('Your orders will appear here once you submit checkout while signed in to your account.', 'Поръчките ви ще се покажат тук, след като изпратите checkout, докато сте влезли в профила си.'))}</p>
                     ) : (
@@ -432,7 +486,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                                 : getText('account.dashboard.orders.piece_unit_plural', localizedFallback('pieces', 'модела'));
 
                             return (
-                            <div key={order.id} className="account-order-card border border-[#1C1C1C]/10 p-4 md:p-5 rounded-sm bg-white/72">
+                            <div key={order.id} className="account-order-card border border-[#1C1C1C]/10 p-4 md:p-5 rounded-sm bg-white/72 xl:shrink-0">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
                                     <div className="flex flex-col gap-2 min-w-0">
                                         <span className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/38">{buildOrderReference(order)}</span>

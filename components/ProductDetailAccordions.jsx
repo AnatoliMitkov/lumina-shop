@@ -16,9 +16,9 @@ function renderEditableSectionItem(item, defaultEditorLabel) {
 function SizeMeasurementsTable({ rows = [], language }) {
     return (
         <div className="min-w-0 overflow-x-auto rounded-sm border border-[#1C1C1C]/10 bg-white/82" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <table className="min-w-[760px] w-full border-collapse text-left text-sm text-[#1C1C1C]/74">
+            <table className="min-w-[760px] w-full border-collapse text-left text-base lg:text-[1.02rem] text-[#1C1C1C]/74">
                 <thead>
-                    <tr className="bg-[#F5F1EB] text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/52">
+                    <tr className="bg-[#F5F1EB] text-[11px] lg:text-[1rem] uppercase tracking-[0.26em] text-[#1C1C1C]/52">
                         <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Size', 'Размер')} language={language} /></th>
                         <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Unit', 'Единица')} language={language} /></th>
                         <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Bust / Chest', 'Бюст / Гръдна обиколка')} language={language} /></th>
@@ -31,14 +31,14 @@ function SizeMeasurementsTable({ rows = [], language }) {
                     {rows.flatMap((row) => ([
                         <tr key={`${row.label}-inch`} className="align-top">
                             <th rowSpan={2} className="border-b border-[#1C1C1C]/10 px-4 py-4 font-serif text-xl font-light uppercase tracking-[0.06em] text-[#1C1C1C]">{row.label}</th>
-                            <td className="border-b border-[#1C1C1C]/10 px-4 py-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/46">inch</td>
+                            <td className="border-b border-[#1C1C1C]/10 px-4 py-4 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-[#1C1C1C]/46">inch</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.inch.bust}</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.inch.waist}</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.inch.hips}</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.inch.back}</td>
                         </tr>,
                         <tr key={`${row.label}-cm`}>
-                            <td className="border-b border-[#1C1C1C]/10 px-4 py-4 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/46">cm</td>
+                            <td className="border-b border-[#1C1C1C]/10 px-4 py-4 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-[#1C1C1C]/46">cm</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.cm.bust}</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.cm.waist}</td>
                             <td className="border-b border-[#1C1C1C]/10 px-4 py-4">{row.cm.hips}</td>
@@ -78,7 +78,7 @@ export default function ProductDetailAccordions({ sections = [], language }) {
                             aria-expanded={isOpen}
                             className="hover-target flex w-full items-center justify-between gap-4 py-5 text-left"
                         >
-                            <span className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/74 font-medium">
+                            <span className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/74 font-medium">
                                 {section.titleKey
                                     ? <EditableText contentKey={section.titleKey} fallback={section.title} editorLabel={section.editorLabel || section.title} />
                                         : <LocalizedText value={section.title} language={language} />}
@@ -88,7 +88,7 @@ export default function ProductDetailAccordions({ sections = [], language }) {
 
                         <div className={`grid overflow-y-hidden transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                             <div className="min-h-0">
-                                <div className="pb-5 flex flex-col gap-4 text-sm leading-relaxed text-[#1C1C1C]/62 normal-case">
+                                <div className="pb-5 flex flex-col gap-4 text-base lg:text-[1.15rem] leading-relaxed text-[#1C1C1C]/62 normal-case">
                                     {section.copy && (
                                         <p>
                                             {section.copyKey
@@ -98,7 +98,7 @@ export default function ProductDetailAccordions({ sections = [], language }) {
                                     )}
 
                                     {section.chips?.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/44">
+                                        <div className="flex flex-wrap gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/44">
                                             {section.chips.map((chip, index) => (
                                                 <span key={chip?.contentKey || chip?.fallback || chip || index} className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2">{renderEditableSectionItem(chip, `${section.title} chip ${index + 1}`)}</span>
                                             ))}
@@ -106,7 +106,7 @@ export default function ProductDetailAccordions({ sections = [], language }) {
                                     )}
 
                                     {section.bullets?.length > 0 && (
-                                        <div className="flex flex-col gap-2.5 pt-1 text-[11px] uppercase tracking-[0.22em] text-[#1C1C1C]/58">
+                                        <div className="flex flex-col gap-2.5 pt-1 text-xs lg:text-[1.08rem] uppercase tracking-[0.22em] text-[#1C1C1C]/58">
                                             {section.bullets.map((bullet, index) => (
                                                 <p key={bullet?.contentKey || bullet?.fallback || bullet || index}>{renderEditableSectionItem(bullet, `${section.title} bullet ${index + 1}`)}</p>
                                             ))}
