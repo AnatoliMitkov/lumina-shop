@@ -11,6 +11,7 @@ import {
     PRODUCT_DEFAULTS,
     PRODUCT_CATEGORY_OPTIONS,
     PRODUCT_COLLECTION_OPTIONS,
+    PRODUCT_LANGUAGE_VISIBILITY_OPTIONS,
     PRODUCT_STATUS_OPTIONS,
     PRODUCT_STORAGE_BUCKET,
     buildProductMutationInput,
@@ -31,6 +32,7 @@ import {
 const supabase = createClient();
 const BULK_EDIT_FIELD_LABELS = {
     status: 'Status',
+    language_visibility: 'Language Visibility',
     category: 'Category',
     collection: 'Collection',
     featured: 'Featured',
@@ -39,6 +41,7 @@ const BULK_EDIT_FIELD_LABELS = {
 };
 const BULK_EDIT_FIELD_DEFAULTS = {
     status: PRODUCT_DEFAULTS.status,
+    language_visibility: PRODUCT_DEFAULTS.language_visibility,
     category: PRODUCT_DEFAULTS.category,
     collection: PRODUCT_DEFAULTS.collection,
     featured: String(PRODUCT_DEFAULTS.featured),
@@ -48,6 +51,7 @@ const BULK_EDIT_FIELD_DEFAULTS = {
 const BULK_GRID_COLUMN_DEFINITIONS = [
     { key: 'name', label: 'Product', type: 'text' },
     { key: 'status', label: 'Status', type: 'select', options: PRODUCT_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label })) },
+    { key: 'language_visibility', label: 'Visibility', type: 'select', options: PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.map((option) => ({ value: option.value, label: option.label })) },
     { key: 'category', label: 'Category', type: 'select', options: PRODUCT_CATEGORY_OPTIONS.map((option) => ({ value: option, label: option })) },
     { key: 'collection', label: 'Collection', type: 'select', options: PRODUCT_COLLECTION_OPTIONS.map((option) => ({ value: option, label: option })) },
     { key: 'featured', label: 'Featured', type: 'boolean' },
@@ -57,12 +61,13 @@ const BULK_GRID_COLUMN_DEFINITIONS = [
     { key: 'lead_time_days', label: 'Lead Time', type: 'number', min: '1', step: '1' },
     { key: 'sort_order', label: 'Sort Order', type: 'number', step: '1' },
 ];
-const DEFAULT_BULK_GRID_COLUMNS = ['name', 'status', 'collection', 'featured', 'price', 'inventory_count'];
+const DEFAULT_BULK_GRID_COLUMNS = ['name', 'status', 'language_visibility', 'collection', 'featured', 'price'];
 
 function createBulkGridRowDraft(product = PRODUCT_DEFAULTS) {
     return {
         name: String(product.name ?? ''),
         status: String(product.status ?? PRODUCT_DEFAULTS.status),
+        language_visibility: String(product.language_visibility ?? PRODUCT_DEFAULTS.language_visibility),
         category: String(product.category ?? PRODUCT_DEFAULTS.category),
         collection: String(product.collection ?? PRODUCT_DEFAULTS.collection),
         featured: Boolean(product.featured),
@@ -107,6 +112,7 @@ function getBulkGridColumnDefinition(columnKey) {
 function createBulkEditEnabledState() {
     return {
         status: false,
+        language_visibility: false,
         category: false,
         collection: false,
         featured: false,
@@ -133,6 +139,7 @@ function buildBulkEditDraft(products = []) {
 
     return {
         status: resolveSharedSelectionValue(products.map((product) => product.status), firstProduct.status || BULK_EDIT_FIELD_DEFAULTS.status),
+        language_visibility: resolveSharedSelectionValue(products.map((product) => product.language_visibility), firstProduct.language_visibility || BULK_EDIT_FIELD_DEFAULTS.language_visibility),
         category: resolveSharedSelectionValue(products.map((product) => product.category), firstProduct.category || BULK_EDIT_FIELD_DEFAULTS.category),
         collection: resolveSharedSelectionValue(products.map((product) => product.collection), firstProduct.collection || BULK_EDIT_FIELD_DEFAULTS.collection),
         featured: resolveSharedSelectionValue(products.map((product) => String(Boolean(product.featured))), String(Boolean(firstProduct.featured))),
@@ -145,10 +152,66 @@ function getStatusLabel(value) {
     return PRODUCT_STATUS_OPTIONS.find((option) => option.value === value)?.label || value;
 }
 
+function getLanguageVisibilityLabel(value) {
+    return PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.find((option) => option.value === value)?.label || value;
+}
+
+function buildUniqueDuplicateName(name = '', products = []) {
+    const baseName = normalizeOptionValue(name) || 'Untitled Piece';
+    const existingNames = new Set(
+        products
+            .map((product) => normalizeOptionValue(product.name).toLowerCase())
+            .filter(Boolean)
+    );
+
+    let copyIndex = 1;
+    let nextName = `${baseName} Copy`;
+
+    while (existingNames.has(nextName.toLowerCase())) {
+        copyIndex += 1;
+        nextName = `${baseName} Copy ${copyIndex}`;
+    }
+
+    return nextName;
+}
+
+function buildUniqueDuplicateSlug(name = '', products = []) {
+    const existingSlugs = new Set(
+        products
+            .map((product) => normalizeOptionValue(product.slug).toLowerCase())
+            .filter(Boolean)
+    );
+
+    let copyIndex = 1;
+    let nextSlug = slugifyProductName(name);
+
+    while (existingSlugs.has(nextSlug.toLowerCase())) {
+        copyIndex += 1;
+        nextSlug = slugifyProductName(`${name} ${copyIndex}`);
+    }
+
+    return nextSlug;
+}
+
+function createDuplicateProductDraft(product, products = []) {
+    const duplicateName = buildUniqueDuplicateName(product?.name, products);
+    const duplicateDraft = createProductEditorState(product);
+
+    return {
+        ...duplicateDraft,
+        id: '',
+        name: duplicateName,
+        slug: buildUniqueDuplicateSlug(duplicateName, products),
+        status: PRODUCT_DEFAULTS.status,
+    };
+}
+
 function formatBulkPreviewValue(field, value) {
     switch (field) {
         case 'status':
             return getStatusLabel(value);
+        case 'language_visibility':
+            return getLanguageVisibilityLabel(value);
         case 'featured':
             return value === 'true' ? 'On' : 'Off';
         case 'inventory_count':
@@ -183,6 +246,7 @@ function buildSelectionSnapshot(products = []) {
 
     return [
         { label: 'Status', value: summarizeSelectionField(products, (product) => product.status, (value) => getStatusLabel(value)) },
+        { label: 'Visibility', value: summarizeSelectionField(products, (product) => product.language_visibility, (value) => getLanguageVisibilityLabel(value)) },
         { label: 'Collection', value: summarizeSelectionField(products, (product) => product.collection) },
         { label: 'Category', value: summarizeSelectionField(products, (product) => product.category) },
         { label: 'Featured', value: featuredCount === 0 ? 'Off' : featuredCount === products.length ? 'On' : 'Mixed' },
@@ -864,6 +928,14 @@ function BulkEditorPanel({
                         </select>
                     </BulkFieldRow>
 
+                    <BulkFieldRow active={enabledFields.language_visibility} label="Language Visibility" hint="Choose whether the selected products show in English, Bulgarian, or both storefront versions." onToggle={() => onToggleField('language_visibility')}>
+                        <select value={value.language_visibility} onChange={(event) => onChange('language_visibility', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                            {PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </BulkFieldRow>
+
                     <BulkFieldRow active={enabledFields.category} label="Category" hint="Reclassify the selection under one product category." onToggle={() => onToggleField('category')}>
                         <select value={value.category} onChange={(event) => onChange('category', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                             {categoryOptions.map((option) => (
@@ -940,6 +1012,7 @@ function ProductListItem({ product, active, selected, onSelect, onToggleSelected
                     </div>
 
                     <div className={`flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.22em] ${active ? 'text-white/55' : 'text-[#1C1C1C]/45'}`}>
+                        <span>{getLanguageVisibilityLabel(product.language_visibility)}</span>
                         <span>{formatProductCurrency(product.price)}</span>
                         <span>{formatDate(product.updated_at || product.created_at)}</span>
                     </div>
@@ -1184,6 +1257,18 @@ export default function AdminDashboard({
         openProductEditor(product);
         setFeedback({ type: 'idle', message: '' });
         setUploadFeedback({ type: 'idle', message: '' });
+    };
+
+    const duplicateProduct = (product) => {
+        if (!product) {
+            return;
+        }
+
+        setEditorMode('single');
+        setSelectedProductId('new');
+        setDraft(createDuplicateProductDraft(product, products));
+        setUploadFeedback({ type: 'idle', message: '' });
+        setFeedback({ type: 'success', message: `Duplicate draft created from ${product.name || 'the selected product'}. Review it and save when ready.` });
     };
 
     const toggleProductSelection = (productId) => {
@@ -2071,6 +2156,11 @@ export default function AdminDashboard({
                         <div className="flex flex-wrap gap-3">
                             <button type="button" onClick={resetToNewDraft} className="hover-target h-12 px-5 border border-[#1C1C1C]/12 text-[10px] uppercase tracking-[0.22em] transition-colors hover:bg-white">New Draft</button>
                             {selectedProductId !== 'new' && (
+                                <button type="button" onClick={() => duplicateProduct(previewProduct)} className="hover-target h-12 px-5 border border-[#1C1C1C]/12 bg-white text-[10px] uppercase tracking-[0.22em] transition-colors hover:bg-[#1C1C1C] hover:text-[#EFECE8]">
+                                    Duplicate Product
+                                </button>
+                            )}
+                            {selectedProductId !== 'new' && (
                                 <button type="button" onClick={() => openDeleteDialog([selectedProductId])} disabled={isDeleting} className={`hover-target h-12 px-5 border border-red-200 bg-red-50 text-[10px] uppercase tracking-[0.22em] text-red-700 transition-colors ${isDeleting ? 'opacity-60' : 'hover:bg-red-100'}`}>
                                     Delete
                                 </button>
@@ -2100,6 +2190,7 @@ export default function AdminDashboard({
                                 </div>
                                 <p className="text-sm leading-relaxed text-white/68">{previewProduct.subtitle || previewProduct.description || 'Add copy so the storefront preview feels complete before publishing.'}</p>
                                 <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-white/45">
+                                    <span className="rounded-full border border-white/12 bg-white/6 px-3 py-2">{getLanguageVisibilityLabel(previewProduct.language_visibility)}</span>
                                     <span className="rounded-full border border-white/12 bg-white/6 px-3 py-2">{previewProduct.collection}</span>
                                     <span className="rounded-full border border-white/12 bg-white/6 px-3 py-2">{previewProduct.category}</span>
                                     <span className="rounded-full border border-white/12 bg-white/6 px-3 py-2">{formatProductCurrency(previewProduct.price)}</span>
@@ -2130,6 +2221,15 @@ export default function AdminDashboard({
                                 Status
                                 <select value={draft.status} onChange={(event) => handleFieldChange('status', event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                                     {PRODUCT_STATUS_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                                Language Visibility
+                                <select value={draft.language_visibility} onChange={(event) => handleFieldChange('language_visibility', event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                                    {PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.map((option) => (
                                         <option key={option.value} value={option.value}>{option.label}</option>
                                     ))}
                                 </select>

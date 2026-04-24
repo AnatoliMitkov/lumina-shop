@@ -110,7 +110,7 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                     <p className="text-[11px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
                         {isCustomSize
                             ? <EditableText contentKey="product.purchase.custom_size_help" fallback={localizedFallback('Enter all four measurements below for a custom atelier fit.', 'Въведете и четирите мерки по-долу за индивидуална atelierna кройка.')} editorLabel="Product custom size help" />
-                            : <EditableText contentKey="product.purchase.measurements_help" fallback={localizedFallback('Measurements guide is available in the accordion below.', 'Ръководството за мерки е достъпно по-долу.')} editorLabel="Product measurements help" />}
+                            : <EditableText contentKey="product.purchase.measurements_help" fallback={localizedFallback('Measurements guide is available in the accordion below.', 'Ръководството за мерките е достъпно по-долу.')} editorLabel="Product measurements help" />}
                     </p>
 
                     {isCustomSize && (

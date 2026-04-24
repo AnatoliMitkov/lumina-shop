@@ -28,7 +28,7 @@ import {
     dispatchPageRevealComplete,
     resolvePageMotionEnabled,
 } from '../utils/page-motion';
-import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
+import { buildCollectionsHref, isProductVisibleInLanguage, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
 import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
 import { createLocalizedValue as localizedFallback, resolveLocalizedValue } from '../utils/language';
@@ -457,7 +457,7 @@ export default function ClientEngine({ children, initialLanguage }) {
             try {
                 const { data, error } = await supabase
                     .from('products')
-                    .select('category')
+                    .select('category, language_visibility')
                     .eq('status', 'active');
 
                 if (error) {
@@ -465,7 +465,11 @@ export default function ClientEngine({ children, initialLanguage }) {
                 }
 
                 if (!isCancelled) {
-                    setCategoryMenuItems(buildCategoryMenuItems((data || []).map((entry) => entry.category)));
+                    const visibleCategories = (data || [])
+                        .filter((entry) => isProductVisibleInLanguage(entry, activeLanguage))
+                        .map((entry) => entry.category);
+
+                    setCategoryMenuItems(buildCategoryMenuItems(visibleCategories));
                 }
             } catch {
                 if (!isCancelled) {
@@ -516,7 +520,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 supabase.removeChannel(categoryChannel);
             }
         };
-    }, []);
+    }, [activeLanguage]);
 
     useEffect(() => {
         if (!hasMounted) {

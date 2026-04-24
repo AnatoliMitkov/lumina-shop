@@ -15,6 +15,7 @@ create table if not exists public.products (
   slug text,
   name text not null default '',
   subtitle text not null default '',
+  language_visibility text not null default 'both' check (language_visibility in ('both', 'en', 'bg')),
   category text not null default 'Atelier Piece',
   collection text not null default 'Atelier Archive',
   status text not null default 'active' check (status in ('draft', 'active', 'archived')),
@@ -43,6 +44,7 @@ create table if not exists public.products (
 
 alter table public.products add column if not exists slug text;
 alter table public.products add column if not exists subtitle text not null default '';
+alter table public.products add column if not exists language_visibility text not null default 'both';
 alter table public.products add column if not exists collection text not null default 'Atelier Archive';
 alter table public.products add column if not exists status text not null default 'active';
 alter table public.products add column if not exists featured boolean not null default false;
@@ -77,6 +79,10 @@ set category = 'Atelier Piece'
 where coalesce(category, '') = '';
 
 update public.products
+set language_visibility = 'both'
+where coalesce(language_visibility, '') not in ('both', 'en', 'bg');
+
+update public.products
 set status = 'active'
 where coalesce(status, '') not in ('draft', 'active', 'archived');
 
@@ -106,6 +112,7 @@ alter table public.products alter column slug set not null;
 
 create unique index if not exists products_slug_uidx on public.products (slug);
 create index if not exists products_status_sort_idx on public.products (status, featured desc, sort_order asc, updated_at desc);
+create index if not exists products_status_language_visibility_idx on public.products (status, language_visibility);
 create index if not exists products_collection_idx on public.products (collection);
 create index if not exists products_category_idx on public.products (category);
 create index if not exists profiles_is_admin_idx on public.profiles (is_admin) where is_admin = true;

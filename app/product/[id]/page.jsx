@@ -11,6 +11,7 @@ import { getProductFieldCopyKey, getProductIndexedCopyKey, getProductOptionCopyK
 import { createClient } from '../../../utils/supabase/server';
 import {
     buildProductHref,
+    filterProductsByLanguage,
     formatProductCurrency,
     normalizeProductRecord,
     resolveProductGallery,
@@ -96,7 +97,9 @@ const getCatalog = cache(async () => {
 
 export async function generateMetadata({ params }) {
     const { id } = await params;
-    const catalog = await getCatalog();
+    const cookieStore = await cookies();
+    const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
+    const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
     const product = catalog.find((entry) => entry.id === id || entry.slug === id);
 
     if (!product) {
@@ -255,7 +258,7 @@ export default async function ProductPage({ params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
-    const catalog = await getCatalog();
+    const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
     const product = catalog.find((entry) => entry.id === id || entry.slug === id);
 
     if (!product) {
