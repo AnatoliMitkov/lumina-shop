@@ -1,3 +1,4 @@
+import { normalizeProductLanguageVisibility } from './products';
 import { getStockProductGallery } from './storefront-media';
 
 const PRODUCT_DEFAULTS = {
@@ -5,6 +6,7 @@ const PRODUCT_DEFAULTS = {
   slug: '',
   name: '',
   subtitle: '',
+  language_visibility: 'both',
   category: 'Atelier Piece',
   collection: 'Atelier Archive',
   status: 'draft',
@@ -199,6 +201,7 @@ function normalizeProductRecord(product = {}) {
     slug: toText(product.slug) || slugifyProductName(product.name || product.id || 'atelier-piece'),
     name: toText(product.name, 'Untitled Piece'),
     subtitle: toText(product.subtitle, PRODUCT_DEFAULTS.subtitle),
+    language_visibility: normalizeProductLanguageVisibility(product.language_visibility),
     category: toText(product.category, PRODUCT_DEFAULTS.category),
     collection: toText(product.collection || product.category, PRODUCT_DEFAULTS.collection),
     status: toText(product.status, PRODUCT_DEFAULTS.status).toLowerCase(),

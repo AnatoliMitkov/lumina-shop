@@ -34,12 +34,12 @@ const PROMO_POPUP_HEADLINE_FALLBACK = localizedFallback(
     ])
 );
 const PROMO_POPUP_HEADLINE_SIZE_CLASS_NAMES = {
-    xs: 'text-xl min-[420px]:text-2xl sm:text-[1.8rem] md:text-[2.25rem]',
-    sm: 'text-[1.4rem] min-[420px]:text-[1.55rem] sm:text-[2rem] md:text-[2.7rem]',
-    body: 'text-[1.56rem] min-[420px]:text-[1.72rem] sm:text-[2.35rem] md:text-[3.05rem]',
-    lg: 'text-[1.68rem] min-[420px]:text-[1.92rem] sm:text-[2.8rem] md:text-[3.8rem]',
-    xl: 'text-[1.78rem] min-[420px]:text-[2.05rem] sm:text-[3.4rem] md:text-[4.5rem]',
-    display: 'text-[1.78rem] min-[420px]:text-[2.05rem] sm:text-[3.4rem] md:text-[4.5rem] xl:text-[5rem]',
+    xs: 'text-[1rem] min-[420px]:text-[1.2rem] sm:text-[1.8rem] md:text-[2.25rem]',
+    sm: 'text-[1.2rem] min-[420px]:text-[1.4rem] sm:text-[2rem] md:text-[2.7rem]',
+    body: 'text-[1.3rem] min-[420px]:text-[1.55rem] sm:text-[2.35rem] md:text-[3.05rem]',
+    lg: 'text-[1.42rem] min-[420px]:text-[1.72rem] sm:text-[2.8rem] md:text-[3.8rem]',
+    xl: 'text-[1.5rem] min-[420px]:text-[1.85rem] sm:text-[3.4rem] md:text-[4.5rem]',
+    display: 'text-[1.5rem] min-[420px]:text-[1.85rem] sm:text-[3.4rem] md:text-[4.5rem] xl:text-[5rem]',
 };
 
 function parseStoredPageCount(value) {
@@ -473,6 +473,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
     const countdown = useMemo(() => buildCountdown(promo?.endsAt, nowTimestamp), [nowTimestamp, promo?.endsAt]);
     const hasMinimumSubtotal = Number(promo?.minimumSubtotal ?? 0) > 0;
     const infoGridClassName = hasMinimumSubtotal ? 'grid-cols-1 min-[430px]:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 min-[430px]:grid-cols-2 xl:grid-cols-2';
+    const timerTitle = getText('promo_popup.timer.title', localizedFallback('Time left', 'Оставащо време'));
 
     const handleDismiss = () => {
         setIsLocallyDismissed(true);
@@ -567,13 +568,13 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
 
     return (
         <>
-        <div className={`fixed inset-0 z-[245] flex items-start justify-center overflow-y-auto p-2 sm:items-center sm:p-4 md:p-8 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
+        <div className={`fixed inset-0 z-[245] flex items-start justify-center overflow-y-auto p-1.5 min-[380px]:p-2 sm:items-center sm:p-4 md:p-8 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(237,212,180,0.18),transparent_36%),linear-gradient(180deg,rgba(8,8,10,0.22),rgba(8,8,10,0.72))] backdrop-blur-[10px]" onClick={handleDismiss}></div>
 
             <section
                 data-lenis-prevent-wheel
                 aria-label="Featured promotion"
-                className={`relative my-2 w-full max-w-[64rem] overflow-hidden rounded-[1.5rem] border border-[#F3E5D5]/14 bg-[linear-gradient(135deg,rgba(14,14,18,0.96),rgba(28,24,22,0.95)_52%,rgba(104,78,49,0.92))] text-[#F7EFE6] shadow-[0_36px_120px_rgba(0,0,0,0.42)] transition-all duration-500 sm:my-0 sm:rounded-[1.9rem] ${isOpen ? 'translate-y-0 scale-100' : 'translate-y-6 scale-[0.985]'} max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-1.5rem)] overflow-y-auto`}
+                className={`relative my-1.5 w-full max-w-[64rem] overflow-hidden rounded-[1.3rem] border border-[#F3E5D5]/14 bg-[linear-gradient(135deg,rgba(14,14,18,0.96),rgba(28,24,22,0.95)_52%,rgba(104,78,49,0.92))] text-[#F7EFE6] shadow-[0_36px_120px_rgba(0,0,0,0.42)] transition-all duration-500 sm:my-0 sm:rounded-[1.9rem] ${isOpen ? 'translate-y-0 scale-100' : 'translate-y-6 scale-[0.985]'} max-h-[calc(100vh-0.75rem)] sm:max-h-[calc(100vh-1.5rem)] overflow-y-auto`}
             >
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
                     <div className="absolute -left-16 top-10 h-44 w-44 rounded-full bg-[#E6C39A]/18 blur-3xl"></div>
@@ -582,8 +583,8 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                     <div className="absolute inset-0 bg-[linear-gradient(125deg,transparent_0%,transparent_48%,rgba(255,255,255,0.05)_50%,transparent_52%,transparent_100%)] opacity-60"></div>
                 </div>
 
-                <div className="relative grid gap-0 xl:grid-cols-[minmax(0,1fr)_19rem]">
-                    <div className="border-b border-white/10 p-4 pb-5 sm:p-6 md:p-8 xl:border-b-0 xl:border-r xl:border-white/10 xl:p-10">
+                <div className="relative grid gap-0 xl:grid-cols-[minmax(0,1fr)_22rem]">
+                    <div className="border-b border-white/10 p-3.5 pb-4.5 sm:p-6 md:p-8 xl:border-b-0 xl:border-r xl:border-white/10 xl:p-10">
                         <div className="flex items-start justify-between gap-3 sm:gap-4">
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.34em] text-[#F5D5B4]/72">
@@ -612,7 +613,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                 fallback={PROMO_POPUP_HEADLINE_FALLBACK}
                                 editorLabel="Promo popup headline"
                                 className="max-w-[35rem]"
-                                blockBaseClassName="font-serif font-light uppercase leading-[0.95] tracking-[0.08em] text-[#FFF7F0]"
+                                blockBaseClassName="font-serif font-light uppercase leading-[0.98] tracking-[0.06em] text-[#FFF7F0] sm:leading-[0.95] sm:tracking-[0.08em]"
                                 blockClassNames={{
                                     quote: 'font-serif font-light italic leading-[1.02] tracking-[0.04em] text-[#FFF7F0]/86 border-l border-white/20 pl-5',
                                     'bullet-list': 'font-serif font-light leading-[1.02] tracking-[0.08em] text-[#FFF7F0] list-disc pl-6',
@@ -653,7 +654,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                         }
                                     }}
                                     placeholder="PROMO"
-                                    className={`h-11 rounded-[1rem] border px-4 text-sm uppercase tracking-[0.24em] outline-none transition-colors sm:h-16 sm:rounded-[1.15rem] sm:px-5 sm:text-lg sm:tracking-[0.34em] ${canManagePromoCode ? 'border-[#F5D5B4]/28 bg-[rgba(255,247,240,0.08)] text-[#FFF7F0] focus:border-[#F5D5B4]/68' : 'border-white/12 bg-[rgba(10,10,14,0.42)] text-[#FFF7F0]'}`}
+                                    className={`h-11 rounded-[1rem] border px-4 text-sm uppercase tracking-[0.18em] outline-none transition-colors sm:h-16 sm:rounded-[1.15rem] sm:px-5 sm:text-lg sm:tracking-[0.34em] ${canManagePromoCode ? 'border-[#F5D5B4]/28 bg-[rgba(255,247,240,0.08)] text-[#FFF7F0] focus:border-[#F5D5B4]/68' : 'border-white/12 bg-[rgba(10,10,14,0.42)] text-[#FFF7F0]'}`}
                                 />
 
                                 {canManagePromoCode ? (
@@ -661,7 +662,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                         type="button"
                                         onClick={saveFeaturedCode}
                                         disabled={!isCodeDirty || isSavingCode}
-                                        className={`hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] px-5 text-[11px] uppercase tracking-[0.2em] transition-colors sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem] ${!isCodeDirty || isSavingCode ? 'border border-white/10 bg-white/5 text-white/35' : 'bg-[#F5D5B4] text-[#141416] hover:bg-[#FFF7F0]'}`}
+                                        className={`hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] px-5 text-[11px] uppercase tracking-[0.16em] transition-colors sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem] sm:tracking-[0.2em] ${!isCodeDirty || isSavingCode ? 'border border-white/10 bg-white/5 text-white/35' : 'bg-[#F5D5B4] text-[#141416] hover:bg-[#FFF7F0]'}`}
                                     >
                                         {isSavingCode
                                             ? getText('promo_popup.save.saving', localizedFallback('Saving', 'Записва се'))
@@ -673,7 +674,7 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                                     <button
                                         type="button"
                                         onClick={handleCopyCode}
-                                        className="hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] bg-[#F5D5B4] px-5 text-[11px] uppercase tracking-[0.2em] text-[#141416] transition-colors hover:bg-[#FFF7F0] sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem]"
+                                        className="hover-target inline-flex h-11 w-full min-w-[8rem] items-center justify-center rounded-[1rem] bg-[#F5D5B4] px-5 text-[11px] uppercase tracking-[0.16em] text-[#141416] transition-colors hover:bg-[#FFF7F0] sm:h-16 sm:min-w-[9rem] sm:w-auto sm:rounded-[1.15rem] sm:tracking-[0.2em]"
                                     >
                                         {copyFeedback === 'success' ? t('copied') : copyFeedback === 'error' ? t('copy_failed') : t('copy_code')}
                                     </button>
@@ -719,21 +720,21 @@ export default function PromoCodePopup({ pathname = '/', onOpenChange }) {
                         )}
                     </div>
 
-                    <aside className="px-4 pb-4 pt-0 sm:p-6 md:p-8 xl:p-10">
+                    <aside className="px-3.5 pb-3.5 pt-0 sm:p-6 md:p-8 xl:p-10">
                         <div className="flex h-full flex-col justify-between rounded-[1.35rem] border border-white/12 bg-[rgba(255,255,255,0.06)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:rounded-[1.75rem] sm:p-5 xl:min-h-[100%]">
                             <div>
-                                <p className="font-serif text-[1.68rem] font-light uppercase tracking-[0.1em] text-[#FFF7F0] sm:text-2xl md:text-[2.15rem]">{getText('promo_popup.timer.title', localizedFallback('Time left', 'Оставащо време'))}</p>
+                                <p className="font-serif text-[1.45rem] font-light uppercase leading-[1.12] tracking-[0.05em] text-[#FFF7F0] sm:text-2xl sm:tracking-[0.08em] md:text-[2.15rem]">{timerTitle}</p>
                                 {countdown.hasDeadline && (
                                     <p className="mt-1.5 text-[9px] uppercase tracking-[0.2em] text-[#F7EFE6]/42 sm:mt-3 sm:text-[11px] sm:tracking-[0.24em]">{getText('promo_popup.timer.closes', localizedFallback('Closes', 'Изтича'))} {formatDeadline(promo?.endsAt)}</p>
                                 )}
                             </div>
 
                             {countdown.hasDeadline ? (
-                                <div className="mt-4 grid grid-cols-4 gap-1.5 sm:gap-3 xl:my-auto xl:mt-6 xl:grid-cols-2">
+                                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 xl:my-auto xl:mt-6 xl:grid-cols-2">
                                     {countdown.segments.map((segment) => (
-                                        <div key={segment.label} className="rounded-[0.9rem] border border-white/10 bg-[#0F1013]/45 px-1.5 py-2.5 text-center sm:rounded-[1.2rem] sm:px-3 sm:py-4">
-                                            <p className="font-serif text-[1.45rem] font-light leading-none tracking-[0.08em] text-[#FFF7F0] sm:text-4xl">{segment.value}</p>
-                                            <p className="mt-1.5 text-[8px] uppercase tracking-[0.2em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">{getText(`promo_popup.timer.segment.${segment.label}`, countdownSegmentFallbacks[segment.label] || segment.label)}</p>
+                                        <div key={segment.label} className="rounded-[0.9rem] border border-white/10 bg-[#0F1013]/45 px-2 py-3 text-center sm:rounded-[1.2rem] sm:px-3 sm:py-4">
+                                            <p className="font-serif text-[1.35rem] font-light leading-none tracking-[0.06em] text-[#FFF7F0] sm:text-4xl sm:tracking-[0.08em]">{segment.value}</p>
+                                            <p className="mt-1.5 text-[8px] uppercase tracking-[0.16em] text-white/38 sm:mt-3 sm:text-[10px] sm:tracking-[0.28em]">{getText(`promo_popup.timer.segment.${segment.label}`, countdownSegmentFallbacks[segment.label] || segment.label)}</p>
                                         </div>
                                     ))}
                                 </div>

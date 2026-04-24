@@ -1,4 +1,6 @@
 import { createAdminClient, isAdminConfigured } from '../utils/supabase/admin';
+import { DEFAULT_LANGUAGE } from '../utils/language';
+import { filterProductsByLanguage } from '../utils/products';
 import { buildProductHref, normalizeProductRecord } from '../utils/products';
 import { absoluteSiteUrl } from '../utils/seo';
 import { SPOTLIGHT_PATH } from '../utils/site-routes';
@@ -30,14 +32,14 @@ export default async function sitemap() {
         const adminClient = createAdminClient();
         const { data: products, error } = await adminClient
             .from('products')
-            .select('id, slug, status, updated_at')
+            .select('id, slug, status, updated_at, language_visibility')
             .eq('status', 'active');
 
         if (error) {
             throw error;
         }
 
-        const productEntries = (products || [])
+        const productEntries = filterProductsByLanguage(products || [], DEFAULT_LANGUAGE)
             .map((product) => normalizeProductRecord(product))
             .filter((product) => product.status === 'active' && product.id)
             .map((product) => ({

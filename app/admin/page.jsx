@@ -29,7 +29,7 @@ function isCatalogSetupError(error) {
 
 function SetupCard({ title, copy, sql }) {
     return (
-        <div className="pt-32 md:pt-40 pb-28 md:pb-36 px-6 md:px-12 max-w-[1200px] mx-auto">
+        <div className="shell-page-pad max-w-[1200px] mx-auto">
             <div className="border border-[#1C1C1C]/10 bg-white/50 rounded-sm p-8 md:p-10 flex flex-col gap-8">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4">Admin / Setup Required</p>
@@ -113,7 +113,7 @@ export default async function AdminPage() {
             : '';
 
     return (
-        <div className="pt-32 md:pt-40 pb-28 md:pb-36 px-6 md:px-12 max-w-[1800px] mx-auto">
+        <div className="shell-page-pad max-w-[1800px] mx-auto">
             <div className="mb-10 md:mb-12 grid grid-cols-1 xl:grid-cols-[1.02fr_0.98fr] gap-6 md:gap-8 items-stretch">
                 <section className="border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>

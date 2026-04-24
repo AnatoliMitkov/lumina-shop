@@ -6,7 +6,7 @@ export default async function CheckoutCancelPage({ searchParams = {} }) {
   const orderCode = searchParams?.orderCode || '';
 
   return (
-    <div className="pt-32 md:pt-40 pb-24 md:pb-28 px-6 md:px-12 max-w-[1200px] mx-auto">
+    <div className="shell-page-pad max-w-[1200px] mx-auto">
       <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-8 md:p-10 flex flex-col gap-8">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="checkout.cancel.eyebrow" fallback="Payment Not Completed" editorLabel="Checkout cancel eyebrow" /></p>

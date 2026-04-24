@@ -87,6 +87,31 @@ function mergeHtmlClassAttribute(rawAttributes = '', nextClassName = '') {
         : `class="${nextClassName}"`;
 }
 
+function stripStylePropertyFromHtml(html = '', propertyName = '') {
+    const normalizedPropertyName = String(propertyName || '').trim().toLowerCase();
+
+    if (!html || !normalizedPropertyName) {
+        return html;
+    }
+
+    return String(html).replace(/style=("([^"]*)"|'([^']*)')/gi, (match, wrappedValue, doubleQuotedValue, singleQuotedValue) => {
+        const rawStyleValue = doubleQuotedValue ?? singleQuotedValue ?? '';
+        const nextStyleValue = rawStyleValue
+            .split(';')
+            .map((rule) => rule.trim())
+            .filter(Boolean)
+            .filter((rule) => !rule.toLowerCase().startsWith(`${normalizedPropertyName}:`))
+            .join('; ');
+
+        if (!nextStyleValue) {
+            return '';
+        }
+
+        const quote = wrappedValue.startsWith('"') ? '"' : "'";
+        return `style=${quote}${nextStyleValue}${quote}`;
+    });
+}
+
 function decorateBlockHtml(
     html = '',
     {
@@ -94,6 +119,7 @@ function decorateBlockHtml(
         blockClassNames = {},
         sizeClassNames = {},
         listClassName = '',
+        ignoreInlineFontSize = false,
     } = {},
 ) {
     if (!html) {
@@ -105,12 +131,15 @@ function decorateBlockHtml(
         ...(sizeClassNames || {}),
     };
     return String(html).replace(/<(p|h1|h2|h3|h4|h5|h6|blockquote|ul|ol)([^>]*)>([\s\S]*?)<\/\1>/gi, (match, tagName, rawAttributes = '', innerHtml = '') => {
+        const processedInnerHtml = ignoreInlineFontSize
+            ? stripStylePropertyFromHtml(innerHtml, 'font-size')
+            : innerHtml;
         const normalizedTagName = tagName.toLowerCase();
         const blockType = HTML_TAG_TO_BLOCK_TYPE[normalizedTagName] || 'paragraph';
         const sizeKey = HTML_TAG_TO_SIZE_KEY[normalizedTagName] || 'body';
         const usesSurfaceHeadingScale = /^h[1-6]$/.test(normalizedTagName);
         const sizeClassNamesForTag = usesSurfaceHeadingScale ? resolvedSizeClassNames : DEFAULT_SIZE_CLASS_NAMES;
-        const hasInlineFontSize = /font-size\s*:/i.test(innerHtml);
+        const hasInlineFontSize = !ignoreInlineFontSize && /font-size\s*:/i.test(processedInnerHtml);
         const combinedClassName = joinClassNames(
             blockBaseClassName,
             DEFAULT_TYPE_CLASS_NAMES[blockType] || '',
@@ -121,7 +150,7 @@ function decorateBlockHtml(
         );
         const mergedAttributes = mergeHtmlClassAttribute(rawAttributes, combinedClassName);
 
-        return mergedAttributes ? `<${tagName} ${mergedAttributes}>${innerHtml}</${tagName}>` : `<${tagName}>${innerHtml}</${tagName}>`;
+        return mergedAttributes ? `<${tagName} ${mergedAttributes}>${processedInnerHtml}</${tagName}>` : `<${tagName}>${processedInnerHtml}</${tagName}>`;
     });
 }
 
@@ -137,6 +166,7 @@ export default function LuminaTextRenderer({
     blockClassNames = {},
     sizeClassNames = {},
     listClassName = '',
+    ignoreInlineFontSize = false,
 }) {
     const isInline = inline || mode === 'inline';
     const Tag = as || (isInline ? 'span' : 'div');
@@ -151,8 +181,9 @@ export default function LuminaTextRenderer({
                 blockClassNames,
                 sizeClassNames,
                 listClassName,
+                ignoreInlineFontSize,
             });
-    }, [value, fallback, isInline, blockBaseClassName, blockClassNames, sizeClassNames, listClassName]);
+    }, [value, fallback, isInline, blockBaseClassName, blockClassNames, sizeClassNames, listClassName, ignoreInlineFontSize]);
 
     if (!html) {
         return <Tag className={className} style={style} />;

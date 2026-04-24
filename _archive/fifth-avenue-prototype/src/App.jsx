@@ -462,7 +462,7 @@ function App({ collectionStageMediaOverrides = {} }) {
           <span>Editorial feature</span>
         </div>
 
-        <a className="topbar__portal" href={MAIN_PAGE_PORTAL.href}>
+        <a className="topbar__portal transition-link" href={MAIN_PAGE_PORTAL.href}>
           <span className="topbar__portal-line">{MAIN_PAGE_PORTAL.label}</span>
           <span className="topbar__portal-subline">{MAIN_PAGE_PORTAL.subline}</span>
         </a>
@@ -529,7 +529,7 @@ function App({ collectionStageMediaOverrides = {} }) {
           <p className="stage__subtitle js-product-fade">{activeCollection.subtitle}</p>
 
           <div className="stage__controls js-product-fade">
-            <a href={activeCollectionHref} aria-label={`Visit ${activeCollection.collection} in collections`}>
+            <a className="transition-link" href={activeCollectionHref} aria-label={`Visit ${activeCollection.collection} in collections`}>
               Visit Collection
             </a>
           </div>

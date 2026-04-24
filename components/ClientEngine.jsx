@@ -1,7 +1,7 @@
 "use client";
 
 import '../i18n';
-import { useEffect, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePathname, useRouter } from 'next/navigation';
 import gsap from 'gsap';
@@ -28,13 +28,15 @@ import {
     dispatchPageRevealComplete,
     resolvePageMotionEnabled,
 } from '../utils/page-motion';
-import { buildCollectionsHref, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
+import { buildCollectionsHref, isProductVisibleInLanguage, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
 import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
 import { createLocalizedValue as localizedFallback, resolveLocalizedValue } from '../utils/language';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
+
+const GTAG_ID = 'G-HS1V41ZYQ4';
 
 const baseCursorClassName = 'hidden md:flex fixed top-0 left-0 relative rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 justify-center items-center text-white text-[10px] uppercase font-medium text-opacity-0 select-none';
 
@@ -207,6 +209,24 @@ function getLoaderCopyConfig(pathname) {
             editorLabel: 'Default intro subtitle',
         },
     };
+}
+
+function normalizeTransitionPath(pathname) {
+    if (typeof pathname !== 'string' || pathname.trim() === '') {
+        return '/';
+    }
+
+    if (pathname.length > 1 && pathname.endsWith('/')) {
+        return pathname.replace(/\/+$/, '');
+    }
+
+    return pathname;
+}
+
+function shouldAnimateRouteTransition(pathname) {
+    const normalizedPathname = normalizeTransitionPath(pathname);
+
+    return normalizedPathname === '/' || normalizedPathname === '/account' || isSpotlightPath(normalizedPathname);
 }
 
 export default function ClientEngine({ children, initialLanguage }) {
@@ -444,6 +464,31 @@ export default function ClientEngine({ children, initialLanguage }) {
     }, []);
 
     useEffect(() => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return undefined;
+        }
+
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = window.gtag || function gtag() {
+            window.dataLayer.push(arguments);
+        };
+        window.gtag('js', new Date());
+        window.gtag('config', GTAG_ID);
+
+        if (document.getElementById('lumina-gtag-loader')) {
+            return undefined;
+        }
+
+        const script = document.createElement('script');
+        script.id = 'lumina-gtag-loader';
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${GTAG_ID}`;
+        document.head.appendChild(script);
+
+        return undefined;
+    }, []);
+
+    useEffect(() => {
         if (!isSupabaseConfigured()) {
             setCategoryMenuItems(PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
             return undefined;
@@ -457,7 +502,7 @@ export default function ClientEngine({ children, initialLanguage }) {
             try {
                 const { data, error } = await supabase
                     .from('products')
-                    .select('category')
+                    .select('category, language_visibility')
                     .eq('status', 'active');
 
                 if (error) {
@@ -465,7 +510,11 @@ export default function ClientEngine({ children, initialLanguage }) {
                 }
 
                 if (!isCancelled) {
-                    setCategoryMenuItems(buildCategoryMenuItems((data || []).map((entry) => entry.category)));
+                    const visibleCategories = (data || [])
+                        .filter((entry) => isProductVisibleInLanguage(entry, activeLanguage))
+                        .map((entry) => entry.category);
+
+                    setCategoryMenuItems(buildCategoryMenuItems(visibleCategories));
                 }
             } catch {
                 if (!isCancelled) {
@@ -516,7 +565,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 supabase.removeChannel(categoryChannel);
             }
         };
-    }, []);
+    }, [activeLanguage]);
 
     useEffect(() => {
         if (!hasMounted) {
@@ -562,9 +611,23 @@ export default function ClientEngine({ children, initialLanguage }) {
         setIsMobileMenuOpen(false);
     };
 
+    const handleSiteLanguageChange = async (nextLanguage) => {
+        const resolvedNextLanguage = normalizeLanguage(nextLanguage) || DEFAULT_LANGUAGE;
+
+        if (resolvedNextLanguage === activeLanguage) {
+            return;
+        }
+
+        await changeSiteLanguage(resolvedNextLanguage);
+
+        startTransition(() => {
+            router.refresh();
+        });
+    };
+
     const handleMobileLanguageChange = (nextLanguage) => {
         setIsMobileLanguageMenuOpen(false);
-        void changeSiteLanguage(nextLanguage);
+        void handleSiteLanguageChange(nextLanguage);
     };
 
     const openIntroCopyEditor = (entryConfig) => {
@@ -590,32 +653,16 @@ export default function ClientEngine({ children, initialLanguage }) {
             >
                 {localize(localizedFallback('Edit Intro Title', 'Редактирай уводното заглавие'))}
             </button>
-            {loaderCopy.subtitle && (
-                <button
-                    type="button"
-                    onClick={() => openIntroCopyEditor(loaderCopy.subtitle)}
-                    className="hover-target rounded-full border border-[#1C1C1C]/12 bg-[rgba(239,236,232,0.94)] px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-md transition-colors hover:bg-white"
-                >
-                    {localize(localizedFallback('Edit Intro Subtitle', 'Редактирай уводния подзаглавен ред'))}
-                </button>
-            )}
         </div>
     ) : null;
 
     const loaderIntro = (
-        <div className="flex w-full max-w-[26rem] flex-col items-center px-6 text-center">
-            <div className="w-full overflow-hidden">
-                <h1 className="loader-text mx-auto w-[calc(100vw-2rem)] max-w-[22rem] whitespace-normal text-center font-serif text-[2.4rem] font-light uppercase leading-[0.94] tracking-[0.06em] translate-y-full sm:text-[2.85rem] sm:tracking-[0.1em] md:w-auto md:max-w-none md:text-7xl md:tracking-widest">
+        <div className="flex w-full max-w-[26rem] flex-col items-center px-6 text-center md:max-w-none md:px-10">
+            <div className="w-full overflow-x-visible overflow-y-hidden md:w-auto">
+                <h1 className="loader-text mx-auto w-[calc(100vw-2rem)] max-w-[22rem] whitespace-normal text-center font-serif text-[2.4rem] font-light uppercase leading-[0.94] tracking-[0.06em] translate-y-full sm:text-[2.85rem] sm:tracking-[0.1em] md:w-auto md:max-w-none md:whitespace-nowrap md:text-[clamp(4rem,7vw,6rem)] md:leading-[0.9] md:tracking-[0.12em]">
                     <EditableText contentKey={loaderCopy.title.key} fallback={loaderCopy.title.fallback} editorLabel={loaderCopy.title.editorLabel} multiline={false} />
                 </h1>
             </div>
-            {loaderCopy.subtitle && (
-                <div className="mt-5 w-full overflow-hidden md:mt-6">
-                    <p className="loader-text mx-auto w-[calc(100vw-3rem)] max-w-[20rem] text-center font-sans text-[10px] uppercase leading-[1.45] tracking-[0.22em] opacity-0 sm:text-[11px] sm:tracking-[0.26em] md:w-auto md:max-w-none md:text-sm md:tracking-[0.3em]">
-                        <EditableText contentKey={loaderCopy.subtitle.key} fallback={loaderCopy.subtitle.fallback} editorLabel={loaderCopy.subtitle.editorLabel} multiline={false} />
-                    </p>
-                </div>
-            )}
         </div>
     );
 
@@ -814,13 +861,13 @@ export default function ClientEngine({ children, initialLanguage }) {
             const isInitialLoad = !hasPlayedInitialLoadRef.current;
             const transitionTimings = isInitialLoad
                 ? {
-                    loaderInDuration: 0.9,
-                    loaderInStagger: 0.12,
-                    loaderInDelay: 0.08,
-                    loaderOutDuration: 0.62,
-                    loaderOutStagger: 0.06,
-                    loaderOutDelay: 0.28,
-                    preloaderLiftDuration: 0.82,
+                    loaderInDuration: 0.62,
+                    loaderInStagger: 0.08,
+                    loaderInDelay: 0.02,
+                    loaderOutDuration: 0.34,
+                    loaderOutStagger: 0.04,
+                    loaderOutDelay: 0.04,
+                    preloaderLiftDuration: 0.42,
                     heroDuration: 1.5,
                     heroTitleDuration: 1.05,
                     heroTitleStagger: 0.08,
@@ -1035,9 +1082,11 @@ export default function ClientEngine({ children, initialLanguage }) {
                 return;
             }
 
+            const shouldAnimateNextRoute = shouldAnimateRouteTransition(nextUrl.pathname);
+
             event.preventDefault();
 
-            if (!isPageMotionEnabled) {
+            if (!isPageMotionEnabled || !shouldAnimateNextRoute) {
                 router.push(nextHref);
                 return;
             }
@@ -1120,8 +1169,8 @@ export default function ClientEngine({ children, initialLanguage }) {
             {introEditorDock}
 
             <div className={`fixed inset-x-0 top-0 z-[55] border-b border-white/10 bg-[rgba(12,12,14,0.82)] text-[#EFECE8] backdrop-blur-xl ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
-                <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-5 py-2 md:min-h-10 md:px-12">
-                    <p className="text-center text-[10px] leading-[1.25] text-white/78 md:text-xs">
+                <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-6 py-2 md:min-h-10 md:px-12">
+                    <p className="text-center text-[11px] leading-[1.35] tracking-[0.015em] text-white/82 min-[380px]:text-[11.5px] md:text-[13px] lg:text-sm">
                         <EditableText
                             contentKey="shell.build_notice"
                             fallback={localizedFallback(
@@ -1135,7 +1184,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 </div>
             </div>
 
-            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white opacity-0 ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
+            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white opacity-0 ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="relative z-[131] flex md:hidden items-center gap-3">
                     <div ref={mobileLanguageMenuRef} className="relative">
@@ -1240,13 +1289,12 @@ export default function ClientEngine({ children, initialLanguage }) {
 
             <div className={`fixed inset-0 z-[120] md:hidden transition-all duration-300 ${isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <div onClick={() => setIsMobileMenuOpen(false)} className={`absolute inset-0 bg-[#1C1C1C]/42 backdrop-blur-xl transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}></div>
-                <div id="mobile-nav-panel" className={`absolute inset-x-4 bottom-4 top-[8.5rem] flex flex-col overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.78)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
-                    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div id="mobile-nav-panel" className={`absolute inset-x-3 bottom-3 top-[8rem] flex flex-col overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.78)] p-4 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 min-[380px]:inset-x-4 min-[380px]:bottom-4 min-[380px]:p-5 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
+                    <div className="flex shrink-0 items-center border-b border-white/10 pb-4">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="shell.mobile_menu.eyebrow" fallback={localizedFallback('Navigation', 'Навигация')} editorLabel="Mobile menu eyebrow" /></p>
                             <p className="mt-2 font-serif text-2xl font-light uppercase tracking-[0.08em]"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></p>
                         </div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/36"><EditableText contentKey="shell.mobile_menu.badge" fallback={localizedFallback('Mobile', 'Мобилно')} editorLabel="Mobile menu badge" /></p>
                     </div>
 
                     <div data-lenis-prevent data-lenis-prevent-wheel data-lenis-prevent-touch className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
@@ -1334,9 +1382,9 @@ export default function ClientEngine({ children, initialLanguage }) {
                 </div>
             </div>
 
-            <footer className="relative w-full z-10 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 pt-10 md:pt-12 pb-10 md:pb-12">
-                <div className="max-w-[1800px] mx-auto w-full flex flex-col gap-8 md:gap-10">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
+            <footer className="relative w-full z-10 bg-[#1C1C1C] text-[#EFECE8] px-6 md:px-12 pt-8 md:pt-12 pb-8 md:pb-12">
+                <div className="max-w-[1800px] mx-auto w-full flex flex-col gap-7 md:gap-10">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
                         <div className="col-span-2 flex max-w-sm flex-col gap-3 md:col-span-1 md:max-w-none">
                             <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
                             <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback={localizedFallback('Beautiful People Smile More', 'Красивите хора се усмихват повече')} editorLabel="Footer slogan" /></p>
@@ -1392,7 +1440,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                                             aria-label={language === 'en'
                                                 ? localize(localizedFallback('Switch to English', 'Смени на английски'))
                                                 : localize(localizedFallback('Switch to Bulgarian', 'Смени на български'))}
-                                            onClick={() => void changeSiteLanguage(language)}
+                                            onClick={() => void handleSiteLanguageChange(language)}
                                             className={`hover-target rounded-full px-3 py-2 text-[10px] uppercase tracking-[0.22em] transition-colors ${activeLanguage === language ? 'bg-[#EFE7DA] text-[#1C1C1C]' : 'text-white/70 hover:text-white'}`}
                                         >
                                             {language.toUpperCase()}

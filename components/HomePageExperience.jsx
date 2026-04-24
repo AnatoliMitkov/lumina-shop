@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import EditableMediaAsset from './site-copy/EditableMediaAsset';
 import EditableMedia from './site-copy/EditableMedia';
 import EditableMediaFrame from './site-copy/EditableMediaFrame';
@@ -7,7 +8,7 @@ import EditableRichText from './site-copy/EditableRichText';
 import EditableText from './site-copy/EditableText';
 import { detectEditableMediaKind } from './site-copy/media-kind';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
-import { createLocalizedValue as localizedFallback } from '../utils/language';
+import { DEFAULT_LANGUAGE, createLocalizedValue as localizedFallback, normalizeLanguage, resolveLocalizedValue } from '../utils/language';
 import { buildProductHref, formatProductCurrency, resolveStorefrontGallery } from '../utils/storefront-products';
 import { createSiteCopyRichTextDocument, resolveSiteCopyMediaEntry } from '../utils/site-copy';
 import { SPOTLIGHT_PATH } from '../utils/site-routes';
@@ -35,13 +36,23 @@ const storyBackdropMediaDefaults = {
     scaleMobile: 1.08,
 };
 
-const storyTitleFallback = createSiteCopyRichTextDocument([
-    {
-        type: 'heading2',
-        size: 'display',
-        text: 'Elevating traditional craftsmanship into avant-garde fashion.',
-    },
-]);
+const storyPanelLabelFallback = 'My Story / Моята история';
+
+// Story surface tuning:
+// - `mobileImageOverlay` / `desktopImageOverlay` control the darkening color and opacity over the image.
+// - `copyPanel` controls the text panel color, opacity, shadow, and `backdrop-blur-*` strength.
+const storySurfaceClassNames = {
+    mobileImageOverlay: 'bg-[linear-gradient(180deg,rgba(10,10,10,0.14)_0%,rgba(10,10,10,0.12)_24%,rgba(10,10,10,0.44)_58%,rgba(10,10,10,0.88)_100%)]',
+    desktopImageOverlay: 'bg-[linear-gradient(90deg,rgba(10,10,10,0.92)_0%,rgba(10,10,10,0.82)_32%,rgba(10,10,10,0.58)_50%,rgba(10,10,10,0.16)_72%,rgba(10,10,10,0)_100%)]',
+    ambientGlow: 'bg-[radial-gradient(circle_at_top_left,rgba(239,236,232,0.14)_0%,rgba(239,236,232,0)_36%)]',
+    overallShade: 'bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.14)_36%,rgba(0,0,0,0.3)_100%)]',
+    copyPanel: 'h-full w-full border-t border-white/10 bg-[linear-gradient(180deg,rgba(8,8,8,0.78)_0%,rgba(8,8,8,0.72)_100%)] shadow-[0_-20px_60px_rgba(0,0,0,0.24)] backdrop-blur-[14px] md:border-0 md:bg-[linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,0.98)_18%,rgba(0,0,0,0.88)_28%,rgba(0,0,0,0.52)_34%,rgba(0,0,0,0)_40%)] md:shadow-none md:backdrop-blur-none',
+};
+
+const storyContentViewportStyle = {
+    paddingTop: 'clamp(4.5rem, calc(var(--shell-page-pad-top-tight) - 2rem), 7rem)',
+    paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.75rem))',
+};
 
 const storyCopyFallback = createSiteCopyRichTextDocument([
     {
@@ -51,22 +62,13 @@ const storyCopyFallback = createSiteCopyRichTextDocument([
     },
 ]);
 
-const storyTitleSizeClassNames = {
-    display: 'storefront-section-display',
-    xl: 'text-4xl md:text-5xl xl:text-6xl',
-    lg: 'text-3xl md:text-4xl xl:text-5xl',
-    body: 'text-2xl md:text-3xl xl:text-4xl',
-    sm: 'text-xl md:text-2xl xl:text-3xl',
-    xs: 'text-lg md:text-xl xl:text-2xl',
-};
-
 const storyCopySizeClassNames = {
-    xs: 'text-xs md:text-sm',
-    sm: 'text-sm md:text-base',
-    body: 'text-base md:text-lg',
-    lg: 'text-lg md:text-xl',
-    xl: 'text-xl md:text-2xl',
-    display: 'text-2xl md:text-4xl',
+    xs: 'text-[11px] min-[380px]:text-xs md:text-sm',
+    sm: 'text-[13px] min-[380px]:text-[13.5px] md:text-base',
+    body: 'text-[14px] min-[380px]:text-[15px] md:text-lg',
+    lg: 'text-[15px] min-[380px]:text-base md:text-xl',
+    xl: 'text-[17px] min-[380px]:text-lg md:text-2xl',
+    display: 'text-[20px] min-[380px]:text-2xl md:text-4xl',
 };
 
 const heroTitleLineOneFallback = localizedFallback(
@@ -130,9 +132,9 @@ const heroTitleSizeClassNames = {
 };
 
 const heroTitleBlockClassNames = {
-    heading1: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]',
-    heading2: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.92] text-[#EFECE8]',
-    heading3: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.96] text-[#EFECE8]',
+    heading1: 'font-serif font-light uppercase tracking-[0.04em] leading-[0.98] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.9]',
+    heading2: 'font-serif font-light uppercase tracking-[0.04em] leading-[1] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.92]',
+    heading3: 'font-serif font-light uppercase tracking-[0.04em] leading-[1] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.96]',
     paragraph: 'max-w-[24rem] font-sans text-[#EFECE8] normal-case tracking-[0.14em] leading-[1.35]',
     quote: 'max-w-[24rem] border-l border-white/20 pl-4 font-sans italic text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.3]',
     'bullet-list': 'max-w-[24rem] list-disc pl-5 space-y-2 font-sans text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.35]',
@@ -182,9 +184,26 @@ const marqueeItems = [
     { key: 'victoria-built', copy: 'Victoria Built' },
 ];
 
+function isValidNewsletterEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
 export default function HomePageExperience({ featuredProducts = [] }) {
     const siteCopy = useSiteCopy();
-    const newsletterPlaceholder = siteCopy ? siteCopy.resolveText('home.newsletter.placeholder', 'Email address') : 'Email address';
+    const activeLanguage = normalizeLanguage(siteCopy?.activeLanguage) || DEFAULT_LANGUAGE;
+    const [newsletterEmail, setNewsletterEmail] = useState('');
+    const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
+    const [newsletterStatus, setNewsletterStatus] = useState({ type: 'idle', message: '' });
+    const shouldUseEnglishHeroFallback = activeLanguage === DEFAULT_LANGUAGE;
+    const heroTitleLineOneKey = shouldUseEnglishHeroFallback ? 'home.hero.title.line_one.__fallback_only' : 'home.hero.title.line_one';
+    const heroTitleLineTwoKey = shouldUseEnglishHeroFallback ? 'home.hero.title.line_two.__fallback_only' : 'home.hero.title.line_two';
+    const heroSubtextKey = shouldUseEnglishHeroFallback ? 'home.hero.subtext.__fallback_only' : 'home.hero.subtext';
+    const resolveNewsletterText = (key, fallback) => siteCopy
+        ? siteCopy.resolveText(key, fallback)
+        : resolveLocalizedValue(fallback, activeLanguage);
+    const newsletterPlaceholder = resolveNewsletterText('home.newsletter.placeholder', localizedFallback('Email address', 'Имейл адрес'));
+    const newsletterButtonLabel = resolveNewsletterText('home.newsletter.button', localizedFallback('Subscribe', 'Абонирай се'));
+    const newsletterSubmittingLabel = resolveNewsletterText('home.newsletter.button.submitting', localizedFallback('Submitting...', 'Изпращане...'));
     const heroMediaFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
     const heroMediaSrc = siteCopy ? siteCopy.resolveMedia('home.hero.media.video', heroMediaFallback) : heroMediaFallback;
     const heroMediaKind = detectEditableMediaKind(heroMediaSrc, 'video');
@@ -200,6 +219,73 @@ export default function HomePageExperience({ featuredProducts = [] }) {
         scaleMobile: Math.max(heroMediaEntry.scaleMobile, 1.08),
     };
 
+    const handleNewsletterSubmit = async (event) => {
+        event.preventDefault();
+
+        const nextEmail = newsletterEmail.trim().toLowerCase();
+
+        if (!isValidNewsletterEmail(nextEmail)) {
+            setNewsletterStatus({
+                type: 'error',
+                message: resolveNewsletterText(
+                    'home.newsletter.status.invalid_email',
+                    localizedFallback('Please enter a valid email address.', 'Моля, въведете валиден имейл адрес.')
+                ),
+            });
+            return;
+        }
+
+        setIsNewsletterSubmitting(true);
+        setNewsletterStatus({ type: 'idle', message: '' });
+
+        try {
+            const response = await fetch('/api/newsletter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: nextEmail,
+                    language: activeLanguage,
+                    source: 'homepage',
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error
+                    || resolveNewsletterText(
+                        'home.newsletter.status.error',
+                        localizedFallback('Unable to save your subscription right now.', 'Не успяхме да запишем абонамента в момента.')
+                    )
+                );
+            }
+
+            setNewsletterEmail('');
+            setNewsletterStatus({
+                type: 'success',
+                message: data.message
+                    || resolveNewsletterText(
+                        'home.newsletter.status.success',
+                        localizedFallback("You're on the atelier list.", 'Вече сте в списъка на ателието.')
+                    ),
+            });
+        } catch (error) {
+            setNewsletterStatus({
+                type: 'error',
+                message: error?.message
+                    || resolveNewsletterText(
+                        'home.newsletter.status.error',
+                        localizedFallback('Unable to save your subscription right now.', 'Не успяхме да запишем абонамента в момента.')
+                    ),
+            });
+        } finally {
+            setIsNewsletterSubmitting(false);
+        }
+    };
+
     return (
         <>
             <style>{`
@@ -209,6 +295,29 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 }
                 .animate-marquee {
                     animation: marquee 25s linear infinite;
+                }
+                @media (min-width: 768px) {
+                    .home-hero-title-shell [style*='font-size'] {
+                        font-size: clamp(1.58rem, 1.72vw, 1.78rem) !important;
+                        line-height: 1.06 !important;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell {
+                        transform: translateY(-3rem);
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell h1,
+                    html[lang='bg'] .home-hero-title-shell h2,
+                    html[lang='bg'] .home-hero-title-shell h3 {
+                        letter-spacing: 0.045em !important;
+                        line-height: 0.94 !important;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell h1 span,
+                    html[lang='bg'] .home-hero-title-shell h2 span,
+                    html[lang='bg'] .home-hero-title-shell h3 span {
+                        letter-spacing: 0.02em !important;
+                    }
                 }
             `}</style>
 
@@ -267,42 +376,43 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                         <div className="absolute inset-0 bg-gradient-to-t from-[#11110f] via-[#11110f]/0 to-transparent"></div>
                     </div>
 
-                    <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
-                        <div className="w-full md:w-auto">
+                    <div className="relative z-10 flex h-full min-h-0 w-full flex-col items-start justify-end gap-5 px-6 pb-10 pt-28 text-[#EFECE8] min-[380px]:gap-6 min-[380px]:pb-12 min-[380px]:pt-32 md:flex-row md:items-end md:justify-between md:gap-10 md:px-12 md:pb-16 md:pt-0 xl:pb-[4.5rem]">
+                        <div className="home-hero-title-shell w-full max-w-[19rem] min-[380px]:max-w-[22rem] md:w-auto md:max-w-none">
                             <div className="md:overflow-hidden md:-mb-[0.5vw]">
                                 <EditableRichText
-                                    contentKey="home.hero.title.line_one"
+                                    contentKey={heroTitleLineOneKey}
                                     fallback={heroTitleLineOneFallback}
                                     editorLabel="Home hero title line one"
-                                    className="hero-title md:translate-y-full"
+                                    className="hero-title home-hero-mobile-title md:translate-y-full"
                                     blockBaseClassName="text-[#EFECE8]"
                                     blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>
-                            <div className="md:overflow-hidden">
+                            <div className="mt-1 min-[380px]:mt-2 md:mt-0 md:block md:overflow-hidden">
                                 <EditableRichText
-                                    contentKey="home.hero.title.line_two"
+                                    contentKey={heroTitleLineTwoKey}
                                     fallback={heroTitleLineTwoFallback}
                                     editorLabel="Home hero title line two"
-                                    className="hero-title storefront-home-shift md:translate-y-full"
+                                    className="hero-title home-hero-mobile-title storefront-home-shift md:translate-y-full"
                                     blockBaseClassName="text-[#EFECE8]"
                                     blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>
                         </div>
-                        <div className="w-full md:w-[22rem] pb-4 md:pb-8 flex flex-col gap-4">
+                        <div className="w-full max-w-[18.5rem] min-[380px]:max-w-[20.5rem] md:w-[20.5rem] md:max-w-none md:pb-0 flex flex-col gap-3 md:gap-4">
                             <EditableRichText
-                                contentKey="home.hero.subtext"
+                                contentKey={heroSubtextKey}
                                 fallback={heroSubtextFallback}
                                 editorLabel="Home hero subtext"
-                                className="hero-sub opacity-0"
-                                blockBaseClassName="tracking-[0.2em] font-light uppercase text-[#EFECE8]"
+                                className="hero-sub home-hero-mobile-copy opacity-0"
+                                blockBaseClassName="font-sans font-light normal-case tracking-[0.06em] leading-[1.48] text-[#EFECE8]/88 md:tracking-[0.12em]"
                                 sizeClassNames={heroSubtextSizeClassNames}
+                                ignoreInlineFontSize
                             />
                             <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
-                            <p className="hero-sub text-xs tracking-widest uppercase opacity-0 hover-target cursor-pointer w-max"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
+                            <p className="hero-sub text-[10px] tracking-[0.28em] uppercase opacity-0 hover-target cursor-pointer w-max md:text-xs md:tracking-widest"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
                         </div>
                     </div>
                 </div>
@@ -397,8 +507,8 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 </div>
             </section>
 
-            <section className="w-full px-6 md:px-12 pb-20 md:pb-24 bg-[#EFECE8]">
-                <div className="relative max-w-[1800px] mx-auto min-h-[30rem] overflow-hidden bg-[#121211] text-[#EFECE8] md:min-h-[34rem] xl:min-h-[38rem]">
+            <section className="w-full overflow-hidden bg-[#EFECE8]">
+                <div className="relative h-[100dvh] min-h-[100svh] w-full overflow-hidden bg-[#121211] text-[#EFECE8] md:h-[60vh] md:min-h-[28rem]">
                     <EditableMedia
                         contentKey="home.brand.image"
                         fallback="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
@@ -412,39 +522,35 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                         }}
                     />
 
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,10,10,0.74)_0%,rgba(10,10,10,0.52)_42%,rgba(10,10,10,0.28)_100%)] md:hidden"></div>
-                    <div className="absolute inset-0 hidden md:block bg-[linear-gradient(90deg,rgba(10,10,10,0.94)_0%,rgba(10,10,10,0.86)_30%,rgba(10,10,10,0.62)_50%,rgba(10,10,10,0.18)_72%,rgba(10,10,10,0)_100%)]"></div>
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0)_28%,rgba(0,0,0,0.38)_100%)]"></div>
+                    <div className={`absolute inset-0 md:hidden ${storySurfaceClassNames.mobileImageOverlay}`}></div>
+                    <div className={`absolute inset-0 hidden md:block ${storySurfaceClassNames.desktopImageOverlay}`}></div>
+                    <div className={`absolute inset-0 mix-blend-screen ${storySurfaceClassNames.ambientGlow}`}></div>
+                    <div className={`absolute inset-0 ${storySurfaceClassNames.overallShade}`}></div>
 
-                    <div className="relative z-[1] flex min-h-[30rem] items-center px-6 py-12 md:min-h-[34rem] md:px-10 md:py-14 xl:min-h-[38rem] xl:px-14 xl:py-16">
-                        <div className="max-w-2xl flex flex-col gap-8">
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/40"><EditableText contentKey="home.brand.eyebrow" fallback="Brand Ethos" editorLabel="Home brand ethos eyebrow" /></p>
-                            <EditableRichText
-                                contentKey="home.brand.title"
-                                fallback={storyTitleFallback}
-                                editorLabel="Home brand ethos title"
-                                className="reveal-text opacity-0 translate-y-8"
-                                blockBaseClassName="font-serif font-light uppercase tracking-[0.08em] leading-[0.92] text-[#EFECE8]"
-                                blockClassNames={{
-                                    quote: 'font-serif font-light italic tracking-[0.04em] leading-[1.02] text-[#EFECE8]/86 border-l border-white/20 pl-5',
-                                    'bullet-list': 'font-serif font-light tracking-[0.08em] leading-[1.02] text-[#EFECE8] list-disc pl-6',
-                                    'numbered-list': 'font-serif font-light tracking-[0.08em] leading-[1.02] text-[#EFECE8] list-decimal pl-6',
-                                }}
-                                sizeClassNames={storyTitleSizeClassNames}
-                            />
-                            <EditableRichText
-                                contentKey="home.brand.copy"
-                                fallback={storyCopyFallback}
-                                editorLabel="Home brand ethos copy"
-                                className="reveal-text opacity-0 translate-y-8 max-w-xl"
-                                blockBaseClassName="leading-relaxed text-white/72"
-                                blockClassNames={{
-                                    quote: 'border-l border-white/20 pl-5 italic text-white/82',
-                                    'bullet-list': 'text-white/72 list-disc pl-5 space-y-2',
-                                    'numbered-list': 'text-white/72 list-decimal pl-5 space-y-2',
-                                }}
-                                sizeClassNames={storyCopySizeClassNames}
-                            />
+                    <div className="relative z-[1] flex h-full items-stretch">
+                        <div className="w-full">
+                            <div className={storySurfaceClassNames.copyPanel}>
+                                <div className="mx-auto flex h-full w-full max-w-[25rem] flex-col justify-start gap-6 px-5 min-[380px]:max-w-[26rem] min-[380px]:px-6 md:max-w-none md:px-10 xl:px-14" style={storyContentViewportStyle}>
+                                    <p className="reveal-text opacity-0 translate-y-8 font-serif text-[0.98rem] leading-none tracking-[0.08em] text-white/72 min-[380px]:text-[1.08rem] md:text-[1.15rem] md:tracking-[0.07em]"><EditableText contentKey="home.brand.story.label" fallback={storyPanelLabelFallback} editorLabel="Home brand story panel label" /></p>
+                                    <EditableRichText
+                                        contentKey="home.brand.copy"
+                                        fallback={storyCopyFallback}
+                                        editorLabel="Home brand ethos copy"
+                                        className="reveal-text opacity-0 translate-y-8 [&_span[style*='font-size']]:!text-[1.08rem] min-[380px]:[&_span[style*='font-size']]:!text-[1.16rem] md:[&_span[style*='font-size']]:!text-[1.22rem] [&_strong]:font-semibold"
+                                        blockBaseClassName="text-white/82"
+                                        blockClassNames={{
+                                            heading1: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
+                                            heading2: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
+                                            heading3: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
+                                            paragraph: 'font-serif !normal-case !not-italic max-w-none !text-[0.98rem] min-[380px]:!text-[1.04rem] leading-[1.68] tracking-[0.035em] text-white/82 md:max-w-[36rem] md:!text-[1rem] md:leading-[1.58] md:tracking-[0.03em] md:text-white/74',
+                                            quote: 'border-l border-white/20 pl-5 italic text-white/82',
+                                            'bullet-list': 'text-white/74 list-disc pl-5 space-y-2',
+                                            'numbered-list': 'text-white/74 list-decimal pl-5 space-y-2',
+                                        }}
+                                        sizeClassNames={storyCopySizeClassNames}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -458,16 +564,43 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                             <h2 className="reveal-text opacity-0 translate-y-8 mt-4 font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.08em] leading-[0.94]"><EditableText contentKey="home.newsletter.title" fallback="Join the atelier dispatch for collection drops, fittings, and editorial releases." editorLabel="Home newsletter title" /></h2>
                         </div>
 
-                        <form onSubmit={(event) => event.preventDefault()} className="w-full xl:max-w-[34rem] flex flex-col sm:flex-row gap-3 md:gap-4">
-                            <input
-                                type="email"
-                                placeholder={newsletterPlaceholder}
-                                className="h-14 flex-1 border border-white/12 bg-transparent px-5 text-sm tracking-[0.08em] text-white placeholder:text-white/34 outline-none transition-colors focus:border-white/40"
-                            />
-                            <button type="submit" className="h-14 px-7 border border-white bg-white text-[#121211] text-[10px] uppercase tracking-[0.26em] font-medium transition-colors hover:bg-transparent hover:text-white">
-                                <EditableText contentKey="home.newsletter.button" fallback="Subscribe" editorLabel="Home newsletter button" />
-                            </button>
-                        </form>
+                        <div className="w-full xl:max-w-[34rem] flex flex-col gap-4">
+                            <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                                <input
+                                    type="email"
+                                    name="newsletterEmail"
+                                    value={newsletterEmail}
+                                    onChange={(event) => {
+                                        setNewsletterEmail(event.target.value);
+
+                                        if (newsletterStatus.type !== 'idle') {
+                                            setNewsletterStatus({ type: 'idle', message: '' });
+                                        }
+                                    }}
+                                    placeholder={newsletterPlaceholder}
+                                    autoComplete="email"
+                                    inputMode="email"
+                                    disabled={isNewsletterSubmitting}
+                                    className="h-14 flex-1 border border-white/12 bg-transparent px-5 text-sm tracking-[0.08em] text-white placeholder:text-white/34 outline-none transition-colors focus:border-white/40 disabled:cursor-not-allowed disabled:opacity-60"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isNewsletterSubmitting}
+                                    className="h-14 px-7 border border-white bg-white text-[#121211] text-[10px] uppercase tracking-[0.26em] font-medium transition-colors hover:bg-transparent hover:text-white disabled:cursor-not-allowed disabled:bg-white/80 disabled:text-[#121211]/72"
+                                >
+                                    <span>{isNewsletterSubmitting ? newsletterSubmittingLabel : newsletterButtonLabel}</span>
+                                </button>
+                            </form>
+
+                            {newsletterStatus.type !== 'idle' ? (
+                                <p
+                                    aria-live="polite"
+                                    className={`text-xs leading-relaxed tracking-[0.08em] ${newsletterStatus.type === 'error' ? 'text-[#F3B4B4]' : 'text-white/62'}`}
+                                >
+                                    {newsletterStatus.message}
+                                </p>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             </section>

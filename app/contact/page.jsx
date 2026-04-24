@@ -42,7 +42,7 @@ export default async function ContactPage({ searchParams }) {
     };
 
     return (
-        <div className="pt-32 md:pt-40 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
+        <div className="shell-page-pad max-w-[1800px] mx-auto">
             <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-12 md:gap-20 items-start">
                 <section className="flex flex-col gap-8 md:gap-10">
                     <div>

@@ -6,11 +6,12 @@ import ProductGallery from '../../../components/ProductGallery';
 import ProductContactWrapper from '../../../components/ProductContactWrapper';
 import EditableRichText from '../../../components/site-copy/EditableRichText';
 import EditableText from '../../../components/site-copy/EditableText';
-import { createLocalizedValue as localizedFallback } from '../../../utils/language';
+import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY, normalizeLanguage } from '../../../utils/language';
 import { getProductFieldCopyKey, getProductIndexedCopyKey, getProductOptionCopyKey } from '../../../utils/product-copy';
 import { createClient } from '../../../utils/supabase/server';
 import {
     buildProductHref,
+    filterProductsByLanguage,
     formatProductCurrency,
     normalizeProductRecord,
     resolveProductGallery,
@@ -20,11 +21,26 @@ import { absoluteSiteUrl } from '../../../utils/seo';
 
 export const dynamic = 'force-dynamic';
 
-const defaultCareCopy = 'Crafted from organic cotton cord and finished by hand. Spot clean only, avoid machine washing, and store flat between wears to preserve the knot structure.';
-const defaultFitCopy = 'Designed to feel sculptural rather than conventional. If you are between sizes or commissioning a private fit, contact the atelier before ordering.';
-const defaultShippingCopy = 'Complimentary worldwide shipping on orders above €300. Ready pieces dispatch faster, while made-to-order work follows the listed atelier lead time.';
-const defaultColorCopy = 'Tone is kept intentionally restrained so the knot structure, line, and silhouette lead first. Contact the atelier if you want the exact tone confirmed before ordering.';
-const defaultProductNotesCopy = 'Each piece is finished in small runs, so slight hand-finished variation is part of the character rather than a defect.';
+const defaultCareCopy = localizedFallback(
+    'Crafted from organic cotton cord and finished by hand. Spot clean only, avoid machine washing, and store flat between wears to preserve the knot structure.',
+    'Изработен от органичен памучен шнур и завършен на ръка. Почиствайте само локално, избягвайте машинно пране и съхранявайте в хоризонтално положение, за да запазите структурата на възлите.'
+);
+const defaultFitCopy = localizedFallback(
+    'Designed to feel sculptural rather than conventional. If you are between sizes or commissioning a private fit, contact the atelier before ordering.',
+    'Създаден да стои скулптурно, а не конвенционално. Ако сте между размери или искате персонална кройка, свържете се с ателието преди поръчка.'
+);
+const defaultShippingCopy = localizedFallback(
+    'Complimentary worldwide shipping on orders above €300. Ready pieces dispatch faster, while made-to-order work follows the listed atelier lead time.',
+    'Безплатна международна доставка при поръчки над €300. Наличните модели се изпращат по-бързо, а изработката по поръчка следва посочения срок на ателието.'
+);
+const defaultColorCopy = localizedFallback(
+    'Tone is kept intentionally restrained so the knot structure, line, and silhouette lead first. Contact the atelier if you want the exact tone confirmed before ordering.',
+    'Тоналността е умишлено сдържана, така че структурата, линията и силуетът да водят. Ако искате потвърждение за точния тон преди поръчка, свържете се с ателието.'
+);
+const defaultProductNotesCopy = localizedFallback(
+    'Each piece is finished in small runs, so slight hand-finished variation is part of the character rather than a defect.',
+    'Всеки модел се завършва в малки серии, затова леките следи от ръчна работа са част от характера му, а не дефект.'
+);
 const SIZE_MEASUREMENTS = [
     {
         label: 'XS',
@@ -54,21 +70,21 @@ const SIZE_MEASUREMENTS = [
 ];
 
 const productBodySizeClassNames = {
-    xs: 'text-xs md:text-sm',
-    sm: 'text-sm md:text-base',
-    body: 'text-sm md:text-base',
-    lg: 'text-base md:text-lg',
-    xl: 'text-lg md:text-xl',
-    display: 'text-xl md:text-2xl',
+    xs: 'text-sm lg:text-[1.08rem]',
+    sm: 'text-base lg:text-[1.18rem]',
+    body: 'text-base lg:text-[1.25rem]',
+    lg: 'text-lg lg:text-[1.45rem]',
+    xl: 'text-xl lg:text-[1.65rem]',
+    display: 'text-2xl lg:text-[1.95rem]',
 };
 
 const productQuoteSizeClassNames = {
-    xs: 'text-base md:text-lg',
-    sm: 'text-lg md:text-xl',
-    body: 'text-lg md:text-xl',
-    lg: 'text-xl md:text-2xl',
-    xl: 'text-2xl md:text-3xl',
-    display: 'text-3xl md:text-4xl',
+    xs: 'text-lg lg:text-[1.35rem]',
+    sm: 'text-xl lg:text-[1.55rem]',
+    body: 'text-xl lg:text-[1.6rem]',
+    lg: 'text-2xl lg:text-[1.85rem]',
+    xl: 'text-3xl lg:text-[2.15rem]',
+    display: 'text-4xl lg:text-[2.65rem]',
 };
 
 const getCatalog = cache(async () => {
@@ -81,7 +97,9 @@ const getCatalog = cache(async () => {
 
 export async function generateMetadata({ params }) {
     const { id } = await params;
-    const catalog = await getCatalog();
+    const cookieStore = await cookies();
+    const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
+    const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
     const product = catalog.find((entry) => entry.id === id || entry.slug === id);
 
     if (!product) {
@@ -128,18 +146,23 @@ function buildHighlightList(product) {
     }
 
     return [
-        `${product.collection} direction`,
-        `${product.category} silhouette`,
-        product.inventory_count > 0 ? 'Ready-to-ship stock available' : 'Made-to-order atelier finish',
+        localizedFallback(`${product.collection} direction`, `${product.collection} линия`),
+        localizedFallback(`${product.category} silhouette`, `${product.category} силует`),
+        product.inventory_count > 0
+            ? localizedFallback('Ready-to-ship stock available', 'Наличност за по-бързо изпращане')
+            : localizedFallback('Made-to-order atelier finish', 'Изработка по поръчка в ателието'),
     ];
 }
 
 function buildAvailabilityLabel(product) {
     if (product.inventory_count > 0) {
-        return `${product.inventory_count} ready now`;
+        return localizedFallback(
+            `${product.inventory_count} ready now`,
+            `${product.inventory_count} ${product.inventory_count === 1 ? 'наличен сега' : 'налични сега'}`
+        );
     }
 
-    return 'Made to order';
+    return localizedFallback('Made to order', 'Изработка по поръчка');
 }
 
 function buildAvailabilityState(product) {
@@ -147,7 +170,10 @@ function buildAvailabilityState(product) {
 }
 
 function buildLeadTimeLabel(product) {
-    return `${product.lead_time_days} day${product.lead_time_days === 1 ? '' : 's'} lead time`;
+    return localizedFallback(
+        `${product.lead_time_days} day${product.lead_time_days === 1 ? '' : 's'} lead time`,
+        `${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'} срок`
+    );
 }
 
 function buildPaletteLabel(product) {
@@ -155,12 +181,15 @@ function buildPaletteLabel(product) {
         return product.palette.join(' / ');
     }
 
-    return 'Atelier neutral';
+    return localizedFallback('Atelier neutral', 'Atelier neutral');
 }
 
 function buildColorCopy(product) {
     if (product.palette.length > 0) {
-        return `Palette notes include ${product.palette.join(', ')}. The tone direction stays restrained so the ${product.category.toLowerCase()} line reads cleanly inside the ${product.collection.toLowerCase()} story.`;
+        return localizedFallback(
+            `Palette notes include ${product.palette.join(', ')}. The tone direction stays restrained so the ${product.category.toLowerCase()} line reads cleanly inside the ${product.collection.toLowerCase()} story.`,
+            `Палитрата включва ${product.palette.join(', ')}. Тоналността остава сдържана, така че силуетът на ${product.category} да стои чисто в историята на ${product.collection}.`
+        );
     }
 
     return defaultColorCopy;
@@ -168,18 +197,26 @@ function buildColorCopy(product) {
 
 function buildDispatchCopy(product) {
     if (product.inventory_count > 0) {
-        return `${product.inventory_count} piece${product.inventory_count === 1 ? '' : 's'} ready to move first, with ${buildLeadTimeLabel(product)} if the atelier prepares another run.`;
+        return localizedFallback(
+            `${product.inventory_count} piece${product.inventory_count === 1 ? '' : 's'} ready to move first, with ${product.lead_time_days} day${product.lead_time_days === 1 ? '' : 's'} lead time if the atelier prepares another run.`,
+            product.inventory_count === 1
+                ? `1 модел е готов за по-бързо изпращане, а при нова изработка срокът е ${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'}.`
+                : `${product.inventory_count} модела са готови за по-бързо изпращане, а при нова изработка срокът е ${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'}.`
+        );
     }
 
-    return `Prepared in the atelier with ${buildLeadTimeLabel(product)} before dispatch.`;
+    return localizedFallback(
+        `Prepared in the atelier with ${product.lead_time_days} day${product.lead_time_days === 1 ? '' : 's'} lead time before dispatch.`,
+        `Подготвя се в ателието със срок ${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'} преди изпращане.`
+    );
 }
 
-function DetailCard({ eyebrow, eyebrowKey, title, titleKey, copy, copyKey, wide = false }) {
+function DetailCard({ eyebrow, eyebrowKey, title, titleKey, copy, copyKey, wide = false, editorLabelBase = 'Detail card' }) {
     return (
         <div className={`reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-5 md:p-6 flex flex-col gap-3 ${wide ? 'md:col-span-2' : ''}`}>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{eyebrowKey ? <EditableText contentKey={eyebrowKey} fallback={eyebrow} editorLabel={`${eyebrow} card eyebrow`} /> : eyebrow}</p>
-            <p className="font-serif text-2xl md:text-3xl font-light leading-tight uppercase tracking-[0.06em] text-[#1C1C1C]">{titleKey ? <EditableText contentKey={titleKey} fallback={title} editorLabel={`${title} card title`} /> : title}</p>
-            <p className="text-sm leading-relaxed text-[#1C1C1C]/58">{copyKey ? <EditableText contentKey={copyKey} fallback={copy} editorLabel={`${eyebrow} card copy`} /> : copy}</p>
+            <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{eyebrowKey ? <EditableText contentKey={eyebrowKey} fallback={eyebrow} editorLabel={`${editorLabelBase} eyebrow`} /> : eyebrow}</p>
+            <p className="font-serif text-2xl md:text-3xl font-light leading-tight uppercase tracking-[0.06em] text-[#1C1C1C]">{titleKey ? <EditableText contentKey={titleKey} fallback={title} editorLabel={`${editorLabelBase} title`} /> : title}</p>
+            <p className="text-base lg:text-[1.12rem] leading-relaxed text-[#1C1C1C]/58">{copyKey ? <EditableText contentKey={copyKey} fallback={copy} editorLabel={`${editorLabelBase} copy`} /> : copy}</p>
         </div>
     );
 }
@@ -199,7 +236,7 @@ function RelatedPieceCard({ product }) {
             </a>
 
             <div className="reveal-text opacity-0 translate-y-8 flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
                     <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} related collection`} /></span>
                     <span className="rounded-full border border-[#1C1C1C]/10 bg-white/60 px-3 py-2"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} related category`} /></span>
                 </div>
@@ -207,10 +244,10 @@ function RelatedPieceCard({ product }) {
                 <div className="flex items-end justify-between gap-4">
                     <div>
                         <a href={href} className="transition-link font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] hover-target"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} related title`} /></a>
-                        {product.subtitle && <p className="mt-3 max-w-md text-sm leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={productSubtitleKey} fallback={product.subtitle} editorLabel={`${product.name || 'Product'} related subtitle`} /></p>}
+                        {product.subtitle && <p className="mt-3 max-w-md text-base lg:text-[1.18rem] leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey={productSubtitleKey} fallback={product.subtitle} editorLabel={`${product.name || 'Product'} related subtitle`} /></p>}
                     </div>
 
-                    <p className="shrink-0 text-sm uppercase tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
+                    <p className="shrink-0 text-base lg:text-[1.12rem] uppercase tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
                 </div>
             </div>
         </article>
@@ -219,7 +256,9 @@ function RelatedPieceCard({ product }) {
 
 export default async function ProductPage({ params }) {
     const { id } = await params;
-    const catalog = await getCatalog();
+    const cookieStore = await cookies();
+    const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
+    const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
     const product = catalog.find((entry) => entry.id === id || entry.slug === id);
 
     if (!product) {
@@ -236,6 +275,7 @@ export default async function ProductPage({ params }) {
     const productStory = product.story || product.description;
     const materialsCopy = [product.materials, product.care].filter(Boolean).join(' ');
     const paletteLabel = buildPaletteLabel(product);
+    const hasDiscount = Boolean(product.compare_at_price && product.compare_at_price > product.price);
     const sizeOptions = [...SIZE_MEASUREMENTS.map((entry) => entry.label), 'Custom'];
     const productNameKey = getProductFieldCopyKey(product, 'name');
     const productSubtitleKey = getProductFieldCopyKey(product, 'subtitle');
@@ -264,83 +304,93 @@ export default async function ProductPage({ params }) {
     }));
     const accordionSections = [
         {
-            title: 'Product Notes',
-            copy: product.tags.length > 0 ? `Filed under ${product.tags.join(', ')}.` : defaultProductNotesCopy,
-            titleKey: 'product.accordion.product_notes.title',
+            id: 'product-notes',
+            title: localizedFallback('Product Notes', 'Бележки за модела'),
+            copy: product.tags.length > 0
+                ? localizedFallback(`Filed under ${product.tags.join(', ')}.`, `Ключови бележки: ${product.tags.join(', ')}.`)
+                : defaultProductNotesCopy,
             copyKey: productNotesCopyKey,
             bullets: highlightItems,
         },
         {
-            title: 'Size & Fit',
+            id: 'size-fit',
+            title: localizedFallback('Size & Fit', 'Размер и стоене'),
             copy: product.fit_notes || defaultFitCopy,
-            titleKey: 'product.accordion.size_fit.title',
             copyKey: productFitNotesKey,
         },
         {
-            title: 'Size & Measurements',
-            copy: 'Use the standard XS to XL chart below as the closest starting point before ordering. If you need a made-for-you fit, choose Custom in the purchase panel and enter your body measurements there.',
-            titleKey: 'product.accordion.size_measurements.title',
+            id: 'size-measurements',
+            title: localizedFallback('Size & Measurements', 'Размери и мерки'),
+            copy: localizedFallback(
+                'Use the standard XS to XL chart below as the closest starting point before ordering. If you need a made-for-you fit, choose Custom in the purchase panel and enter your body measurements there.',
+                'Използвайте стандартната таблица от XS до XL по-долу като най-близка отправна точка преди поръчка. Ако искате изработка по вас, изберете Custom в панела за покупка и въведете мерките си там.'
+            ),
             copyKey: 'product.accordion.size_measurements.copy',
             table: SIZE_MEASUREMENTS,
         },
         {
-            title: 'Color & Palette',
+            id: 'color-palette',
+            title: localizedFallback('Color & Palette', 'Цвят и палитра'),
             copy: buildColorCopy(product),
-            titleKey: 'product.accordion.color_palette.title',
             copyKey: productColorCopyKey,
             chips: paletteItems,
         },
         {
-            title: 'Materials & Care',
+            id: 'materials-care',
+            title: localizedFallback('Materials & Care', 'Материи и поддръжка'),
             copy: materialsCopy || defaultCareCopy,
-            titleKey: 'product.accordion.materials_care.title',
             copyKey: productMaterialsCareKey,
         },
         {
-            title: 'Shipping & Returns',
+            id: 'shipping-returns',
+            title: localizedFallback('Shipping & Returns', 'Доставка и връщане'),
             copy: defaultShippingCopy,
-            titleKey: 'product.accordion.shipping_returns.title',
             copyKey: 'product.accordion.shipping_returns.copy',
         },
     ];
     const detailPanels = [
         {
-            eyebrow: 'Atelier Finish',
+            eyebrow: localizedFallback('Atelier Finish', 'Завършек в ателието'),
             eyebrowKey: 'product.detail_cards.atelier_finish.eyebrow',
-            title: product.artisan_note ? 'Hand-tensioned final pass' : 'Finished in small runs',
-            titleKey: product.artisan_note ? null : 'product.detail_cards.atelier_finish.title',
-            copy: product.artisan_note || 'Every piece is checked by hand so the structure stays controlled, directional, and easy to wear around other tailored layers.',
+            title: product.artisan_note
+                ? localizedFallback('Final hand-finished pass', 'Финален ръчен завършек')
+                : localizedFallback('Finished in small runs', 'Завършен в малки серии'),
+            titleKey: product.artisan_note ? 'product.detail_cards.atelier_finish.note_title' : 'product.detail_cards.atelier_finish.title',
+            copy: product.artisan_note || localizedFallback('Every piece is checked by hand so the structure stays controlled, directional, and easy to wear around other tailored layers.', 'Всеки модел се проверява на ръка, за да остане структурата контролирана, изчистена и лесна за носене с други силуети.'),
             copyKey: productArtisanNoteKey,
+            editorLabelBase: 'Atelier finish card',
         },
         {
-            eyebrow: 'Dispatch',
+            eyebrow: localizedFallback('Dispatch', 'Изпращане'),
             eyebrowKey: 'product.detail_cards.dispatch.eyebrow',
             title: buildAvailabilityLabel(product),
             titleKey: productAvailabilityLabelKey,
             copy: buildDispatchCopy(product),
             copyKey: productDispatchCopyKey,
+            editorLabelBase: 'Dispatch card',
         },
         {
-            eyebrow: 'Palette & Mood',
+            eyebrow: localizedFallback('Palette & Mood', 'Палитра и настроение'),
             eyebrowKey: 'product.detail_cards.palette.eyebrow',
             title: paletteLabel,
             titleKey: productPaletteLabelKey,
             copy: buildColorCopy(product),
             copyKey: productColorCopyKey,
             wide: true,
+            editorLabelBase: 'Palette card',
         },
     ];
 
     return (
-        <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
-            <section className="mb-10 md:mb-14 border-b border-[#1C1C1C]/10 pb-8 md:pb-10">
-                <div className="grid grid-cols-1 xl:grid-cols-[1.04fr_0.96fr] gap-6 md:gap-8 items-end">
-                    <div>
-                        <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.hero.eyebrow_prefix" fallback={localizedFallback('Product', 'Продукт')} editorLabel="Product hero eyebrow prefix" /> / <EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} collection`} /></p>
-                        <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} title`} /></h1></div>
+        <div className="shell-page-pad-tight max-w-[1800px] mx-auto">
+            <section className="mb-8 md:mb-10 border-b border-[#1C1C1C]/10 pb-6 md:pb-8">
+                <div className="grid grid-cols-1 xl:grid-cols-[1.08fr_0.92fr] gap-6 md:gap-8 xl:gap-10 items-start">
+                    <div className="flex flex-col gap-4 md:gap-5 max-w-4xl">
+                        <p className="hero-sub opacity-0 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.34em] text-[#1C1C1C]/45"><EditableText contentKey="product.hero.eyebrow_prefix" fallback={localizedFallback('Product', 'Продукт')} editorLabel="Product hero eyebrow prefix" /> / <EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} collection`} /></p>
+                        <div className="overflow-hidden"><h1 className="hero-title storefront-panel-display font-serif font-light tracking-[-0.02em] translate-y-full"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} title`} /></h1></div>
                     </div>
 
-                    <div className="flex flex-col gap-4 max-w-2xl xl:justify-self-end xl:pl-8">
+                    <div className="flex flex-col gap-4 max-w-xl xl:justify-self-end xl:pl-4 xl:pt-1">
                         {product.subtitle && (
                             <EditableRichText
                                 contentKey={productSubtitleKey}
@@ -351,7 +401,7 @@ export default async function ProductPage({ params }) {
                                 sizeClassNames={productBodySizeClassNames}
                             />
                         )}
-                        <div className="hero-sub opacity-0 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                        <div className="hero-sub opacity-0 flex flex-wrap gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} category`} /></span>
                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} availability label`} /></span>
                             {product.palette.slice(0, 3).map((tone) => (
@@ -370,16 +420,16 @@ export default async function ProductPage({ params }) {
                 <div className="xl:pl-4">
                     <div className="sticky top-28 flex flex-col gap-5 md:gap-6">
                         <div className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8 flex flex-col gap-6 md:gap-7">
-                            <div className="flex flex-wrap items-end justify-between gap-5 border-b border-[#1C1C1C]/10 pb-5">
-                                <div className="flex flex-col gap-2">
-                                    <p className="hero-sub opacity-0 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/42"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} purchase collection`} /> / <EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} purchase category`} /></p>
+                            <div className="grid gap-5 border-b border-[#1C1C1C]/10 pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                                <div className="min-w-0 flex flex-col gap-2">
+                                    <p className="hero-sub opacity-0 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} purchase collection`} /> / <EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} purchase category`} /></p>
                                     <p className="hero-sub opacity-0 font-serif text-4xl md:text-5xl font-light leading-none text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
-                                    {product.compare_at_price && product.compare_at_price > product.price && (
-                                        <p className="hero-sub opacity-0 text-xs uppercase tracking-[0.24em] text-[#1C1C1C]/40 line-through">{formatProductCurrency(product.compare_at_price)}</p>
+                                    {hasDiscount && (
+                                        <p className="hero-sub opacity-0 text-xs lg:text-[1rem] uppercase tracking-[0.24em] text-[#ff0000] line-through">{formatProductCurrency(product.compare_at_price)}</p>
                                     )}
                                 </div>
 
-                                <div className="hero-sub opacity-0 flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45 xl:text-right">
+                                <div className="hero-sub opacity-0 flex flex-col gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/45 lg:text-right lg:justify-self-end">
                                     <span><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} price card availability`} /></span>
                                     <span><EditableText contentKey={productLeadTimeLabelKey} fallback={buildLeadTimeLabel(product)} editorLabel={`${product.name || 'Product'} lead time`} /></span>
                                 </div>
@@ -396,23 +446,23 @@ export default async function ProductPage({ params }) {
 
                             <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback={localizedFallback('Availability', 'Наличност')} editorLabel="Product availability label" /></p>
-                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'availability_state')} fallback={localizedFallback(buildAvailabilityState(product), product.inventory_count > 0 ? 'Налично' : 'Изработка')} editorLabel={`${product.name || 'Product'} availability state`} /></p>
+                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback={localizedFallback('Availability', 'Наличност')} editorLabel="Product availability label" /></p>
+                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'availability_state')} fallback={localizedFallback(buildAvailabilityState(product), product.inventory_count > 0 ? 'Налично' : 'Изработка')} editorLabel={`${product.name || 'Product'} availability state`} /></p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback={localizedFallback('Lead Time', 'Срок')} editorLabel="Product lead time label" /></p>
-                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]">{product.lead_time_days}d</p>
+                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback={localizedFallback('Lead Time', 'Срок')} editorLabel="Product lead time label" /></p>
+                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'lead_time_compact')} fallback={localizedFallback(`${product.lead_time_days}d`, `${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'}`)} editorLabel={`${product.name || 'Product'} compact lead time`} /></p>
                                 </div>
                                 <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback={localizedFallback('Piece Type', 'Тип изделие')} editorLabel="Product piece type label" /></p>
-                                    <p className="font-serif text-2xl font-light leading-none text-[#1C1C1C]"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} summary category`} /></p>
+                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback={localizedFallback('Piece Type', 'Тип изделие')} editorLabel="Product piece type label" /></p>
+                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} summary category`} /></p>
                                 </div>
                             </div>
 
                             <ProductContactWrapper product={product} sizeOptions={sizeOptions} toneOptions={product.palette} />
                         </div>
 
-                        <ProductDetailAccordions sections={accordionSections} />
+                        <ProductDetailAccordions sections={accordionSections} language={currentLanguage} />
                     </div>
                 </div>
             </section>
@@ -444,7 +494,7 @@ export default async function ProductPage({ params }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                     {detailPanels.map((panel) => (
-                        <DetailCard key={panel.eyebrow} eyebrow={panel.eyebrow} eyebrowKey={panel.eyebrowKey} title={panel.title} titleKey={panel.titleKey} copy={panel.copy} copyKey={panel.copyKey} wide={panel.wide} />
+                        <DetailCard key={panel.eyebrowKey || panel.editorLabelBase} eyebrow={panel.eyebrow} eyebrowKey={panel.eyebrowKey} title={panel.title} titleKey={panel.titleKey} copy={panel.copy} copyKey={panel.copyKey} wide={panel.wide} editorLabelBase={panel.editorLabelBase} />
                     ))}
                 </div>
             </section>

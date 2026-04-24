@@ -2,37 +2,19 @@
 
 import '../../i18n';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { useTranslation } from 'react-i18next';
 import EditableMediaAsset from './EditableMediaAsset';
-import SiteCopyRichTextEditor from './SiteCopyRichTextEditor';
 import { detectEditableMediaKind } from './media-kind';
-import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
+import { DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
 import {
     createDefaultMediaSettings,
     extractSiteCopyPlainText,
     resolveSiteCopyMediaEntry,
     resolveSiteCopyRichTextEntry,
     serializeSiteCopyMediaEntry,
-    serializeSiteCopyRichTextEntry,
 } from '../../utils/site-copy';
-import {
-    createLuminaTextDocument,
-    resolveLuminaTextDocument,
-} from '../../utils/lumina-text';
 import { PRODUCT_STORAGE_BUCKET } from '../../utils/products';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../../utils/supabase/client';
-
-// TipTap pulls in ~100KB of code we don't want on visitor pages. Lazy-load it
-// so it only ships to admins who actually open the editor.
-const LuminaTextEditor = dynamic(() => import('./LuminaTextEditor'), {
-    ssr: false,
-    loading: () => (
-        <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.04] p-6 text-sm text-white/55">
-            Loading the editor…
-        </div>
-    ),
-});
 
 const SiteCopyContext = createContext(null);
 
@@ -75,17 +57,8 @@ function getLocalizedSiteCopyKey(key = '', language) {
 }
 
 const MOBILE_TEXT_VARIANT_MEDIA_QUERY = '(max-width: 767px)';
+const COARSE_POINTER_MEDIA_QUERY = '(hover: none), (pointer: coarse)';
 const SHARED_TEXT_VARIANT_VIEWPORT = 'shared';
-const TEXT_VARIANT_VIEWPORT_OPTIONS = Object.freeze([SHARED_TEXT_VARIANT_VIEWPORT, 'desktop', 'mobile']);
-const TEXT_VARIANT_VIEWPORT_LABELS = Object.freeze({
-    shared: 'Shared',
-    desktop: 'Desktop',
-    mobile: 'Mobile',
-});
-const TEXT_VARIANT_LANGUAGE_LABELS = Object.freeze({
-    en: 'English',
-    bg: 'Bulgarian',
-});
 
 function normalizeTextVariantViewport(value) {
     return value === 'desktop' || value === 'mobile' ? value : SHARED_TEXT_VARIANT_VIEWPORT;
@@ -336,24 +309,15 @@ function MediaPreviewSurface({ label, viewport, mediaConfig, previewKind, onUpda
 
 function SiteCopyEditor({
     activeEntry,
-    draftTextValue,
-    draftRichTextValue,
-    draftLuminaValue,
     draftMediaValue,
     isSaving,
     isUploadingMedia,
     uploadFeedback,
     saveError,
     onCancel,
-    onTextChange,
-    onRichTextChange,
-    onLuminaChange,
-    onTextVariantChange,
     onMediaChange,
     onMediaUpload,
     onSave,
-    currentLanguage,
-    currentTextViewport,
 }) {
     const [activeViewport, setActiveViewport] = useState('desktop');
 
@@ -363,22 +327,12 @@ function SiteCopyEditor({
         }
     }, [activeEntry?.key]);
 
-    if (!activeEntry) {
+    if (!activeEntry || activeEntry.entryType !== 'media') {
         return null;
     }
 
-    const isMediaEntry = activeEntry.entryType === 'media';
-    const isRichTextEntry = activeEntry.entryType === 'rich-text';
-    const activeVariantLanguage = normalizeLanguage(activeEntry.language) || DEFAULT_LANGUAGE;
-    const activeVariantViewport = normalizeTextVariantViewport(activeEntry.textViewport);
-    const resolvedCurrentLanguage = normalizeLanguage(currentLanguage) || DEFAULT_LANGUAGE;
-    const resolvedCurrentTextViewport = normalizeTextVariantViewport(currentTextViewport) === SHARED_TEXT_VARIANT_VIEWPORT
-        ? 'desktop'
-        : normalizeTextVariantViewport(currentTextViewport);
-    const resolvedDraftMediaValue = isMediaEntry
-        ? resolveSiteCopyMediaEntry(draftMediaValue, activeEntry.fallback, activeEntry.defaultMediaSettings || {})
-        : null;
-    const previewKind = isMediaEntry ? detectEditableMediaKind(resolvedDraftMediaValue?.src, activeEntry.mediaKind) : 'image';
+    const resolvedDraftMediaValue = resolveSiteCopyMediaEntry(draftMediaValue, activeEntry.fallback, activeEntry.defaultMediaSettings || {});
+    const previewKind = detectEditableMediaKind(resolvedDraftMediaValue?.src, activeEntry.mediaKind);
     const previewLabel = previewKind === 'video' ? 'Video Preview' : 'Image Preview';
 
     const updateMediaDraft = (updater) => {
@@ -400,9 +354,7 @@ function SiteCopyEditor({
     const activeViewportScale = resolvedDraftMediaValue?.[viewportKeyMap.scale] || 1;
     const defaultViewportSettings = createDefaultMediaSettings(activeEntry.defaultMediaSettings || {});
     const uploadFeedbackClassName = uploadFeedback?.type === 'error' ? 'text-red-300' : 'text-emerald-300';
-    const modalWidthClassName = isMediaEntry || isRichTextEntry
-        ? 'max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2.5rem)] 2xl:max-w-[1560px]'
-        : 'max-w-2xl';
+    const modalWidthClassName = 'max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2.5rem)] 2xl:max-w-[1560px]';
 
     return (
         <div className="fixed inset-0 z-[260] flex items-end justify-center p-4 backdrop-blur-sm sm:items-center">
@@ -412,49 +364,9 @@ function SiteCopyEditor({
                 <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                     <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">{isMediaEntry ? 'Inline Media Editor' : isRichTextEntry ? 'Semantic Copy Editor' : 'Inline Copy Editor'}</p>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40">Inline Media Editor</p>
                             <h3 className="mt-3 font-serif text-[2rem] font-light uppercase tracking-[0.08em] text-white sm:text-3xl">{activeEntry.label}</h3>
                             <p className="mt-3 text-sm leading-relaxed text-white/62">Key: {activeEntry.key}</p>
-                            {!isMediaEntry && (
-                                <div className="mt-4 flex flex-col gap-4">
-                                    <div className="flex flex-col gap-2">
-                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Language Variant</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {SUPPORTED_LANGUAGES.map((language) => (
-                                                <button
-                                                    key={language}
-                                                    type="button"
-                                                    onClick={() => onTextVariantChange?.({ language })}
-                                                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantLanguage === language ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
-                                                >
-                                                    {TEXT_VARIANT_LANGUAGE_LABELS[language] || language.toUpperCase()}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">Viewport Variant</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {TEXT_VARIANT_VIEWPORT_OPTIONS.map((viewport) => (
-                                                <button
-                                                    key={viewport}
-                                                    type="button"
-                                                    onClick={() => onTextVariantChange?.({ textViewport: viewport })}
-                                                    className={`rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.24em] transition-colors ${activeVariantViewport === viewport ? 'border-[#EFE7DA] bg-[#EFE7DA] text-[#1C1C1C]' : 'border-white/10 bg-white/[0.04] text-white/62 hover:text-white hover:bg-white/[0.08]'}`}
-                                                >
-                                                    {TEXT_VARIANT_VIEWPORT_LABELS[viewport]}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <p className="text-xs leading-relaxed text-white/48">
-                                        Live page right now: {TEXT_VARIANT_LANGUAGE_LABELS[resolvedCurrentLanguage] || resolvedCurrentLanguage.toUpperCase()} on {TEXT_VARIANT_VIEWPORT_LABELS[resolvedCurrentTextViewport]}.
-                                        Switch variants here without changing the whole page.
-                                    </p>
-                                </div>
-                            )}
                         </div>
                         <button
                             type="button"
@@ -466,7 +378,6 @@ function SiteCopyEditor({
                     </div>
 
                     <div className="mt-6">
-                    {isMediaEntry ? (
                         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_22rem]">
                             <div className="flex flex-col gap-5">
                                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10.5rem]">
@@ -737,14 +648,6 @@ function SiteCopyEditor({
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <LuminaTextEditor
-                            value={draftLuminaValue}
-                            fallback={typeof activeEntry.fallback === 'string' ? activeEntry.fallback : ''}
-                            mode={isRichTextEntry || activeEntry.multiline ? 'block' : 'inline'}
-                            onChange={onLuminaChange}
-                        />
-                    )}
 
                     {saveError && <p className="text-sm leading-relaxed text-red-300">{saveError}</p>}
                     </div>
@@ -764,7 +667,7 @@ function SiteCopyEditor({
                         disabled={isSaving || isUploadingMedia}
                         className={`hover-target rounded-full bg-[#EFE7DA] px-6 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors ${isSaving || isUploadingMedia ? 'opacity-60' : 'hover:bg-white'}`}
                     >
-                        {isSaving ? 'Saving' : isMediaEntry ? 'Save Media' : 'Save'}
+                        {isSaving ? 'Saving' : 'Save Media'}
                     </button>
                 </div>
             </div>
@@ -778,9 +681,6 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const [isEditMode, setIsEditMode] = useState(false);
     const [hoveredEntry, setHoveredEntry] = useState(null);
     const [activeEntry, setActiveEntry] = useState(null);
-    const [draftTextValue, setDraftTextValue] = useState('');
-    const [draftRichTextValue, setDraftRichTextValue] = useState(null);
-    const [draftLuminaValue, setDraftLuminaValue] = useState(null);
     const [draftMediaValue, setDraftMediaValue] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -791,6 +691,9 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
     const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const [activeTextViewport, setActiveTextViewport] = useState('desktop');
+    const [isCoarsePointerDevice, setIsCoarsePointerDevice] = useState(false);
+    const isMobileViewport = activeTextViewport === 'mobile';
+    const shouldDisableInlineEditing = isMobileViewport || isCoarsePointerDevice;
 
     useEffect(() => {
         if (areSiteCopyEntryMapsEqual(lastInitialEntriesRef.current, initialEntries)) {
@@ -802,10 +705,21 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, [initialEntries]);
 
     useEffect(() => {
-        if (!isAdmin && isEditMode) {
+        if ((!isAdmin || shouldDisableInlineEditing) && isEditMode) {
             setIsEditMode(false);
         }
-    }, [isAdmin, isEditMode]);
+    }, [isAdmin, isEditMode, shouldDisableInlineEditing]);
+
+    useEffect(() => {
+        if (!isAdmin || !shouldDisableInlineEditing) {
+            return;
+        }
+
+        setHoveredEntry(null);
+        setActiveEntry(null);
+        setSaveError('');
+        setUploadFeedback({ type: 'idle', message: '' });
+    }, [isAdmin, shouldDisableInlineEditing]);
 
     useEffect(() => {
         setActiveLanguage(normalizedInitialLanguage);
@@ -829,27 +743,39 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         }
 
         const mediaQueryList = window.matchMedia(MOBILE_TEXT_VARIANT_MEDIA_QUERY);
+        const coarsePointerMediaQueryList = window.matchMedia(COARSE_POINTER_MEDIA_QUERY);
         const syncViewport = (matchesMobile) => {
             setActiveTextViewport(matchesMobile ? 'mobile' : 'desktop');
         };
+        const syncCoarsePointerMode = (matchesCoarsePointer) => {
+            setIsCoarsePointerDevice(matchesCoarsePointer);
+        };
 
         syncViewport(mediaQueryList.matches);
+        syncCoarsePointerMode(coarsePointerMediaQueryList.matches);
 
         const handleViewportChange = (event) => {
             syncViewport(event.matches);
         };
+        const handleCoarsePointerChange = (event) => {
+            syncCoarsePointerMode(event.matches);
+        };
 
         if (typeof mediaQueryList.addEventListener === 'function') {
             mediaQueryList.addEventListener('change', handleViewportChange);
+            coarsePointerMediaQueryList.addEventListener('change', handleCoarsePointerChange);
         } else if (typeof mediaQueryList.addListener === 'function') {
             mediaQueryList.addListener(handleViewportChange);
+            coarsePointerMediaQueryList.addListener(handleCoarsePointerChange);
         }
 
         return () => {
             if (typeof mediaQueryList.removeEventListener === 'function') {
                 mediaQueryList.removeEventListener('change', handleViewportChange);
+                coarsePointerMediaQueryList.removeEventListener('change', handleCoarsePointerChange);
             } else if (typeof mediaQueryList.removeListener === 'function') {
                 mediaQueryList.removeListener(handleViewportChange);
+                coarsePointerMediaQueryList.removeListener(handleCoarsePointerChange);
             }
         };
     }, []);
@@ -860,21 +786,6 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                 window.clearTimeout(hoverClearTimeoutRef.current);
             }
         };
-    }, []);
-
-    const hydrateTextDraft = useCallback((entry, resolvedEntry) => {
-        const luminaMode = entry.entryType === 'rich-text' || entry.multiline ? 'block' : 'inline';
-
-        setDraftLuminaValue(resolveLuminaTextDocument(
-            resolvedEntry.value,
-            resolvedEntry.fallback,
-            luminaMode,
-        ));
-        setDraftTextValue(extractSiteCopyPlainText(resolvedEntry.value, resolvedEntry.fallback));
-        setDraftRichTextValue(entry.entryType === 'rich-text'
-            ? resolveSiteCopyRichTextEntry(resolvedEntry.value, resolvedEntry.fallback)
-            : null);
-        setDraftMediaValue(null);
     }, []);
 
     const resolveText = useCallback((key, fallback) => {
@@ -910,64 +821,46 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         return matchingKey ? entries[matchingKey] : undefined;
     }, [activeLanguage, activeTextViewport, entries]);
 
-    const openEditor = useCallback((entry) => {
-        const resolvedEntry = entry.entryType === 'media'
-            ? {
-                value: hasSiteCopyEntry(entries, entry.key) ? entries[entry.key] : entry.fallback,
-                storageKey: entry.key,
-            }
-            : resolveAdaptiveSiteCopyEntry(entries, entry.key, entry.fallback, activeLanguage, activeTextViewport);
+    const canEditEntryType = useCallback((entryType) => entryType === 'media', []);
 
-        setActiveEntry({
-            ...entry,
-            sourceFallback: entry.fallback,
-            fallback: resolvedEntry.fallback,
-            storageKey: resolvedEntry.storageKey,
-            language: activeLanguage,
-            textViewport: entry.entryType === 'media' ? SHARED_TEXT_VARIANT_VIEWPORT : activeTextViewport,
-        });
-        setIsUploadingMedia(false);
-        if (entry.entryType === 'media') {
-            setDraftMediaValue(resolveSiteCopyMediaEntry(
-                resolvedEntry.value,
-                entry.fallback,
-                entry.defaultMediaSettings || {},
-            ));
-            setDraftTextValue('');
-            setDraftRichTextValue(null);
-            setDraftLuminaValue(null);
-        } else {
-            hydrateTextDraft(entry, resolvedEntry);
-        }
-        setUploadFeedback({ type: 'idle', message: '' });
-        setSaveError('');
-    }, [activeLanguage, activeTextViewport, entries, hydrateTextDraft]);
-
-    const changeActiveTextVariant = useCallback((updates = {}) => {
-        if (!activeEntry || activeEntry.entryType === 'media') {
+    useEffect(() => {
+        if (!activeEntry || canEditEntryType(activeEntry.entryType)) {
             return;
         }
 
-        const nextLanguage = normalizeLanguage(updates.language) || activeEntry.language || activeLanguage;
-        const nextTextViewport = normalizeTextVariantViewport(updates.textViewport ?? activeEntry.textViewport ?? activeTextViewport);
-        const sourceFallback = activeEntry.sourceFallback ?? activeEntry.fallback;
-        const resolvedEntry = resolveAdaptiveSiteCopyEntry(entries, activeEntry.key, sourceFallback, nextLanguage, nextTextViewport);
-
-        setActiveEntry((currentEntry) => currentEntry ? {
-            ...currentEntry,
-            sourceFallback,
-            fallback: resolvedEntry.fallback,
-            storageKey: resolvedEntry.storageKey,
-            language: nextLanguage,
-            textViewport: nextTextViewport,
-        } : currentEntry);
-        hydrateTextDraft(activeEntry, resolvedEntry);
+        setHoveredEntry(null);
+        setActiveEntry(null);
         setSaveError('');
         setUploadFeedback({ type: 'idle', message: '' });
-    }, [activeEntry, activeLanguage, activeTextViewport, entries, hydrateTextDraft]);
+    }, [activeEntry, canEditEntryType]);
+
+    const openEditor = useCallback((entry) => {
+        if (!entry || !canEditEntryType(entry.entryType)) {
+            return;
+        }
+
+        const resolvedEntry = {
+            value: hasSiteCopyEntry(entries, entry.key) ? entries[entry.key] : entry.fallback,
+            storageKey: entry.key,
+        };
+
+        setActiveEntry({
+            ...entry,
+            fallback: entry.fallback,
+            storageKey: resolvedEntry.storageKey,
+        });
+        setIsUploadingMedia(false);
+        setDraftMediaValue(resolveSiteCopyMediaEntry(
+            resolvedEntry.value,
+            entry.fallback,
+            entry.defaultMediaSettings || {},
+        ));
+        setUploadFeedback({ type: 'idle', message: '' });
+        setSaveError('');
+    }, [canEditEntryType, entries]);
 
     const registerHoverTarget = useCallback((entry) => {
-        if (!isAdmin || !isEditMode || !entry?.element) {
+        if (!isAdmin || !isEditMode || !entry?.element || !canEditEntryType(entry.entryType)) {
             return;
         }
 
@@ -987,7 +880,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                 left: bounds.left,
             },
         });
-    }, [isAdmin, isEditMode]);
+    }, [canEditEntryType, isAdmin, isEditMode]);
 
     const clearHoverTarget = useCallback(() => {
         if (!isAdmin || !isEditMode) {
@@ -1065,7 +958,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, [activeEntry]);
 
     const saveActiveEntry = useCallback(async () => {
-        if (!activeEntry || isSaving || isUploadingMedia) {
+        if (!activeEntry || activeEntry.entryType !== 'media' || isSaving || isUploadingMedia) {
             return;
         }
 
@@ -1073,20 +966,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         setSaveError('');
 
         try {
-            let nextValue;
-            if (activeEntry.entryType === 'media') {
-                nextValue = serializeSiteCopyMediaEntry(draftMediaValue, activeEntry.defaultMediaSettings || {});
-            } else {
-                // Both plain text and rich text now save as the unified
-                // lumina-text-v1 format. Display components handle every
-                // legacy shape transparently.
-                const luminaMode = activeEntry.entryType === 'rich-text' || activeEntry.multiline ? 'block' : 'inline';
-                const draft = draftLuminaValue || createLuminaTextDocument({
-                    text: typeof activeEntry.fallback === 'string' ? activeEntry.fallback : '',
-                    mode: luminaMode,
-                });
-                nextValue = JSON.stringify(draft);
-            }
+            const nextValue = serializeSiteCopyMediaEntry(draftMediaValue, activeEntry.defaultMediaSettings || {});
             const entryStorageKey = activeEntry.storageKey || activeEntry.key;
             const response = await fetch('/api/admin/site-copy', {
                 method: 'PATCH',
@@ -1112,7 +992,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         } finally {
             setIsSaving(false);
         }
-    }, [activeEntry, draftLuminaValue, draftMediaValue, draftRichTextValue, draftTextValue, isSaving, isUploadingMedia]);
+    }, [activeEntry, draftMediaValue, isSaving, isUploadingMedia]);
 
     const hoverButtonStyle = hoveredEntry?.rect
         ? {
@@ -1124,6 +1004,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const value = useMemo(() => ({
         isAdmin,
         isEditMode,
+        activeLanguage,
         resolveText,
         resolveRichTextEntry,
         resolveMedia,
@@ -1132,16 +1013,17 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         openEditor,
         registerHoverTarget,
         clearHoverTarget,
-    }), [clearHoverTarget, getRawEntry, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveRichTextEntry, resolveText]);
+        canEditEntryType,
+    }), [activeLanguage, canEditEntryType, clearHoverTarget, getRawEntry, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveRichTextEntry, resolveText]);
 
     return (
         <SiteCopyContext.Provider value={value}>
             {children}
 
-            {isAdmin && (
+            {isAdmin && !shouldDisableInlineEditing && (
                 <>
                     <div className="fixed bottom-5 right-5 z-[240] flex items-center gap-3 rounded-full border border-[#1C1C1C]/12 bg-[rgba(239,236,232,0.94)] px-3 py-3 text-[#1C1C1C] shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-md">
-                        <span className="hidden text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 sm:inline">Inline Copy</span>
+                        <span className="hidden text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 sm:inline">Inline Media</span>
                         <button
                             type="button"
                             role="switch"
@@ -1155,7 +1037,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
                             <span className={`flex h-5 w-10 items-center rounded-full border border-[#1C1C1C]/10 px-1 transition-colors ${isEditMode ? 'justify-end bg-[#1C1C1C]' : 'justify-start bg-transparent'}`}>
                                 <span className={`h-3 w-3 rounded-full transition-colors ${isEditMode ? 'bg-[#EFECE8]' : 'bg-[#1C1C1C]/34'}`}></span>
                             </span>
-                            <span>{isEditMode ? 'Editing' : 'Edit Copy'}</span>
+                            <span>{isEditMode ? 'Editing Media' : 'Edit Media'}</span>
                         </button>
                     </div>
 
@@ -1175,28 +1057,17 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
 
                     <SiteCopyEditor
                         activeEntry={activeEntry}
-                        draftTextValue={draftTextValue}
-                        draftRichTextValue={draftRichTextValue}
-                        draftLuminaValue={draftLuminaValue}
                         draftMediaValue={draftMediaValue}
                         isSaving={isSaving}
                         isUploadingMedia={isUploadingMedia}
                         uploadFeedback={uploadFeedback}
                         saveError={saveError}
-                        currentLanguage={activeLanguage}
-                        currentTextViewport={activeTextViewport}
                         onCancel={() => {
                             setActiveEntry(null);
-                            setDraftRichTextValue(null);
-                            setDraftLuminaValue(null);
                             setIsUploadingMedia(false);
                             setUploadFeedback({ type: 'idle', message: '' });
                             setSaveError('');
                         }}
-                        onTextChange={setDraftTextValue}
-                        onRichTextChange={setDraftRichTextValue}
-                        onLuminaChange={setDraftLuminaValue}
-                        onTextVariantChange={changeActiveTextVariant}
                         onMediaChange={setDraftMediaValue}
                         onMediaUpload={handleMediaUpload}
                         onSave={saveActiveEntry}

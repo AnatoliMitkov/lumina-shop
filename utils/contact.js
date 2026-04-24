@@ -1,4 +1,5 @@
 import { getCountries, getCountryCallingCode, parsePhoneNumberFromString } from 'libphonenumber-js/min';
+import contactCountryLabels from './contact-country-labels';
 
 export const defaultContactCountry = 'BG';
 
@@ -49,16 +50,8 @@ const timeZoneCountryMap = {
     'Asia/Tokyo': 'JP',
 };
 
-const regionNames = (() => {
-    try {
-        return new Intl.DisplayNames(['en'], { type: 'region' });
-    } catch {
-        return null;
-    }
-})();
-
 function getCountryLabel(country) {
-    return regionNames?.of(country) || country;
+    return contactCountryLabels[country] || country;
 }
 
 const priorityRank = new Map(prioritizedCountries.map((country, index) => [country, index]));

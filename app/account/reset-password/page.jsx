@@ -32,7 +32,7 @@ export default async function ResetPasswordPage({ searchParams = {} }) {
 
     if (!isSupabaseConfigured()) {
         return (
-            <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[960px] mx-auto">
+            <div className="shell-page-pad-tight max-w-[960px] mx-auto">
                 <section className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8">
                     <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="reset_password.eyebrow" fallback="Account Recovery / The VA Store" editorLabel="Reset password eyebrow" /></p>
                     <h1 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-[0.12em] leading-none"><EditableText contentKey="reset_password.title" fallback="Reset Password" editorLabel="Reset password title" /></h1>
@@ -48,7 +48,7 @@ export default async function ResetPasswordPage({ searchParams = {} }) {
 
     if (!user) {
         return (
-            <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[960px] mx-auto">
+            <div className="shell-page-pad-tight max-w-[960px] mx-auto">
                 <section className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8">
                     <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="reset_password.eyebrow" fallback="Account Recovery / The VA Store" editorLabel="Reset password eyebrow" /></p>
                     <h1 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-[0.12em] leading-none"><EditableText contentKey="reset_password.title" fallback="Reset Password" editorLabel="Reset password title" /></h1>
@@ -65,7 +65,7 @@ export default async function ResetPasswordPage({ searchParams = {} }) {
     }
 
     return (
-        <div className="pt-28 md:pt-36 pb-24 md:pb-28 px-6 md:px-12 max-w-[960px] mx-auto">
+        <div className="shell-page-pad-tight max-w-[960px] mx-auto">
             <section className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8">
                 <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="reset_password.eyebrow" fallback="Account Recovery / The VA Store" editorLabel="Reset password eyebrow" /></p>
                 <h1 className="font-serif text-4xl md:text-5xl font-light uppercase tracking-[0.12em] leading-none"><EditableText contentKey="reset_password.title" fallback="Reset Password" editorLabel="Reset password title" /></h1>

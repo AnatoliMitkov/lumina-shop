@@ -1,13 +1,15 @@
 import { cookies } from 'next/headers';
 import HomePageExperience from '../components/HomePageExperience';
 import { fallbackCatalogProducts } from '../utils/fallback-catalog';
+import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY, normalizeLanguage } from '../utils/language';
+import { filterProductsByLanguage } from '../utils/products';
 import { resolveStorefrontProduct, sortProducts } from '../utils/storefront-products';
 import { createClient, isSupabaseConfigured, resolveSupabaseWithTimeout } from '../utils/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-async function loadFeaturedProducts() {
-    const fallbackProducts = fallbackCatalogProducts
+async function loadFeaturedProducts(language) {
+    const fallbackProducts = filterProductsByLanguage(fallbackCatalogProducts, language)
         .map((product) => resolveStorefrontProduct(product))
         .slice(0, 4);
 
@@ -26,7 +28,7 @@ async function loadFeaturedProducts() {
         return fallbackProducts;
     }
 
-    const activeProducts = sortProducts(products ?? [])
+    const activeProducts = sortProducts(filterProductsByLanguage(products ?? [], language))
         .filter((product) => product.status === 'active')
         .map((product) => resolveStorefrontProduct(product));
 
@@ -34,7 +36,9 @@ async function loadFeaturedProducts() {
 }
 
 export default async function HomePage() {
-    const featuredProducts = await loadFeaturedProducts();
+    const cookieStore = await cookies();
+    const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
+    const featuredProducts = await loadFeaturedProducts(currentLanguage);
 
     return <HomePageExperience featuredProducts={featuredProducts} />;
 }

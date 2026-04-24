@@ -1,9 +1,17 @@
+import { DEFAULT_LANGUAGE, normalizeLanguage } from './language';
+
 export const PRODUCT_STORAGE_BUCKET = 'product-media';
 
 export const PRODUCT_STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'draft', label: 'Draft' },
   { value: 'archived', label: 'Archived' },
+];
+
+export const PRODUCT_LANGUAGE_VISIBILITY_OPTIONS = [
+  { value: 'both', label: 'English + Bulgarian' },
+  { value: 'en', label: 'English only' },
+  { value: 'bg', label: 'Bulgarian only' },
 ];
 
 export const PRODUCT_CATEGORY_OPTIONS = [
@@ -33,6 +41,7 @@ export const PRODUCT_DEFAULTS = {
   slug: '',
   name: '',
   subtitle: '',
+  language_visibility: 'both',
   category: 'Atelier Piece',
   collection: 'Atelier Archive',
   status: 'draft',
@@ -226,12 +235,33 @@ function normalizeStatus(value) {
   return validValues.includes(normalizedValue) ? normalizedValue : PRODUCT_DEFAULTS.status;
 }
 
+export function normalizeProductLanguageVisibility(value) {
+  const normalizedValue = toText(value, PRODUCT_DEFAULTS.language_visibility).toLowerCase();
+  const validValues = PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.map((option) => option.value);
+
+  return validValues.includes(normalizedValue) ? normalizedValue : PRODUCT_DEFAULTS.language_visibility;
+}
+
+export function isProductVisibleInLanguage(product = {}, language = DEFAULT_LANGUAGE) {
+  const visibility = normalizeProductLanguageVisibility(product.language_visibility);
+  const currentLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+  return visibility === 'both' || visibility === currentLanguage;
+}
+
+export function filterProductsByLanguage(products = [], language = DEFAULT_LANGUAGE) {
+  return products
+    .map((product) => normalizeProductRecord(product))
+    .filter((product) => isProductVisibleInLanguage(product, language));
+}
+
 export function normalizeProductRecord(product = {}) {
   return {
     id: toText(product.id, PRODUCT_DEFAULTS.id),
     slug: toText(product.slug) || slugifyProductName(product.name || product.id || 'atelier-piece'),
     name: toText(product.name, 'Untitled Piece'),
     subtitle: toText(product.subtitle, PRODUCT_DEFAULTS.subtitle),
+    language_visibility: normalizeProductLanguageVisibility(product.language_visibility),
     category: toText(product.category, PRODUCT_DEFAULTS.category),
     collection: toText(product.collection || product.category, PRODUCT_DEFAULTS.collection),
     status: normalizeStatus(product.status),
@@ -363,6 +393,7 @@ export function buildProductMutationInput(product = {}) {
     slug: toText(product.slug) || slugifyProductName(normalizedProduct.name || normalizedProduct.id || 'atelier-piece'),
     name: normalizedProduct.name,
     subtitle: normalizedProduct.subtitle,
+    language_visibility: normalizedProduct.language_visibility,
     category: normalizedProduct.category,
     collection: normalizedProduct.collection,
     status: normalizedProduct.status,
@@ -392,6 +423,10 @@ export function buildProductBulkMutationInput(product = {}) {
 
   if (Object.prototype.hasOwnProperty.call(product, 'status')) {
     updates.status = normalizeStatus(product.status);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(product, 'language_visibility')) {
+    updates.language_visibility = normalizeProductLanguageVisibility(product.language_visibility);
   }
 
   if (Object.prototype.hasOwnProperty.call(product, 'category')) {

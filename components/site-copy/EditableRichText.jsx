@@ -17,23 +17,26 @@ export default function EditableRichText({
     blockClassNames = {},
     sizeClassNames = {},
     listClassName = '',
+    ignoreInlineFontSize = false,
 }) {
     const context = useSiteCopy();
     const containerRef = useRef(null);
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
+    const canEditRichText = isAdmin && isEditMode && Boolean(context?.canEditEntryType?.('rich-text'));
     const rawEntry = context?.getRawEntry?.(contentKey);
     const isLuminaEntry = isLuminaTextValue(rawEntry);
     const resolvedDocument = context
         ? context.resolveRichTextEntry(contentKey, fallback)
         : resolveSiteCopyRichTextEntry(undefined, resolveLocalizedValue(fallback, DEFAULT_LANGUAGE));
     const hasVisibleContent = isLuminaEntry || resolvedDocument.blocks.some((block) => String(block.text || '').trim());
-    const highlightClassName = isAdmin && isEditMode
+    const isEmptyEditableContent = !hasVisibleContent && canEditRichText;
+    const highlightClassName = canEditRichText
         ? 'rounded-[0.8rem] outline outline-1 outline-offset-[3px] outline-[#1C1C1C]/18 bg-[#EFE7DA]/20 cursor-pointer'
         : '';
 
     const registerHover = () => {
-        if (!context || !containerRef.current || !isAdmin || !isEditMode) {
+        if (!context || !containerRef.current || !canEditRichText) {
             return;
         }
 
@@ -47,7 +50,7 @@ export default function EditableRichText({
     };
 
     const handleClick = (event) => {
-        if (!context || !isAdmin || !isEditMode) {
+        if (!context || !canEditRichText) {
             return;
         }
 
@@ -65,7 +68,7 @@ export default function EditableRichText({
     return (
         <div
             ref={containerRef}
-            className={`${className} ${highlightClassName}`.trim()}
+            className={`${className} ${highlightClassName} ${isEmptyEditableContent ? 'min-h-[1.75rem] min-w-[2rem]' : ''}`.trim()}
             onMouseEnter={registerHover}
             onMouseMove={registerHover}
             onMouseLeave={() => context?.clearHoverTarget()}
@@ -85,6 +88,7 @@ export default function EditableRichText({
                         blockClassNames={blockClassNames}
                         sizeClassNames={sizeClassNames}
                         listClassName={listClassName}
+                        ignoreInlineFontSize={ignoreInlineFontSize}
                     />
                 ) : (
                     <SiteCopyRichTextContent
@@ -97,7 +101,7 @@ export default function EditableRichText({
                     />
                 )
             ) : (
-                isAdmin && isEditMode ? <span>[Empty content]</span> : null
+                isEmptyEditableContent ? <span aria-hidden="true" className="block min-h-[1.75rem] w-full">&nbsp;</span> : null
             )}
         </div>
     );

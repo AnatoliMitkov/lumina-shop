@@ -1,8 +1,9 @@
 export function normalizeProductCopySegment(value, fallback = 'product') {
     const normalizedValue = String(value || '')
+        .normalize('NFKC')
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 80);
 
