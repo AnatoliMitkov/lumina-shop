@@ -6,6 +6,10 @@ import { formatProductCurrency } from '../../utils/products';
  * resolveStorefrontProduct) and renders it without any editor coupling.
  */
 export default function ProductCard({ product, baseHref = '/v2/product' }) {
+    if (!product || !product.id) {
+        return null;
+    }
+
     const href = `${baseHref}/${encodeURIComponent(product.slug || product.id)}`;
     const image = product.image_main;
     const isLowStock = product.inventory_count > 0 && product.inventory_count <= 2;
