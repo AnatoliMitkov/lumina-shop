@@ -2,6 +2,8 @@
 
 import { startTransition, useState } from 'react';
 import EditableText from './site-copy/EditableText';
+import LocalizedText from './LocalizedText';
+import { createLocalizedValue as localizedFallback } from '../utils/language';
 
 function renderEditableSectionItem(item, defaultEditorLabel) {
     if (item && typeof item === 'object' && typeof item.contentKey === 'string') {
@@ -11,18 +13,18 @@ function renderEditableSectionItem(item, defaultEditorLabel) {
     return item;
 }
 
-function SizeMeasurementsTable({ rows = [] }) {
+function SizeMeasurementsTable({ rows = [], language }) {
     return (
         <div className="min-w-0 overflow-x-auto rounded-sm border border-[#1C1C1C]/10 bg-white/82" style={{ WebkitOverflowScrolling: 'touch' }}>
             <table className="min-w-[760px] w-full border-collapse text-left text-sm text-[#1C1C1C]/74">
                 <thead>
                     <tr className="bg-[#F5F1EB] text-[10px] uppercase tracking-[0.26em] text-[#1C1C1C]/52">
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.size" fallback="Size" editorLabel="Product measurements size header" /></th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.unit" fallback="Unit" editorLabel="Product measurements unit header" /></th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.bust" fallback="Bust / Chest" editorLabel="Product measurements bust header" /></th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.waist" fallback="Waist" editorLabel="Product measurements waist header" /></th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.hips" fallback="Hips" editorLabel="Product measurements hips header" /></th>
-                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><EditableText contentKey="product.measurements.headers.back" fallback="Back" editorLabel="Product measurements back header" /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Size', 'Размер')} language={language} /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Unit', 'Единица')} language={language} /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Bust / Chest', 'Бюст / Гръдна обиколка')} language={language} /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Waist', 'Талия')} language={language} /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Hips', 'Ханш')} language={language} /></th>
+                        <th className="border-b border-[#1C1C1C]/10 px-4 py-4"><LocalizedText value={localizedFallback('Back', 'Гръб')} language={language} /></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -49,15 +51,15 @@ function SizeMeasurementsTable({ rows = [] }) {
     );
 }
 
-export default function ProductDetailAccordions({ sections = [] }) {
+export default function ProductDetailAccordions({ sections = [], language }) {
     const [openTitles, setOpenTitles] = useState([]);
 
-    const toggleSection = (title) => {
+    const toggleSection = (sectionId) => {
         startTransition(() => {
             setOpenTitles((currentTitles) => (
-                currentTitles.includes(title)
-                    ? currentTitles.filter((entry) => entry !== title)
-                    : [...currentTitles, title]
+                currentTitles.includes(sectionId)
+                    ? currentTitles.filter((entry) => entry !== sectionId)
+                    : [...currentTitles, sectionId]
             ));
         });
     };
@@ -65,20 +67,21 @@ export default function ProductDetailAccordions({ sections = [] }) {
     return (
         <div className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm px-6 md:px-8 py-2">
             {sections.map((section, index) => {
-                const isOpen = openTitles.includes(section.title);
+                const sectionId = section.id || section.titleKey || section.title || `section-${index}`;
+                const isOpen = openTitles.includes(sectionId);
 
                 return (
-                    <div key={section.title} className={`${index === 0 ? '' : 'border-t border-[#1C1C1C]/10'}`}>
+                    <div key={sectionId} className={`${index === 0 ? '' : 'border-t border-[#1C1C1C]/10'}`}>
                         <button
                             type="button"
-                            onClick={() => toggleSection(section.title)}
+                            onClick={() => toggleSection(sectionId)}
                             aria-expanded={isOpen}
                             className="hover-target flex w-full items-center justify-between gap-4 py-5 text-left"
                         >
                             <span className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/74 font-medium">
                                 {section.titleKey
                                     ? <EditableText contentKey={section.titleKey} fallback={section.title} editorLabel={section.editorLabel || section.title} />
-                                    : section.title}
+                                        : <LocalizedText value={section.title} language={language} />}
                             </span>
                             <span className={`text-lg font-light text-[#1C1C1C]/55 transition-transform duration-300 ${isOpen ? 'rotate-45 text-[#1C1C1C]' : ''}`}>+</span>
                         </button>
@@ -110,7 +113,7 @@ export default function ProductDetailAccordions({ sections = [] }) {
                                         </div>
                                     )}
 
-                                    {section.table?.length > 0 && <SizeMeasurementsTable rows={section.table} />}
+                                    {section.table?.length > 0 && <SizeMeasurementsTable rows={section.table} language={language} />}
                                 </div>
                             </div>
                         </div>

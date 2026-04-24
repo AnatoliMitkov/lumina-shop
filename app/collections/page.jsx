@@ -18,7 +18,7 @@ export default async function CollectionsPage() {
     const { data: products } = await supabase.from('products').select('*');
 
     return (
-        <div className="pt-24 md:pt-40 pb-20 md:pb-28 px-4 md:px-12 max-w-[1800px] mx-auto">
+        <div className="shell-page-pad max-w-[1800px] mx-auto">
             <CollectionsArchive products={products ?? []} />
         </div>
     );

@@ -8,6 +8,31 @@
 :root {
         /* Adjust this number to tune fullscreen hover zoom strength. 3 = 300%. */
         --product-lightbox-hover-zoom: 5;
+        --shell-page-pad-inline: 1.5rem;
+        --shell-page-pad-top: 7.75rem;
+        --shell-page-pad-top-tight: 7rem;
+        --shell-page-pad-bottom: 6rem;
+}
+
+.shell-page-pad {
+    padding-inline: var(--shell-page-pad-inline);
+    padding-top: var(--shell-page-pad-top);
+    padding-bottom: var(--shell-page-pad-bottom);
+}
+
+.shell-page-pad-tight {
+    padding-inline: var(--shell-page-pad-inline);
+    padding-top: var(--shell-page-pad-top-tight);
+    padding-bottom: var(--shell-page-pad-bottom);
+}
+
+@media (min-width: 768px) {
+    :root {
+        --shell-page-pad-inline: 3rem;
+        --shell-page-pad-top: 10rem;
+        --shell-page-pad-top-tight: 9rem;
+        --shell-page-pad-bottom: 7rem;
+    }
 }
 
 html[data-page-motion='off'] #preloader {
@@ -434,6 +459,36 @@ body {
 
     .storefront-home-shift {
         margin-left: 0;
+    }
+
+    .home-hero-mobile-title .lumina-text-content {
+        gap: 0.45rem;
+    }
+
+    .home-hero-mobile-title .lumina-text-content > *:empty {
+        display: none;
+    }
+
+    .home-hero-mobile-title h1,
+    .home-hero-mobile-title h2,
+    .home-hero-mobile-title h3 {
+        line-height: 0.98;
+        letter-spacing: 0.03em;
+    }
+
+    .home-hero-mobile-title h1 span,
+    .home-hero-mobile-title h2 span,
+    .home-hero-mobile-title h3 span {
+        font-size: clamp(2.1rem, 9.8vw, 3.05rem) !important;
+        line-height: 0.98;
+    }
+
+    .home-hero-mobile-copy .lumina-text-content {
+        gap: 0.5rem;
+    }
+
+    .home-hero-mobile-copy p {
+        max-width: 20.5rem;
     }
 }
 

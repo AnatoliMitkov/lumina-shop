@@ -75,6 +75,7 @@ function getLocalizedSiteCopyKey(key = '', language) {
 }
 
 const MOBILE_TEXT_VARIANT_MEDIA_QUERY = '(max-width: 767px)';
+const COARSE_POINTER_MEDIA_QUERY = '(hover: none), (pointer: coarse)';
 const SHARED_TEXT_VARIANT_VIEWPORT = 'shared';
 const TEXT_VARIANT_VIEWPORT_OPTIONS = Object.freeze([SHARED_TEXT_VARIANT_VIEWPORT, 'desktop', 'mobile']);
 const TEXT_VARIANT_VIEWPORT_LABELS = Object.freeze({
@@ -791,6 +792,9 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
     const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const [activeTextViewport, setActiveTextViewport] = useState('desktop');
+    const [isCoarsePointerDevice, setIsCoarsePointerDevice] = useState(false);
+    const isMobileViewport = activeTextViewport === 'mobile';
+    const shouldDisableInlineEditing = isMobileViewport || isCoarsePointerDevice;
 
     useEffect(() => {
         if (areSiteCopyEntryMapsEqual(lastInitialEntriesRef.current, initialEntries)) {
@@ -802,10 +806,21 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     }, [initialEntries]);
 
     useEffect(() => {
-        if (!isAdmin && isEditMode) {
+        if ((!isAdmin || shouldDisableInlineEditing) && isEditMode) {
             setIsEditMode(false);
         }
-    }, [isAdmin, isEditMode]);
+    }, [isAdmin, isEditMode, shouldDisableInlineEditing]);
+
+    useEffect(() => {
+        if (!isAdmin || !shouldDisableInlineEditing) {
+            return;
+        }
+
+        setHoveredEntry(null);
+        setActiveEntry(null);
+        setSaveError('');
+        setUploadFeedback({ type: 'idle', message: '' });
+    }, [isAdmin, shouldDisableInlineEditing]);
 
     useEffect(() => {
         setActiveLanguage(normalizedInitialLanguage);
@@ -829,27 +844,39 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         }
 
         const mediaQueryList = window.matchMedia(MOBILE_TEXT_VARIANT_MEDIA_QUERY);
+        const coarsePointerMediaQueryList = window.matchMedia(COARSE_POINTER_MEDIA_QUERY);
         const syncViewport = (matchesMobile) => {
             setActiveTextViewport(matchesMobile ? 'mobile' : 'desktop');
         };
+        const syncCoarsePointerMode = (matchesCoarsePointer) => {
+            setIsCoarsePointerDevice(matchesCoarsePointer);
+        };
 
         syncViewport(mediaQueryList.matches);
+        syncCoarsePointerMode(coarsePointerMediaQueryList.matches);
 
         const handleViewportChange = (event) => {
             syncViewport(event.matches);
         };
+        const handleCoarsePointerChange = (event) => {
+            syncCoarsePointerMode(event.matches);
+        };
 
         if (typeof mediaQueryList.addEventListener === 'function') {
             mediaQueryList.addEventListener('change', handleViewportChange);
+            coarsePointerMediaQueryList.addEventListener('change', handleCoarsePointerChange);
         } else if (typeof mediaQueryList.addListener === 'function') {
             mediaQueryList.addListener(handleViewportChange);
+            coarsePointerMediaQueryList.addListener(handleCoarsePointerChange);
         }
 
         return () => {
             if (typeof mediaQueryList.removeEventListener === 'function') {
                 mediaQueryList.removeEventListener('change', handleViewportChange);
+                coarsePointerMediaQueryList.removeEventListener('change', handleCoarsePointerChange);
             } else if (typeof mediaQueryList.removeListener === 'function') {
                 mediaQueryList.removeListener(handleViewportChange);
+                coarsePointerMediaQueryList.removeListener(handleCoarsePointerChange);
             }
         };
     }, []);
@@ -1138,7 +1165,7 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         <SiteCopyContext.Provider value={value}>
             {children}
 
-            {isAdmin && (
+            {isAdmin && !shouldDisableInlineEditing && (
                 <>
                     <div className="fixed bottom-5 right-5 z-[240] flex items-center gap-3 rounded-full border border-[#1C1C1C]/12 bg-[rgba(239,236,232,0.94)] px-3 py-3 text-[#1C1C1C] shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-md">
                         <span className="hidden text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42 sm:inline">Inline Copy</span>

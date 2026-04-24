@@ -85,7 +85,7 @@ function FilterButton({ label, isActive, onClick, theme = 'light' }) {
         <button
             type="button"
             onClick={onClick}
-            className={`hover-target rounded-full border px-4 py-3 text-[10px] uppercase tracking-[0.24em] transition-colors ${isActive ? activeClassName : inactiveClassName}`}
+            className={`hover-target rounded-full border px-3 py-2.5 text-[9px] uppercase tracking-[0.18em] transition-colors sm:px-4 sm:py-3 sm:text-[10px] sm:tracking-[0.24em] ${isActive ? activeClassName : inactiveClassName}`}
         >
             {label}
         </button>
@@ -506,26 +506,26 @@ export default function CollectionsArchive({ products = [] }) {
 
     return (
         <div ref={archiveRef}>
-            <section className="mb-1 md:mb-4 grid grid-cols-3 gap-2 md:gap-5">
+            <section className="mb-1 md:mb-4 grid grid-cols-3 gap-1.5 min-[380px]:gap-2 md:gap-5">
                 <StatCard label={localizedFallback('Pieces', 'Модели')} labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} />
                 <StatCard label={localizedFallback('Collections', 'Колекции')} labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} />
                 <StatCard label={localizedFallback('Categories', 'Категории')} labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} />
             </section>
 
-            <section className="mb-8 md:mb-10 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-4 md:p-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <section className="mb-8 md:mb-10 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-3.5 min-[380px]:p-4 md:p-6">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/45"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
-                        <p className="mt-3 text-sm md:text-base leading-relaxed text-[#1C1C1C]/62">
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 min-[380px]:tracking-[0.3em]"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
+                        <p className="mt-2.5 text-[13px] leading-relaxed text-[#1C1C1C]/62 min-[380px]:text-sm md:mt-3 md:text-base">
                             {String(filteredProducts.length).padStart(2, '0')} {readyToBrowseLabel}
                             {activeCollection !== 'All' ? ` / ${activeCollection}` : ''}
                             {activeCategory !== 'All' ? ` / ${activeCategory}` : ''}
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5 min-[380px]:gap-2">
                         {hasActiveFilters && (
-                            <button type="button" onClick={handleReset} className="hover-target rounded-full border border-[#1C1C1C]/12 bg-white/70 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/62 transition-colors hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]">
+                            <button type="button" onClick={handleReset} className="hover-target rounded-full border border-[#1C1C1C]/12 bg-white/70 px-3 py-2.5 text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/62 transition-colors hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C] min-[380px]:px-4 min-[380px]:py-3 min-[380px]:text-[10px] min-[380px]:tracking-[0.24em]">
                                 <EditableText contentKey="collections.filters.reset" fallback={localizedFallback('Reset Archive', 'Изчисти филтрите')} editorLabel="Collections reset archive" />
                             </button>
                         )}
@@ -533,7 +533,7 @@ export default function CollectionsArchive({ products = [] }) {
                         <button
                             type="button"
                             onClick={() => setIsFilterPanelOpen(true)}
-                            className="hover-target inline-flex items-center gap-3 rounded-full border border-[#1C1C1C] bg-[#1C1C1C] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#EFECE8] transition-colors hover:bg-black"
+                            className="hover-target inline-flex items-center gap-2 rounded-full border border-[#1C1C1C] bg-[#1C1C1C] px-3 py-2.5 text-[9px] uppercase tracking-[0.18em] text-[#EFECE8] transition-colors hover:bg-black min-[380px]:gap-3 min-[380px]:px-4 min-[380px]:py-3 min-[380px]:text-[10px] min-[380px]:tracking-[0.24em]"
                         >
                             <EditableText contentKey="collections.filters.open_panel" fallback={localizedFallback('Search & Filter', 'Търси и филтрирай')} editorLabel="Collections open filter panel" />
                             <span className="rounded-full border border-white/12 bg-white/10 px-2 py-1 text-[9px] leading-none text-white/78">{String(activeFilterCount).padStart(2, '0')}</span>
@@ -542,9 +542,9 @@ export default function CollectionsArchive({ products = [] }) {
                 </div>
 
                 {activeFilterLabels.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1.5 min-[380px]:mt-4 min-[380px]:gap-2">
                         {activeFilterLabels.map((label) => (
-                            <span key={label} className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-[#1C1C1C]/62">
+                            <span key={label} className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2 text-[9px] uppercase tracking-[0.16em] text-[#1C1C1C]/62 min-[380px]:text-[10px] min-[380px]:tracking-[0.2em]">
                                 {label}
                             </span>
                         ))}
@@ -553,38 +553,38 @@ export default function CollectionsArchive({ products = [] }) {
             </section>
 
             {isFilterPanelOpen && (
-                <div className="fixed inset-0 z-[140] flex items-end justify-center p-4 backdrop-blur-sm md:items-center">
+                <div className="fixed inset-0 z-[140] flex items-end justify-center p-3 backdrop-blur-sm min-[380px]:p-4 md:items-center">
                     <button type="button" aria-label={getText('collections.filters.close_panel', localizedFallback('Close filter panel', 'Затвори панела с филтри'))} onClick={() => setIsFilterPanelOpen(false)} className="absolute inset-0 bg-[#1C1C1C]/55"></button>
 
                     <div className="relative flex w-full max-w-4xl max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-[rgba(12,12,14,0.95)] text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.4)] md:max-h-[calc(100vh-3rem)]" onClick={(event) => event.stopPropagation()}>
-                        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 md:px-6">
+                        <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4 md:gap-4 md:px-6 md:py-5">
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
-                                <h3 className="mt-3 font-serif text-3xl font-light uppercase tracking-[0.08em] text-white"><EditableText contentKey="collections.filters.title" fallback={localizedFallback('Archive Controls', 'Контроли на архива')} editorLabel="Collections filter modal title" /></h3>
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-white/40 md:tracking-[0.28em]"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
+                                <h3 className="mt-2.5 font-serif text-[1.6rem] font-light uppercase tracking-[0.06em] text-white min-[380px]:text-[1.8rem] md:mt-3 md:text-3xl md:tracking-[0.08em]"><EditableText contentKey="collections.filters.title" fallback={localizedFallback('Archive Controls', 'Контроли на архива')} editorLabel="Collections filter modal title" /></h3>
                             </div>
 
                             <button
                                 type="button"
                                 onClick={() => setIsFilterPanelOpen(false)}
-                                className="hover-target rounded-full border border-white/12 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.24em] text-white/72 transition-colors hover:bg-white/10"
+                                className="hover-target rounded-full border border-white/12 bg-white/5 px-3 py-2 text-[9px] uppercase tracking-[0.18em] text-white/72 transition-colors hover:bg-white/10 min-[380px]:px-4 min-[380px]:text-[10px] min-[380px]:tracking-[0.24em]"
                             >
                                 {getText('collections.filters.close', localizedFallback('Close', 'Затвори'))}
                             </button>
                         </div>
 
-                        <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6 md:py-6">
+                        <div data-lenis-prevent-wheel className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
                             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem]">
-                                <label className="flex min-w-0 flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
+                                <label className="flex min-w-0 flex-col gap-2 text-[10px] uppercase tracking-[0.18em] text-white/48 md:tracking-[0.22em]">
                                     <EditableText contentKey="collections.filters.search_label" fallback={localizedFallback('Search Pieces', 'Търси модели')} editorLabel="Collections search label" />
                                     <input
                                         value={searchValue}
                                         onChange={(event) => setSearchValue(event.target.value)}
                                         placeholder={searchPlaceholder}
-                                        className="h-14 rounded-[1.05rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/24"
+                                        className="h-12 rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors placeholder:text-white/28 focus:border-white/24 md:h-14 md:rounded-[1.05rem]"
                                     />
                                 </label>
 
-                                <div className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/48">
+                                <div className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.18em] text-white/48 md:tracking-[0.22em]">
                                     <p><EditableText contentKey="collections.filters.cards_per_row" fallback={localizedFallback('Cards Per Row', 'Карти на ред')} editorLabel="Collections cards per row label" /></p>
                                     <div className="flex flex-wrap gap-2">
                                         {cardsPerRowOptions.map((option) => (
@@ -602,7 +602,7 @@ export default function CollectionsArchive({ products = [] }) {
 
                             <div className="mt-6 flex flex-col gap-6">
                                 <section>
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.collection_title" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Collections filter collection title" /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/42 md:tracking-[0.24em]"><EditableText contentKey="collections.filters.collection_title" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Collections filter collection title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {collectionOptions.map((option) => (
                                             <FilterButton key={option} label={formatFilterOptionLabel(option)} theme="dark" isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
@@ -611,7 +611,7 @@ export default function CollectionsArchive({ products = [] }) {
                                 </section>
 
                                 <section>
-                                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="collections.filters.category_title" fallback={localizedFallback('Categories', 'Категории')} editorLabel="Collections filter category title" /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/42 md:tracking-[0.24em]"><EditableText contentKey="collections.filters.category_title" fallback={localizedFallback('Categories', 'Категории')} editorLabel="Collections filter category title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {categoryOptions.map((option) => (
                                             <FilterButton key={option} label={formatFilterOptionLabel(option)} theme="dark" isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
@@ -621,17 +621,17 @@ export default function CollectionsArchive({ products = [] }) {
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 text-[10px] uppercase tracking-[0.24em] text-white/42 sm:flex-row sm:items-center sm:justify-between md:px-6">
+                        <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-4 text-[10px] uppercase tracking-[0.18em] text-white/42 sm:flex-row sm:items-center sm:justify-between sm:tracking-[0.24em] md:px-6">
                             <p>{String(filteredProducts.length).padStart(2, '0')} {visibleNowLabel}</p>
 
                             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                 {hasActiveFilters && (
-                                    <button type="button" onClick={handleReset} className="hover-target rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-white/66 transition-colors hover:bg-white/[0.08] hover:text-white">
+                                    <button type="button" onClick={handleReset} className="hover-target rounded-full border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[9px] uppercase tracking-[0.18em] text-white/66 transition-colors hover:bg-white/[0.08] hover:text-white min-[380px]:px-4 min-[380px]:py-3 min-[380px]:text-[10px] min-[380px]:tracking-[0.24em]">
                                         <EditableText contentKey="collections.filters.reset" fallback={localizedFallback('Reset Archive', 'Изчисти филтрите')} editorLabel="Collections reset archive" />
                                     </button>
                                 )}
 
-                                <button type="button" onClick={() => setIsFilterPanelOpen(false)} className="hover-target rounded-full bg-[#EFE7DA] px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C] transition-colors hover:bg-white">
+                                <button type="button" onClick={() => setIsFilterPanelOpen(false)} className="hover-target rounded-full bg-[#EFE7DA] px-3 py-2.5 text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C] transition-colors hover:bg-white min-[380px]:px-4 min-[380px]:py-3 min-[380px]:text-[10px] min-[380px]:tracking-[0.24em]">
                                     {getText('collections.filters.view_pieces', localizedFallback('View Pieces', 'Виж моделите'))}
                                 </button>
                             </div>

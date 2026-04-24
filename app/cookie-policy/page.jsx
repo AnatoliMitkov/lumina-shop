@@ -39,7 +39,7 @@ const cookieSections = [
 
 export default function CookiePolicyPage() {
     return (
-        <div className="px-6 pb-24 pt-32 md:px-12 md:pb-28 md:pt-40">
+        <div className="shell-page-pad">
             <div className="mx-auto flex max-w-[1100px] flex-col gap-12">
                 <section className="border-b border-[#1C1C1C]/10 pb-10">
                     <p className="text-[10px] uppercase tracking-[0.34em] text-[#1C1C1C]/45">Legal / Cookies</p>

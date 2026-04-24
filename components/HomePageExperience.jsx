@@ -130,9 +130,9 @@ const heroTitleSizeClassNames = {
 };
 
 const heroTitleBlockClassNames = {
-    heading1: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.9] text-[#EFECE8]',
-    heading2: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.92] text-[#EFECE8]',
-    heading3: 'font-serif font-light uppercase tracking-[0.08em] leading-[0.96] text-[#EFECE8]',
+    heading1: 'font-serif font-light uppercase tracking-[0.04em] leading-[0.98] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.9]',
+    heading2: 'font-serif font-light uppercase tracking-[0.04em] leading-[1] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.92]',
+    heading3: 'font-serif font-light uppercase tracking-[0.04em] leading-[1] text-[#EFECE8] md:tracking-[0.08em] md:leading-[0.96]',
     paragraph: 'max-w-[24rem] font-sans text-[#EFECE8] normal-case tracking-[0.14em] leading-[1.35]',
     quote: 'max-w-[24rem] border-l border-white/20 pl-4 font-sans italic text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.3]',
     'bullet-list': 'max-w-[24rem] list-disc pl-5 space-y-2 font-sans text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.35]',
@@ -267,20 +267,20 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                         <div className="absolute inset-0 bg-gradient-to-t from-[#11110f] via-[#11110f]/0 to-transparent"></div>
                     </div>
 
-                    <div className="relative z-10 w-full flex flex-col md:flex-row justify-between items-end gap-8 text-[#EFECE8] px-6 md:px-12">
-                        <div className="w-full md:w-auto">
+                    <div className="relative z-10 flex h-full min-h-0 w-full flex-col items-start justify-end gap-5 px-6 pb-10 pt-28 text-[#EFECE8] min-[380px]:gap-6 min-[380px]:pb-12 min-[380px]:pt-32 md:flex-row md:items-end md:justify-between md:gap-8 md:px-12 md:pb-0 md:pt-0">
+                        <div className="w-full max-w-[19rem] min-[380px]:max-w-[22rem] md:w-auto md:max-w-none">
                             <div className="md:overflow-hidden md:-mb-[0.5vw]">
                                 <EditableRichText
                                     contentKey="home.hero.title.line_one"
                                     fallback={heroTitleLineOneFallback}
                                     editorLabel="Home hero title line one"
-                                    className="hero-title md:translate-y-full"
+                                    className="hero-title home-hero-mobile-title md:translate-y-full"
                                     blockBaseClassName="text-[#EFECE8]"
                                     blockClassNames={heroTitleBlockClassNames}
                                     sizeClassNames={heroTitleSizeClassNames}
                                 />
                             </div>
-                            <div className="md:overflow-hidden">
+                            <div className="hidden md:block md:overflow-hidden">
                                 <EditableRichText
                                     contentKey="home.hero.title.line_two"
                                     fallback={heroTitleLineTwoFallback}
@@ -292,17 +292,17 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                 />
                             </div>
                         </div>
-                        <div className="w-full md:w-[22rem] pb-4 md:pb-8 flex flex-col gap-4">
+                        <div className="w-full max-w-[18.5rem] min-[380px]:max-w-[20.5rem] md:w-[22rem] md:max-w-none md:pb-8 flex flex-col gap-3 md:gap-4">
                             <EditableRichText
                                 contentKey="home.hero.subtext"
                                 fallback={heroSubtextFallback}
                                 editorLabel="Home hero subtext"
-                                className="hero-sub opacity-0"
-                                blockBaseClassName="tracking-[0.2em] font-light uppercase text-[#EFECE8]"
+                                className="hero-sub home-hero-mobile-copy opacity-0"
+                                blockBaseClassName="font-sans font-light normal-case tracking-[0.06em] leading-[1.48] text-[#EFECE8]/88 md:tracking-[0.12em]"
                                 sizeClassNames={heroSubtextSizeClassNames}
                             />
                             <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
-                            <p className="hero-sub text-xs tracking-widest uppercase opacity-0 hover-target cursor-pointer w-max"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
+                            <p className="hero-sub text-[10px] tracking-[0.28em] uppercase opacity-0 hover-target cursor-pointer w-max md:text-xs md:tracking-widest"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
                         </div>
                     </div>
                 </div>

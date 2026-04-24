@@ -1,3 +1,5 @@
+import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from './language';
+
 export const shippingScopeOptions = [
     {
         value: 'domestic_bg',
@@ -90,6 +92,66 @@ function toAmount(value) {
     return Number(parsedValue.toFixed(2));
 }
 
+function resolveText(value, language = DEFAULT_LANGUAGE) {
+    return resolveLocalizedValue(value, normalizeLanguage(language) || DEFAULT_LANGUAGE);
+}
+
+function localizeStoredShippingLabel(label = '', language = DEFAULT_LANGUAGE) {
+    const normalizedLabel = toText(label, 120);
+
+    if (!normalizedLabel || (normalizeLanguage(language) || DEFAULT_LANGUAGE) !== 'bg') {
+        return normalizedLabel;
+    }
+
+    const labelMap = {
+        'Quote pending': 'Очаква оферта',
+        'Free shipping': 'Безплатна доставка',
+        'Covered by sender': 'За сметка на ателието',
+        'Covered by receiver': 'За сметка на получателя',
+        'Add delivery details': 'Добавете доставка',
+    };
+
+    return labelMap[normalizedLabel] || normalizedLabel;
+}
+
+function localizeStoredShippingMessage(message = '', language = DEFAULT_LANGUAGE) {
+    const normalizedMessage = toText(message, 240);
+
+    if (!normalizedMessage || (normalizeLanguage(language) || DEFAULT_LANGUAGE) !== 'bg') {
+        return normalizedMessage;
+    }
+
+    if (normalizedMessage === 'Worldwide shipping is prepared from the submitted address and route details before dispatch.') {
+        return 'Международната доставка се подготвя по подадения адрес и маршрут преди изпращане.';
+    }
+
+    if (normalizedMessage === 'Add the country, city, and custom address so the atelier can prepare the worldwide shipping quote.') {
+        return 'Добавете държава, град и адрес, за да може ателието да подготви международната оферта.';
+    }
+
+    if (normalizedMessage === 'Enter the Bulgarian city and exact address or pickup office to determine the shipping coverage.') {
+        return 'Добавете град и точен адрес или офис за получаване в България, за да се определи доставката.';
+    }
+
+    if (normalizedMessage === 'This code marks the domestic shipping as atelier-covered.') {
+        return 'Този код отбелязва доставката в България като поета от ателието.';
+    }
+
+    if (normalizedMessage === 'Domestic shipping is payable by the receiver on delivery or pickup.') {
+        return 'Доставката в България се заплаща от получателя при доставка или вземане.';
+    }
+
+    if (normalizedMessage === 'Domestic shipping is payable by the receiver once the route is confirmed.') {
+        return 'Доставката в България се заплаща от получателя след потвърждение на маршрута.';
+    }
+
+    if (normalizedMessage === `Domestic orders above €${FREE_DOMESTIC_SHIPPING_THRESHOLD.toFixed(2)} qualify for atelier-covered shipping.`) {
+        return `Поръчките в България над €${FREE_DOMESTIC_SHIPPING_THRESHOLD.toFixed(2)} са с доставка за сметка на ателието.`;
+    }
+
+    return normalizedMessage;
+}
+
 export function normalizeShippingScope(value) {
     return value === 'domestic_bg' ? 'domestic_bg' : 'worldwide';
 }
@@ -98,8 +160,15 @@ export function normalizeShippingBenefit(value) {
     return shippingBenefitOptions.some((option) => option.value === value) ? value : 'none';
 }
 
-export function buildShippingBenefitLabel(value = '') {
-    return shippingBenefitLabelMap[normalizeShippingBenefit(value)] || shippingBenefitLabelMap.none;
+export function buildShippingBenefitLabel(value = '', language = DEFAULT_LANGUAGE) {
+    const normalizedBenefit = normalizeShippingBenefit(value);
+    const localizedLabels = {
+        none: localizedFallback('No Shipping Override', 'Без промяна в доставката'),
+        sender_covers: localizedFallback('Covered by Sender', 'За сметка на ателието'),
+        receiver_covers: localizedFallback('Covered by Receiver', 'За сметка на получателя'),
+    };
+
+    return resolveText(localizedLabels[normalizedBenefit] || shippingBenefitLabelMap.none, language);
 }
 
 export function getDeliveryMethodOptions(shippingScope = 'worldwide') {
@@ -307,12 +376,25 @@ export function normalizeCheckoutPayload(payload = {}) {
     };
 }
 
-export function buildDeliveryMethodLabel(value = '') {
-    return deliveryMethodLabelMap[value] || 'Delivery details pending';
+export function buildDeliveryMethodLabel(value = '', language = DEFAULT_LANGUAGE) {
+    const localizedLabels = {
+        speedy_address: localizedFallback('Speedy Address Delivery', 'Speedy до адрес'),
+        speedy_office: localizedFallback('Speedy Office Pickup', 'Вземане от офис на Speedy'),
+        econt_address: localizedFallback('ECONT Address Delivery', 'ECONT до адрес'),
+        econt_office: localizedFallback('ECONT Office Pickup', 'Вземане от офис на ECONT'),
+        worldwide_quote: localizedFallback('Worldwide Shipping Quote', 'Международна оферта за доставка'),
+    };
+
+    return resolveText(localizedLabels[value] || localizedFallback(deliveryMethodLabelMap[value] || 'Delivery details pending', 'Детайлите за доставката предстоят'), language);
 }
 
-export function buildShippingScopeLabel(value = '') {
-    return shippingScopeOptions.find((option) => option.value === value)?.label || 'Worldwide';
+export function buildShippingScopeLabel(value = '', language = DEFAULT_LANGUAGE) {
+    const localizedLabels = {
+        domestic_bg: localizedFallback('Domestic Bulgaria', 'В България'),
+        worldwide: localizedFallback('Worldwide', 'Международно'),
+    };
+
+    return resolveText(localizedLabels[value] || localizedFallback(shippingScopeOptions.find((option) => option.value === value)?.label || 'Worldwide', 'Международно'), language);
 }
 
 export function buildOrderReference(order = {}) {
@@ -327,22 +409,22 @@ export function buildOrderReference(order = {}) {
     return 'VA-PENDING';
 }
 
-export function buildOrderCustomerLabel(order = {}) {
-    return order?.customer_name || order?.customer_email || order?.customer_snapshot?.email || 'Client request';
+export function buildOrderCustomerLabel(order = {}, language = DEFAULT_LANGUAGE) {
+    return order?.customer_name || order?.customer_email || order?.customer_snapshot?.email || resolveText(localizedFallback('Client request', 'Клиентско запитване'), language);
 }
 
-export function buildOrderDeliverySummary(order = {}) {
-    const scopeLabel = buildShippingScopeLabel(order?.shipping_scope);
-    const methodLabel = buildDeliveryMethodLabel(order?.delivery_method);
+export function buildOrderDeliverySummary(order = {}, language = DEFAULT_LANGUAGE) {
+    const scopeLabel = buildShippingScopeLabel(order?.shipping_scope, language);
+    const methodLabel = buildDeliveryMethodLabel(order?.delivery_method, language);
 
     if (!order?.delivery_method && !order?.shipping_scope) {
-        return 'Delivery details still need to be confirmed.';
+        return resolveText(localizedFallback('Delivery details still need to be confirmed.', 'Детайлите за доставката още се уточняват.'), language);
     }
 
     return `${scopeLabel} / ${methodLabel}`;
 }
 
-export function buildOrderAddressSummary(order = {}) {
+export function buildOrderAddressSummary(order = {}, language = DEFAULT_LANGUAGE) {
     const deliveryMethod = normalizeDeliveryMethod(order?.shipping_scope, order?.delivery_method);
     const officeParts = [order?.shipping_office_label, order?.shipping_office_code].filter(Boolean);
     const locationParts = [
@@ -374,13 +456,13 @@ export function buildOrderAddressSummary(order = {}) {
     }
 
     if (buildOrderMapUrl(order)) {
-        return 'Pinned map location shared by the client.';
+        return resolveText(localizedFallback('Pinned map location shared by the client.', 'Изпратена е закачена локация от клиента.'), language);
     }
 
-    return 'Delivery destination will be confirmed by the atelier.';
+    return resolveText(localizedFallback('Delivery destination will be confirmed by the atelier.', 'Крайната доставка ще бъде потвърдена от ателието.'), language);
 }
 
-export function buildOrderDiscountSummary(order = {}) {
+export function buildOrderDiscountSummary(order = {}, language = DEFAULT_LANGUAGE) {
     const discountCode = toText(order?.discount_code || order?.pricing_snapshot?.discount_code, 64);
     const discountLabel = toText(order?.pricing_snapshot?.discount_label, 120);
     const affiliateCode = toText(order?.affiliate_code || order?.pricing_snapshot?.affiliate_code, 64);
@@ -389,25 +471,25 @@ export function buildOrderDiscountSummary(order = {}) {
     const segments = [];
 
     if (discountCode) {
-        segments.push(discountLabel ? `Discount ${discountCode} (${discountLabel})` : `Discount ${discountCode}`);
+        segments.push(discountLabel ? `${resolveText(localizedFallback('Discount', 'Код'), language)} ${discountCode} (${discountLabel})` : `${resolveText(localizedFallback('Discount', 'Код'), language)} ${discountCode}`);
     }
 
     if (affiliateCode) {
-        segments.push(affiliatePartnerName ? `Affiliate ${affiliateCode} (${affiliatePartnerName})` : `Affiliate ${affiliateCode}`);
+        segments.push(affiliatePartnerName ? `${resolveText(localizedFallback('Affiliate', 'Партньор'), language)} ${affiliateCode} (${affiliatePartnerName})` : `${resolveText(localizedFallback('Affiliate', 'Партньор'), language)} ${affiliateCode}`);
     }
 
     if (totalSavings > 0) {
-        segments.push(`Saved €${totalSavings.toFixed(2)}`);
+        segments.push(`${resolveText(localizedFallback('Saved', 'Спестени'), language)} €${totalSavings.toFixed(2)}`);
     }
 
     return segments.join(' / ');
 }
 
-export function buildOrderShippingSummary(order = {}) {
+export function buildOrderShippingSummary(order = {}, language = DEFAULT_LANGUAGE) {
     const shippingLabel = toText(order?.pricing_snapshot?.shipping_label, 120);
 
     if (shippingLabel) {
-        return shippingLabel;
+        return localizeStoredShippingLabel(shippingLabel, language);
     }
 
     const shippingAmount = toAmount(order?.shipping_amount ?? order?.pricing_snapshot?.shipping_amount ?? 0);
@@ -416,17 +498,17 @@ export function buildOrderShippingSummary(order = {}) {
         return `€${shippingAmount.toFixed(2)}`;
     }
 
-    return 'Quote pending';
+    return resolveText(localizedFallback('Quote pending', 'Очаква оферта'), language);
 }
 
-export function buildOrderShippingMessage(order = {}) {
+export function buildOrderShippingMessage(order = {}, language = DEFAULT_LANGUAGE) {
     const shippingSource = toText(order?.pricing_snapshot?.shipping_source, 32);
 
     if (shippingSource === 'threshold') {
         return '';
     }
 
-    return toText(order?.pricing_snapshot?.shipping_message, 240);
+    return localizeStoredShippingMessage(order?.pricing_snapshot?.shipping_message, language);
 }
 
 export function buildOrderMapUrl(order = {}) {

@@ -55,8 +55,8 @@ export default function CartPage() {
             : getText('cart.primary.request_atelier', localizedFallback('Request Through Atelier', 'Изпрати към ателието'));
 
     return (
-        <div className="pt-32 md:pt-40 pb-24 md:pb-28 px-6 md:px-12 max-w-[1800px] mx-auto">
-            <div className="mb-12 md:mb-16 border-b border-[#1C1C1C]/10 pb-8 md:pb-10 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-8">
+        <div className="shell-page-pad max-w-[1800px] mx-auto">
+            <div className="mb-10 md:mb-16 border-b border-[#1C1C1C]/10 pb-6 md:pb-10 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 md:gap-8">
                 <div>
                     <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="cart.hero.eyebrow" fallback={localizedFallback('Selection / The VA Store', 'Селекция / The VA Store')} editorLabel="Cart hero eyebrow" /></p>
                     <div className="overflow-hidden"><h1 className="hero-title storefront-hero-display font-serif font-light uppercase translate-y-full"><EditableText contentKey="cart.hero.title" fallback={localizedFallback('Cart', 'Количка')} editorLabel="Cart hero title" /></h1></div>

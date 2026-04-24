@@ -1114,7 +1114,7 @@ export default function ClientEngine({ children, initialLanguage }) {
             {introEditorDock}
 
             <div className={`fixed inset-x-0 top-0 z-[55] border-b border-white/10 bg-[rgba(12,12,14,0.82)] text-[#EFECE8] backdrop-blur-xl ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
-                <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-5 py-2 md:min-h-10 md:px-12">
+                <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-6 py-2 md:min-h-10 md:px-12">
                     <p className="text-center text-[10px] leading-[1.25] text-white/78 md:text-xs">
                         <EditableText
                             contentKey="shell.build_notice"
@@ -1129,7 +1129,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 </div>
             </div>
 
-            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-5 md:px-12 py-5 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white opacity-0 ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
+            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white opacity-0 ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="relative z-[131] flex md:hidden items-center gap-3">
                     <div ref={mobileLanguageMenuRef} className="relative">
@@ -1234,7 +1234,7 @@ export default function ClientEngine({ children, initialLanguage }) {
 
             <div className={`fixed inset-0 z-[120] md:hidden transition-all duration-300 ${isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 <div onClick={() => setIsMobileMenuOpen(false)} className={`absolute inset-0 bg-[#1C1C1C]/42 backdrop-blur-xl transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}></div>
-                <div id="mobile-nav-panel" className={`absolute inset-x-4 bottom-4 top-[8.5rem] flex flex-col overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.78)] p-5 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
+                <div id="mobile-nav-panel" className={`absolute inset-x-3 bottom-3 top-[8rem] flex flex-col overflow-hidden rounded-[2rem] border border-white/12 bg-[rgba(17,17,17,0.78)] p-4 text-[#EFECE8] shadow-[0_28px_90px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all duration-300 min-[380px]:inset-x-4 min-[380px]:bottom-4 min-[380px]:p-5 ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
                     <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 pb-4">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.28em] text-white/40"><EditableText contentKey="shell.mobile_menu.eyebrow" fallback={localizedFallback('Navigation', 'Навигация')} editorLabel="Mobile menu eyebrow" /></p>
@@ -1328,9 +1328,9 @@ export default function ClientEngine({ children, initialLanguage }) {
                 </div>
             </div>
 
-            <footer className="relative w-full z-10 bg-[#1C1C1C] text-[#EFECE8] px-5 md:px-8 xl:px-10 pt-10 md:pt-12 pb-10 md:pb-12">
-                <div className="max-w-[1800px] mx-auto w-full flex flex-col gap-8 md:gap-10">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
+            <footer className="relative w-full z-10 bg-[#1C1C1C] text-[#EFECE8] px-6 md:px-12 pt-8 md:pt-12 pb-8 md:pb-12">
+                <div className="max-w-[1800px] mx-auto w-full flex flex-col gap-7 md:gap-10">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-[11px] uppercase tracking-[0.15em] font-medium md:[grid-template-columns:minmax(0,1.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)] md:gap-x-12 md:gap-y-8 md:text-xs">
                         <div className="col-span-2 flex max-w-sm flex-col gap-3 md:col-span-1 md:max-w-none">
                             <h3 className="font-serif text-3xl md:text-5xl font-light uppercase tracking-[0.18em] md:tracking-widest"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></h3>
                             <p className="text-[11px] md:text-sm tracking-[0.2em] md:tracking-[0.24em] font-light uppercase text-white/70"><EditableText contentKey="shell.footer.slogan" fallback={localizedFallback('Beautiful People Smile More', 'Красивите хора се усмихват повече')} editorLabel="Footer slogan" /></p>
