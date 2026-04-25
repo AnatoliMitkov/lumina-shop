@@ -104,15 +104,25 @@ function getDisplayParts(label) {
   };
 }
 
+function normalizeCollectionName(value) {
+  const normalizedValue = String(value || '').trim();
+
+  return normalizedValue || 'Collection';
+}
+
 function slugify(value) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return normalizeCollectionName(value)
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/(^-|-$)/g, '');
 }
 
 function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
   const groupedCollections = new Map();
 
   products.forEach((product) => {
-    const collectionName = product.collection || 'Collection';
+    const collectionName = normalizeCollectionName(product.collection);
     const existingGroup = groupedCollections.get(collectionName);
 
     if (existingGroup) {
@@ -134,6 +144,7 @@ function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
       const collectionConfig = COLLECTION_STAGE_CONFIG[group.collection] ?? {};
       const collectionMediaOverride = collectionStageMediaOverrides[group.collection] ?? {};
       const anchorProduct = group.products.find((product) => product.featured) ?? group.products[0];
+      const collectionId = slugify(group.collection) || slugify(anchorProduct.slug) || anchorProduct.id;
       const availableMedia = Array.from(
         new Set(group.products.flatMap((product) => [product.primaryMedia, product.secondaryMedia]).filter(Boolean)),
       );
@@ -147,7 +158,7 @@ function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
         primaryMedia;
 
       return {
-        id: `collection-${slugify(group.collection)}`,
+        id: `collection-${collectionId}`,
         collection: group.collection,
         title: collectionConfig.title || group.collection,
         subtitle: collectionConfig.subtitle || anchorProduct.subtitle || 'Curated collection edit.',
