@@ -9,6 +9,8 @@ import EditableText from './site-copy/EditableText';
 import { detectEditableMediaKind } from './site-copy/media-kind';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { DEFAULT_LANGUAGE, createLocalizedValue as localizedFallback, normalizeLanguage, resolveLocalizedValue } from '../utils/language';
+import { getTaxonomyStorageKey } from '../utils/product-taxonomy';
+import { buildCollectionsHref } from '../utils/products';
 import { buildProductHref, formatProductCurrency, resolveStorefrontGallery } from '../utils/storefront-products';
 import { createSiteCopyRichTextDocument, resolveSiteCopyMediaEntry } from '../utils/site-copy';
 import { SPOTLIGHT_PATH } from '../utils/site-routes';
@@ -71,49 +73,26 @@ const storyCopySizeClassNames = {
     display: 'text-[20px] min-[380px]:text-2xl md:text-4xl',
 };
 
-const heroTitleLineOneFallback = localizedFallback(
-    createSiteCopyRichTextDocument([
-        {
-            type: 'heading1',
-            size: 'display',
-            text: 'Women',
-        },
-    ]),
-    createSiteCopyRichTextDocument([
-        {
-            type: 'heading1',
-            size: 'display',
-            text: 'Женствена',
-        },
-    ])
-);
+// Keep the home hero headlines in code so they are easy to edit locally.
+const homeHeroTitleCopyByLanguage = {
+    en: {
+        primary: ['Women'],
+        secondary: ['Elegance'],
+    },
+    bg: {
+        primary: ['Ексклузивност',],
+        secondary: ['родена от всеки възел'],
+    },
+};
 
-const heroTitleLineTwoFallback = localizedFallback(
-    createSiteCopyRichTextDocument([
-        {
-            type: 'heading1',
-            size: 'display',
-            text: 'Elegance',
-        },
-    ]),
-    createSiteCopyRichTextDocument([
-        {
-            type: 'heading1',
-            size: 'display',
-            text: 'Елегантност',
-        },
-    ])
-);
-
-const heroSubtextFallback = localizedFallback(
-    createSiteCopyRichTextDocument([
-        {
-            type: 'paragraph',
-            size: 'sm',
-            text: 'Elevating traditional craftsmanship into avant-garde fashion. A true Handmade fashion. ZERO machine work. Hand-knotted by Victoria.',
-        },
-    ]),
-);
+const homeHeroSubtextCopyByLanguage = {
+    en: [
+        'Elevating traditional craftsmanship into avant-garde fashion. A true handmade fashion. Zero machine work. Hand-knotted by Victoria.',
+    ],
+    bg: [
+        'Дизайн за уверената жена. Истинска ръчна изработка. Без механична намеса. Ръчно изработени от Виктория.',
+    ],
+};
 
 const heroTitleSizeClassNames = {
     xs: 'text-4xl md:text-5xl xl:text-6xl',
@@ -134,37 +113,91 @@ const heroTitleBlockClassNames = {
     'numbered-list': 'max-w-[24rem] list-decimal pl-5 space-y-2 font-sans text-[#EFECE8] normal-case tracking-[0.08em] leading-[1.35]',
 };
 
-const heroSubtextSizeClassNames = {
-    xs: 'text-[11px] md:text-xs',
-    sm: 'text-xs md:text-sm',
-    body: 'text-xs md:text-sm',
-    lg: 'text-sm md:text-base',
-    xl: 'text-base md:text-lg',
-    display: 'text-lg md:text-xl',
-};
+function resolveHomeHeroTitleCopy(language = DEFAULT_LANGUAGE) {
+    return homeHeroTitleCopyByLanguage[language] || homeHeroTitleCopyByLanguage[DEFAULT_LANGUAGE];
+}
+
+function resolveHomeHeroSubtextCopy(language = DEFAULT_LANGUAGE) {
+    return homeHeroSubtextCopyByLanguage[language] || homeHeroSubtextCopyByLanguage[DEFAULT_LANGUAGE];
+}
+
+function buildLocalizedSiteCopyStorageKey(key = '', language = DEFAULT_LANGUAGE) {
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+    return normalizedLanguage === DEFAULT_LANGUAGE ? key : `${normalizedLanguage}::${key}`;
+}
+
+function resolveExactSiteCopyText(siteCopy, storageKey = '', fallback = '', language = DEFAULT_LANGUAGE) {
+    const entry = siteCopy?.getRawEntry?.(storageKey);
+
+    if (typeof entry === 'string' && entry.trim()) {
+        return entry;
+    }
+
+    return resolveLocalizedValue(fallback, language);
+}
+
+function HomeHeroTitleLines({ lines = [], className = '', itemClassName = '' }) {
+    if (!Array.isArray(lines) || lines.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className={className}>
+            <div className="lumina-text-content flex flex-col gap-4">
+                {lines.map((line, index) => (
+                    <h2 key={`${index}-${line}`} className={`${heroTitleBlockClassNames.heading2} ${heroTitleSizeClassNames.display} ${itemClassName}`.trim()}>
+                        <span>{line}</span>
+                    </h2>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function HomeHeroSubtextLines({ lines = [], className = '' }) {
+    if (!Array.isArray(lines) || lines.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className={className}>
+            <div className="lumina-text-content flex flex-col gap-4">
+                {lines.map((line, index) => (
+                    <p key={`${index}-${line}`} className="font-sans font-light normal-case tracking-[0.06em] leading-[1.48] text-[#EFECE8]/88 md:tracking-[0.12em] leading-relaxed text-base md:text-lg">
+                        <span>{line}</span>
+                    </p>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 const categoryShowcaseItems = [
     {
-        key: 'atelier-archive',
-        title: 'Atelier Archive',
-        label: 'Signature Collection',
-        href: '/collections?collection=Evening+Structures',
+        key: 'evening-edit',
+        mediaKey: 'atelier-archive',
+        filterValue: localizedFallback('Evening Structures', 'Вечерна селекция'),
+        titleFallback: localizedFallback('Evening Structures', 'Вечерна селекция'),
+        labelFallback: localizedFallback('After Dark', 'Вечерна линия'),
         image: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1800',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
     {
-        key: 'evening-structures',
-        title: 'Evening Structures',
-        label: 'New Depth',
-        href: '/collections?collection=Signature+Weaves',
+        key: 'signature-weaves',
+        mediaKey: 'evening-structures',
+        filterValue: localizedFallback('Signature Weaves', 'Signature Weaves'),
+        titleFallback: localizedFallback('Signature Weaves', 'Авторски плетки'),
+        labelFallback: localizedFallback('Knotted Signatures', 'Авторски възли'),
         image: 'https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=1400',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
     {
-        key: 'private-commission',
-        title: 'Private Commission',
-        label: 'By Appointment',
-        href: '/collections?collection=Atelier+Archive',
+        key: 'accessories-edit',
+        mediaKey: 'private-commission',
+        filterValue: localizedFallback('Accessories', 'Аксесоари'),
+        titleFallback: localizedFallback('Accessories', 'Аксесоари'),
+        labelFallback: localizedFallback('Statement Accents', 'Акцентни модели'),
         image: 'https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1800',
         layout: 'h-[16rem] md:h-[20rem] xl:h-[22rem]',
     },
@@ -187,16 +220,19 @@ export default function HomePageExperience({ featuredProducts = [] }) {
     const [newsletterEmail, setNewsletterEmail] = useState('');
     const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
     const [newsletterStatus, setNewsletterStatus] = useState({ type: 'idle', message: '' });
-    const shouldUseEnglishHeroFallback = activeLanguage === DEFAULT_LANGUAGE;
-    const heroTitleLineOneKey = shouldUseEnglishHeroFallback ? 'home.hero.title.line_one.__fallback_only' : 'home.hero.title.line_one';
-    const heroTitleLineTwoKey = shouldUseEnglishHeroFallback ? 'home.hero.title.line_two.__fallback_only' : 'home.hero.title.line_two';
-    const heroSubtextKey = shouldUseEnglishHeroFallback ? 'home.hero.subtext.__fallback_only' : 'home.hero.subtext';
+    const heroTitleCopy = resolveHomeHeroTitleCopy(activeLanguage);
+    const heroSubtextCopy = resolveHomeHeroSubtextCopy(activeLanguage);
     const resolveNewsletterText = (key, fallback) => siteCopy
         ? siteCopy.resolveText(key, fallback)
         : resolveLocalizedValue(fallback, activeLanguage);
     const newsletterPlaceholder = resolveNewsletterText('home.newsletter.placeholder', localizedFallback('Email address', 'Имейл адрес'));
     const newsletterButtonLabel = resolveNewsletterText('home.newsletter.button', localizedFallback('Subscribe', 'Абонирай се'));
     const newsletterSubmittingLabel = resolveNewsletterText('home.newsletter.button.submitting', localizedFallback('Submitting...', 'Изпращане...'));
+    const resolveLanguageScopedText = (key, fallback) => resolveExactSiteCopyText(siteCopy, buildLocalizedSiteCopyStorageKey(key, activeLanguage), fallback, activeLanguage);
+    const resolveShowcaseCollectionTitle = (collection, fallback) => resolveExactSiteCopyText(siteCopy, getTaxonomyStorageKey('collection', collection, activeLanguage), fallback, activeLanguage);
+    const categoryShowcaseEyebrow = resolveLanguageScopedText('home.category_showcase.eyebrow', localizedFallback('Category Showcase', 'Подбрани колекции'));
+    const categoryShowcaseTitle = resolveLanguageScopedText('home.category_showcase.title', localizedFallback('Selected', 'Избрани колекции'));
+    const categoryShowcaseCopy = resolveLanguageScopedText('home.category_showcase.copy', localizedFallback('Discover the Atelier', 'Три колекции с директен път към точния архив.'));
     const heroMediaFallback = 'https://hvkgcmgqelczdnvhxtrj.supabase.co/storage/v1/object/public/Logos/7679415-uhd_4096_2160_25fps.mp4';
     const heroMediaSrc = siteCopy ? siteCopy.resolveMedia('home.hero.media.video', heroMediaFallback) : heroMediaFallback;
     const heroMediaKind = detectEditableMediaKind(heroMediaSrc, 'video');
@@ -289,27 +325,59 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 .animate-marquee {
                     animation: marquee 25s linear infinite;
                 }
-                @media (min-width: 768px) {
-                    .home-hero-title-shell [style*='font-size'] {
-                        font-size: clamp(1.58rem, 1.72vw, 1.78rem) !important;
-                        line-height: 1.06 !important;
+                @media (max-width: 767px) {
+                    html[lang='en'] .home-hero-title-shell .home-hero-primary-line.storefront-home-display {
+                        font-size: clamp(2.45rem, 12.2vw, 4.1rem) !important;
+                        line-height: 0.9 !important;
+                        letter-spacing: 0.015em !important;
                     }
 
+                    html[lang='en'] .home-hero-title-shell .home-hero-secondary-line.storefront-home-display {
+                        font-size: clamp(1.9rem, 9.4vw, 3rem) !important;
+                        line-height: 0.96 !important;
+                        letter-spacing: 0.045em !important;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell .home-hero-primary-line.storefront-home-display {
+                        font-size: clamp(2.25rem, 11.2vw, 3.7rem) !important;
+                        line-height: 0.9 !important;
+                        letter-spacing: 0.015em !important;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell .home-hero-secondary-line.storefront-home-display {
+                        font-size: clamp(1.55rem, 7.9vw, 2.55rem) !important;
+                        line-height: 0.97 !important;
+                        letter-spacing: 0.04em !important;
+                    }
+                }
+
+                @media (min-width: 768px) {
                     html[lang='bg'] .home-hero-title-shell {
-                        transform: translateY(-3rem);
+                        transform: none;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell .storefront-home-display {
+                        font-size: clamp(2.8rem, 5.7vw, 5.9rem) !important;
+                        line-height: 0.9 !important;
+                        text-wrap: balance;
                     }
 
                     html[lang='bg'] .home-hero-title-shell h1,
                     html[lang='bg'] .home-hero-title-shell h2,
                     html[lang='bg'] .home-hero-title-shell h3 {
-                        letter-spacing: 0.045em !important;
+                        letter-spacing: 0.03em !important;
                         line-height: 0.94 !important;
                     }
 
                     html[lang='bg'] .home-hero-title-shell h1 span,
                     html[lang='bg'] .home-hero-title-shell h2 span,
                     html[lang='bg'] .home-hero-title-shell h3 span {
-                        letter-spacing: 0.02em !important;
+                        letter-spacing: 0.01em !important;
+                    }
+
+                    html[lang='bg'] .home-hero-title-shell .home-hero-secondary-line.storefront-home-display {
+                        font-size: clamp(1.8rem, 4vw, 3.75rem) !important;
+                        line-height: 0.98 !important;
                     }
                 }
             `}</style>
@@ -370,39 +438,28 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                     </div>
 
                     <div className="relative z-10 flex h-full min-h-0 w-full flex-col items-start justify-end gap-5 px-6 pb-10 pt-28 text-[#EFECE8] min-[380px]:gap-6 min-[380px]:pb-12 min-[380px]:pt-32 md:flex-row md:items-end md:justify-between md:gap-10 md:px-12 md:pb-16 md:pt-0 xl:pb-[4.5rem]">
-                        <div className="home-hero-title-shell w-full max-w-[19rem] min-[380px]:max-w-[22rem] md:w-auto md:max-w-none">
+                        <div className="home-hero-title-shell w-full max-w-[19rem] min-[380px]:max-w-[22rem] md:min-w-0 md:flex-1 md:max-w-none">
                             <div className="md:overflow-hidden md:-mb-[0.5vw]">
-                                <EditableRichText
-                                    contentKey={heroTitleLineOneKey}
-                                    fallback={heroTitleLineOneFallback}
-                                    editorLabel="Home hero title line one"
+                                <HomeHeroTitleLines
+                                    lines={heroTitleCopy.primary}
                                     className="hero-title home-hero-mobile-title md:translate-y-full"
-                                    blockBaseClassName="text-[#EFECE8]"
-                                    blockClassNames={heroTitleBlockClassNames}
-                                    sizeClassNames={heroTitleSizeClassNames}
+                                    itemClassName="home-hero-primary-line"
                                 />
                             </div>
-                            <div className="mt-1 min-[380px]:mt-2 md:mt-0 md:block md:overflow-hidden">
-                                <EditableRichText
-                                    contentKey={heroTitleLineTwoKey}
-                                    fallback={heroTitleLineTwoFallback}
-                                    editorLabel="Home hero title line two"
-                                    className="hero-title home-hero-mobile-title storefront-home-shift md:translate-y-full"
-                                    blockBaseClassName="text-[#EFECE8]"
-                                    blockClassNames={heroTitleBlockClassNames}
-                                    sizeClassNames={heroTitleSizeClassNames}
-                                />
-                            </div>
+                            {heroTitleCopy.secondary.length > 0 ? (
+                                <div className="mt-1 min-[380px]:mt-2 md:mt-0 md:block md:overflow-hidden">
+                                    <HomeHeroTitleLines
+                                        lines={heroTitleCopy.secondary}
+                                        className="hero-title home-hero-mobile-title storefront-home-shift md:translate-y-full"
+                                        itemClassName="home-hero-secondary-line"
+                                    />
+                                </div>
+                            ) : null}
                         </div>
-                        <div className="w-full max-w-[18.5rem] min-[380px]:max-w-[20.5rem] md:w-[20.5rem] md:max-w-none md:pb-0 flex flex-col gap-3 md:gap-4">
-                            <EditableRichText
-                                contentKey={heroSubtextKey}
-                                fallback={heroSubtextFallback}
-                                editorLabel="Home hero subtext"
+                        <div className="w-full max-w-[18.5rem] min-[380px]:max-w-[20.5rem] md:w-[clamp(24.5rem,31vw,26.75rem)] md:max-w-[26.75rem] md:flex-shrink-0 md:pb-0 flex flex-col gap-3 md:gap-4">
+                            <HomeHeroSubtextLines
+                                lines={heroSubtextCopy}
                                 className="hero-sub home-hero-mobile-copy opacity-0"
-                                blockBaseClassName="font-sans font-light normal-case tracking-[0.06em] leading-[1.48] text-[#EFECE8]/88 md:tracking-[0.12em]"
-                                sizeClassNames={heroSubtextSizeClassNames}
-                                ignoreInlineFontSize
                             />
                             <div className="hero-sub w-full h-[1px] bg-white/30 opacity-0"></div>
                             <p className="hero-sub text-[10px] tracking-[0.28em] uppercase opacity-0 hover-target cursor-pointer w-max md:text-xs md:tracking-widest"><EditableText contentKey="home.hero.scroll_prompt" fallback="Scroll to explore ↓" editorLabel="Home hero scroll prompt" /></p>
@@ -428,24 +485,30 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 <div className="max-w-[1800px] mx-auto px-6 md:px-12">
                     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-8 mb-10 md:mb-12">
                         <div className="max-w-2xl">
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/45"><EditableText contentKey="home.category_showcase.eyebrow" fallback="Category Showcase" editorLabel="Home category showcase eyebrow" /></p>
-                            <h2 className="reveal-text opacity-0 translate-y-8 mt-4 storefront-section-display font-serif font-light uppercase tracking-[0.08em]"><EditableText contentKey="home.category_showcase.title" fallback="Collections In Focus" editorLabel="Home category showcase title" /></h2>
+                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-white/45"><span>{categoryShowcaseEyebrow}</span></p>
+                            <h2 className="reveal-text opacity-0 translate-y-8 mt-4 storefront-section-display font-serif font-light uppercase tracking-[0.08em]"><span>{categoryShowcaseTitle}</span></h2>
                         </div>
-                        <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-white/60"><EditableText contentKey="home.category_showcase.copy" fallback="A concise edit of the house categories, presented as large image fields with restrained overlays and direct paths into the archive." editorLabel="Home category showcase copy" /></p>
+                        <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-white/60"><span>{categoryShowcaseCopy}</span></p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-                        {categoryShowcaseItems.map((item) => (
+                        {categoryShowcaseItems.map((item) => {
+                            const showcaseCollection = resolveLocalizedValue(item.filterValue, activeLanguage);
+                            const showcaseHref = buildCollectionsHref({ collection: showcaseCollection });
+                            const showcaseTitle = resolveShowcaseCollectionTitle(showcaseCollection, item.titleFallback);
+                            const showcaseLabel = resolveLanguageScopedText(`home.category_showcase.${item.mediaKey}.label`, item.labelFallback);
+
+                            return (
                             <a
-                                key={item.title}
-                                href={item.href}
+                                key={item.key}
+                                href={showcaseHref}
                                 className={`group relative overflow-hidden border border-white/8 bg-[#161614] hover-target transition-link ${item.layout}`}
                             >
                                 <EditableMedia
-                                    contentKey={`home.category_showcase.${item.key}.image`}
+                                    contentKey={`home.category_showcase.${item.mediaKey}.image`}
                                     fallback={item.image}
-                                    editorLabel={`${item.title} showcase image`}
-                                    alt={item.title}
+                                    editorLabel={`${showcaseTitle} showcase image`}
+                                    alt={showcaseTitle}
                                     wrapperClassName="absolute inset-0"
                                     className="h-full w-full object-contain p-3 md:p-4 transition-transform duration-[1600ms] ease-out group-hover:scale-[1.02]"
                                     defaultMediaSettings={containMediaDefaults}
@@ -455,13 +518,14 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/24 to-black/12 opacity-88 transition-opacity duration-500 group-hover:opacity-96"></div>
                                 <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-                                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/45"><EditableText contentKey={`home.category_showcase.${item.key}.label`} fallback={item.label} editorLabel={`${item.title} label`} /></p>
+                                    <p className="text-[10px] uppercase tracking-[0.3em] text-white/45"><span>{showcaseLabel}</span></p>
                                     <div className="mt-3 inline-flex items-end gap-3 border-b border-white/0 pb-1 transition-all duration-500 group-hover:border-white/30">
-                                        <h3 className="font-serif text-2xl md:text-4xl font-light uppercase tracking-[0.08em] text-white"><EditableText contentKey={`home.category_showcase.${item.key}.title`} fallback={item.title} editorLabel={`${item.title} title`} /></h3>
+                                        <h3 className="font-serif text-2xl md:text-4xl font-light uppercase tracking-[0.08em] text-white"><span>{showcaseTitle}</span></h3>
                                     </div>
                                 </div>
                             </a>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </section>

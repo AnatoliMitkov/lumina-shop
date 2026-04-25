@@ -111,7 +111,7 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 5.25rem minmax(0, 1fr) minmax(320px, 0.86fr) 14rem;
+  grid-template-columns: 5.25rem minmax(0, 1fr) minmax(23rem, 0.86fr) 14rem;
   align-items: center;
   gap: clamp(1rem, 3vw, 2.4rem);
   height: 100%;
@@ -344,9 +344,15 @@
   text-transform: uppercase;
 }
 
+.stage__title--compact {
+  font-size: clamp(3rem, 6vw, 6.4rem);
+}
+
 .stage__title > span {
   display: block;
   overflow: hidden;
+  padding-inline-end: 0.08em;
+  margin-inline-end: -0.08em;
 }
 
 .stage__title .inner {
@@ -500,7 +506,7 @@
   }
 
   .stage {
-    grid-template-columns: 4rem minmax(0, 1fr) minmax(280px, 0.8fr);
+    grid-template-columns: 4rem minmax(0, 1fr) minmax(22rem, 0.8fr);
   }
 
   .stage__rail {

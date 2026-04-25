@@ -1,4 +1,5 @@
 import { DEFAULT_LANGUAGE, normalizeLanguage } from './language';
+import { normalizeProductCopySegment } from './product-copy';
 
 export const PRODUCT_STORAGE_BUCKET = 'product-media';
 
@@ -370,11 +371,11 @@ export function buildCollectionsHref(filters = {}) {
   const collection = toText(filters.collection);
 
   if (category && category.toLowerCase() !== 'all') {
-    searchParams.set('category', category);
+    searchParams.set('category', normalizeProductCopySegment(category, 'category'));
   }
 
   if (collection && collection.toLowerCase() !== 'all') {
-    searchParams.set('collection', collection);
+    searchParams.set('collection', normalizeProductCopySegment(collection, 'collection'));
   }
 
   const query = searchParams.toString();

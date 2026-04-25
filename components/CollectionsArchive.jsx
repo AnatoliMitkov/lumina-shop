@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, resolveLocalizedValue } from '../utils/language';
+import { normalizeProductCopySegment } from '../utils/product-copy';
 import { getTaxonomyCopyKey, resolveTaxonomyLabel } from '../utils/product-taxonomy';
 import {
     buildCollectionsHref,
@@ -47,6 +48,63 @@ function normalizeOptionValue(value) {
     return String(value).trim();
 }
 
+function normalizeFilterToken(value, fallback = 'filter') {
+    const normalizedValue = normalizeOptionValue(value);
+
+    if (!normalizedValue) {
+        return '';
+    }
+
+    return normalizeProductCopySegment(normalizedValue, fallback);
+}
+
+function buildFilterGroups(options = [], resolveOptionLabel = (option) => option) {
+    const groups = [];
+    const groupedOptions = new Map();
+
+    options.forEach((option) => {
+        const isAllOption = option === 'All';
+        const label = normalizeOptionValue(resolveOptionLabel(option)) || option;
+        const key = isAllOption ? 'All' : normalizeFilterToken(label);
+        const aliases = [
+            normalizeOptionValue(option).toLowerCase(),
+            normalizeFilterToken(option),
+            label.toLowerCase(),
+            normalizeFilterToken(label),
+        ].filter(Boolean);
+
+        if (isAllOption) {
+            groups.push({
+                key: 'All',
+                label,
+                values: ['All'],
+                aliases: new Set(['all', ...aliases]),
+            });
+            return;
+        }
+
+        const existingGroup = groupedOptions.get(key);
+
+        if (existingGroup) {
+            existingGroup.values.push(option);
+            aliases.forEach((alias) => existingGroup.aliases.add(alias));
+            return;
+        }
+
+        const nextGroup = {
+            key,
+            label,
+            values: [option],
+            aliases: new Set(aliases),
+        };
+
+        groupedOptions.set(key, nextGroup);
+        groups.push(nextGroup);
+    });
+
+    return groups;
+}
+
 function buildFilterOptionList(seedOptions = [], values = []) {
     const normalizedSeedOptions = [...new Set(seedOptions.map((option) => normalizeOptionValue(option)).filter(Boolean))];
     const normalizedValues = [...new Set(values.map((value) => normalizeOptionValue(value)).filter(Boolean))];
@@ -64,14 +122,27 @@ function buildFilterOptionList(seedOptions = [], values = []) {
     return [...seededMatches, ...customMatches];
 }
 
-function resolveFilterValue(value, options = []) {
-    const normalizedValue = normalizeOptionValue(value).toLowerCase();
+function resolveFilterGroup(value, groups = []) {
+    const normalizedValue = normalizeOptionValue(value);
+    const allGroup = groups.find((group) => group.key === 'All') || {
+        key: 'All',
+        label: 'All',
+        values: ['All'],
+        aliases: new Set(['all']),
+    };
 
-    if (!normalizedValue || normalizedValue === 'all') {
-        return 'All';
+    if (!normalizedValue) {
+        return allGroup;
     }
 
-    return options.find((option) => option.toLowerCase() === normalizedValue) || 'All';
+    const lowerCaseValue = normalizedValue.toLowerCase();
+    const normalizedToken = normalizeFilterToken(normalizedValue);
+
+    if (lowerCaseValue === 'all' || normalizedToken === 'all') {
+        return allGroup;
+    }
+
+    return groups.find((group) => group.aliases.has(lowerCaseValue) || group.aliases.has(normalizedToken)) || allGroup;
 }
 
 function FilterButton({ label, isActive, onClick, theme = 'light' }) {
@@ -307,12 +378,25 @@ export default function CollectionsArchive({ products = [] }) {
     const categoryOptions = useMemo(() => {
         return ['All', ...buildFilterOptionList(PRODUCT_CATEGORY_OPTIONS, normalizedProducts.map((product) => product.category))];
     }, [normalizedProducts]);
-    const activeCollection = resolveFilterValue(searchParams.get('collection'), collectionOptions);
-    const activeCategory = resolveFilterValue(searchParams.get('category'), categoryOptions);
+    const getFilterOptionLabel = (group, option) => {
+        if (option === 'All') {
+            return getText('collections.filters.option_all', localizedFallback('All', 'Всички'));
+        }
+
+        return group === 'category' ? resolveCategoryLabel(option) : resolveCollectionLabel(option);
+    };
+    const collectionFilterGroups = buildFilterGroups(collectionOptions, (option) => getFilterOptionLabel('collection', option));
+    const categoryFilterGroups = buildFilterGroups(categoryOptions, (option) => getFilterOptionLabel('category', option));
+    const activeCollectionGroup = resolveFilterGroup(searchParams.get('collection'), collectionFilterGroups);
+    const activeCategoryGroup = resolveFilterGroup(searchParams.get('category'), categoryFilterGroups);
+    const activeCollection = activeCollectionGroup.key;
+    const activeCategory = activeCategoryGroup.key;
+    const activeCollectionLabel = activeCollectionGroup.label;
+    const activeCategoryLabel = activeCategoryGroup.label;
     const searchPlaceholder = getText('collections.filters.search_placeholder', localizedFallback('Search by collection, category, mood, or name', 'Търсене по колекция, категория, настроение или име'));
     const filteredProducts = normalizedProducts.filter((product) => {
-        const matchesCollection = activeCollection === 'All' || product.collection === activeCollection;
-        const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
+        const matchesCollection = activeCollection === 'All' || activeCollectionGroup.values.includes(product.collection);
+        const matchesCategory = activeCategory === 'All' || activeCategoryGroup.values.includes(product.category);
         const matchesSearch = !deferredSearch || [
             buildSearchString(product),
             resolveCollectionLabel(product.collection),
@@ -331,26 +415,6 @@ export default function CollectionsArchive({ products = [] }) {
     const visibleNowLabel = filteredProducts.length === 1
         ? getText('collections.filters.visible_singular', localizedFallback('piece visible now', 'модел видим сега'))
         : getText('collections.filters.visible_plural', localizedFallback('pieces visible now', 'модела видими сега'));
-    const getFilterOptionLabel = (group, option) => {
-        if (option === 'All') {
-            return getText('collections.filters.option_all', localizedFallback('All', 'Всички'));
-        }
-
-        return group === 'category' ? resolveCategoryLabel(option) : resolveCollectionLabel(option);
-    };
-    const renderFilterOptionLabel = (group, option) => {
-        if (option === 'All') {
-            return getFilterOptionLabel(group, option);
-        }
-
-        return (
-            <EditableText
-                contentKey={getTaxonomyCopyKey(group, option)}
-                fallback={option}
-                editorLabel={`${option} ${group} label`}
-            />
-        );
-    };
     const productCardTranslations = {
         inspect: getText('collections.card.inspect', localizedFallback('Inspect', 'Преглед')), 
         ready: getText('collections.card.ready', localizedFallback('ready', 'готови')),
@@ -360,8 +424,8 @@ export default function CollectionsArchive({ products = [] }) {
     const hasActiveFilters = activeCollection !== 'All' || activeCategory !== 'All' || Boolean(searchValue);
     const activeFilterCount = [activeCollection !== 'All', activeCategory !== 'All', Boolean(searchValue)].filter(Boolean).length;
     const activeFilterLabels = [
-        activeCollection !== 'All' ? { group: 'collection', value: activeCollection } : null,
-        activeCategory !== 'All' ? { group: 'category', value: activeCategory } : null,
+        activeCollection !== 'All' ? { key: `collection-${activeCollection}`, value: activeCollectionLabel } : null,
+        activeCategory !== 'All' ? { key: `category-${activeCategory}`, value: activeCategoryLabel } : null,
         searchValue ? { group: 'search', value: `${getText('collections.filters.search_prefix', localizedFallback('Search:', 'Търсене:'))} ${searchValue}` } : null,
     ].filter(Boolean);
 
@@ -538,8 +602,8 @@ export default function CollectionsArchive({ products = [] }) {
         <div ref={archiveRef}>
             <section className="mb-1 md:mb-4 grid grid-cols-3 gap-1.5 min-[380px]:gap-2 md:gap-5">
                 <StatCard label={localizedFallback('Pieces', 'Модели')} labelKey="collections.stats.pieces.label" value={normalizedProducts.length} delayMs={0} />
-                <StatCard label={localizedFallback('Collections', 'Колекции')} labelKey="collections.stats.collections.label" value={Math.max(collectionOptions.length - 1, 1)} delayMs={160} />
-                <StatCard label={localizedFallback('Categories', 'Категории')} labelKey="collections.stats.categories.label" value={Math.max(categoryOptions.length - 1, 1)} delayMs={320} />
+                <StatCard label={localizedFallback('Collections', 'Колекции')} labelKey="collections.stats.collections.label" value={Math.max(collectionFilterGroups.length - 1, 1)} delayMs={160} />
+                <StatCard label={localizedFallback('Categories', 'Категории')} labelKey="collections.stats.categories.label" value={Math.max(categoryFilterGroups.length - 1, 1)} delayMs={320} />
             </section>
 
             <section className="mb-8 md:mb-10 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-3.5 min-[380px]:p-4 md:p-6">
@@ -548,8 +612,8 @@ export default function CollectionsArchive({ products = [] }) {
                         <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 min-[380px]:tracking-[0.3em]"><EditableText contentKey="collections.filters.eyebrow" fallback={localizedFallback('Filter The Archive', 'Филтрирай архива')} editorLabel="Collections filter eyebrow" /></p>
                         <p className="mt-2.5 text-[13px] leading-relaxed text-[#1C1C1C]/62 min-[380px]:text-sm md:mt-3 md:text-base">
                             {String(filteredProducts.length).padStart(2, '0')} {readyToBrowseLabel}
-                            {activeCollection !== 'All' ? ` / ${resolveCollectionLabel(activeCollection)}` : ''}
-                            {activeCategory !== 'All' ? ` / ${resolveCategoryLabel(activeCategory)}` : ''}
+                            {activeCollection !== 'All' ? ` / ${activeCollectionLabel}` : ''}
+                            {activeCategory !== 'All' ? ` / ${activeCategoryLabel}` : ''}
                         </p>
                     </div>
 
@@ -574,14 +638,8 @@ export default function CollectionsArchive({ products = [] }) {
                 {activeFilterLabels.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5 min-[380px]:mt-4 min-[380px]:gap-2">
                         {activeFilterLabels.map((label) => (
-                            <span key={`${label.group}-${label.value}`} className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2 text-[9px] uppercase tracking-[0.16em] text-[#1C1C1C]/62 min-[380px]:text-[10px] min-[380px]:tracking-[0.2em]">
-                                {label.group === 'search' ? label.value : (
-                                    <EditableText
-                                        contentKey={getTaxonomyCopyKey(label.group, label.value)}
-                                        fallback={label.value}
-                                        editorLabel={`${label.value} active ${label.group} filter`}
-                                    />
-                                )}
+                            <span key={label.key || `${label.group}-${label.value}`} className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2 text-[9px] uppercase tracking-[0.16em] text-[#1C1C1C]/62 min-[380px]:text-[10px] min-[380px]:tracking-[0.2em]">
+                                {label.value}
                             </span>
                         ))}
                     </div>
@@ -640,8 +698,8 @@ export default function CollectionsArchive({ products = [] }) {
                                 <section>
                                     <p className="text-[10px] uppercase tracking-[0.18em] text-white/42 md:tracking-[0.24em]"><EditableText contentKey="collections.filters.collection_title" fallback={localizedFallback('Collections', 'Колекции')} editorLabel="Collections filter collection title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
-                                        {collectionOptions.map((option) => (
-                                            <FilterButton key={option} label={renderFilterOptionLabel('collection', option)} theme="dark" isActive={activeCollection === option} onClick={() => updateArchiveFilters({ collection: option })} />
+                                        {collectionFilterGroups.map((group) => (
+                                            <FilterButton key={group.key} label={group.label} theme="dark" isActive={activeCollection === group.key} onClick={() => updateArchiveFilters({ collection: group.key })} />
                                         ))}
                                     </div>
                                 </section>
@@ -649,8 +707,8 @@ export default function CollectionsArchive({ products = [] }) {
                                 <section>
                                     <p className="text-[10px] uppercase tracking-[0.18em] text-white/42 md:tracking-[0.24em]"><EditableText contentKey="collections.filters.category_title" fallback={localizedFallback('Categories', 'Категории')} editorLabel="Collections filter category title" /></p>
                                     <div className="mt-3 flex flex-wrap gap-2">
-                                        {categoryOptions.map((option) => (
-                                            <FilterButton key={option} label={renderFilterOptionLabel('category', option)} theme="dark" isActive={activeCategory === option} onClick={() => updateArchiveFilters({ category: option })} />
+                                        {categoryFilterGroups.map((group) => (
+                                            <FilterButton key={group.key} label={group.label} theme="dark" isActive={activeCategory === group.key} onClick={() => updateArchiveFilters({ category: group.key })} />
                                         ))}
                                     </div>
                                 </section>

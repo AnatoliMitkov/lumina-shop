@@ -1,3 +1,6 @@
+import { DEFAULT_LANGUAGE, normalizeLanguage } from '../../../../utils/language.js';
+import { filterProductsByLanguage } from '../../../../utils/products.js';
+
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://hvkgcmgqelczdnvhxtrj.supabase.co';
 
@@ -5,7 +8,7 @@ const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2a2djbWdxZWxjemRudmh4dHJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxODUyMzcsImV4cCI6MjA5MTc2MTIzN30.ZAL2g033rRDN330ZkZh_MK8OkNZrZ50SOZH7UOjRwn0';
 
-const PRODUCTS_ENDPOINT = `${SUPABASE_URL}/rest/v1/products?select=id,name,slug,price,subtitle,collection,image_main,image_detail,gallery,featured,sort_order,status,created_at&status=eq.active&order=featured.desc,sort_order.asc.nullslast,created_at.asc`;
+const PRODUCTS_ENDPOINT = `${SUPABASE_URL}/rest/v1/products?select=id,name,slug,price,subtitle,collection,image_main,image_detail,gallery,featured,sort_order,status,language_visibility,created_at&status=eq.active&order=featured.desc,sort_order.asc.nullslast,created_at.asc`;
 
 const DISPLAYABLE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
 
@@ -122,7 +125,7 @@ function getMediaList(product) {
   return [product.image_main, product.image_detail, ...gallery].filter(Boolean);
 }
 
-function normalizeProduct(product) {
+export function normalizeStageProduct(product) {
   const displayableMedia = getMediaList(product).filter(isDisplayableAsset);
 
   if (!displayableMedia.length) {
@@ -142,7 +145,8 @@ function normalizeProduct(product) {
   };
 }
 
-export async function loadProducts({ signal } = {}) {
+export async function loadProducts({ signal, language = DEFAULT_LANGUAGE } = {}) {
+  const currentLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
   const response = await fetch(PRODUCTS_ENDPOINT, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -156,7 +160,9 @@ export async function loadProducts({ signal } = {}) {
   }
 
   const payload = await response.json();
-  const normalizedProducts = payload.map(normalizeProduct).filter(Boolean);
+  const normalizedProducts = filterProductsByLanguage(payload, currentLanguage)
+    .map(normalizeStageProduct)
+    .filter(Boolean);
 
   return normalizedProducts.length ? normalizedProducts : FALLBACK_PRODUCTS;
 }

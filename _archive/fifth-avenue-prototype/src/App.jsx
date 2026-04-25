@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { useSiteCopy } from '../../../components/site-copy/SiteCopyProvider';
+import { normalizeProductCopySegment } from '../../../utils/product-copy';
+import { resolveTaxonomyLabel } from '../../../utils/product-taxonomy';
+import { buildCollectionsHref } from '../../../utils/products';
 import { FALLBACK_PRODUCTS, loadProducts } from './lib/catalog.js';
 import { COLLECTION_STAGE_CONFIG, MAIN_PAGE_PORTAL } from './lib/stageConfig.js';
 import './App.css';
@@ -118,23 +122,29 @@ function slugify(value) {
     .replace(/(^-|-$)/g, '');
 }
 
-function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
+function buildCollectionEntries(products, collectionStageMediaOverrides = {}, resolveCollectionLabel = normalizeCollectionName) {
   const groupedCollections = new Map();
 
   products.forEach((product) => {
     const collectionName = normalizeCollectionName(product.collection);
-    const existingGroup = groupedCollections.get(collectionName);
+    const collectionLabel = normalizeCollectionName(resolveCollectionLabel(collectionName));
+    const groupKey = normalizeProductCopySegment(collectionLabel, 'collection');
+    const collectionConfig = COLLECTION_STAGE_CONFIG[collectionName] ?? {};
+    const groupSortOrder = collectionConfig.order ?? product.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const existingGroup = groupedCollections.get(groupKey);
 
     if (existingGroup) {
       existingGroup.products.push(product);
-      existingGroup.sortOrder = Math.min(existingGroup.sortOrder, product.sortOrder ?? Number.MAX_SAFE_INTEGER);
+      existingGroup.sortOrder = Math.min(existingGroup.sortOrder, groupSortOrder);
       return;
     }
 
-    groupedCollections.set(collectionName, {
+    groupedCollections.set(groupKey, {
+      key: groupKey,
       collection: collectionName,
+      collectionLabel,
       products: [product],
-      sortOrder: product.sortOrder ?? Number.MAX_SAFE_INTEGER,
+      sortOrder: groupSortOrder,
     });
   });
 
@@ -144,7 +154,7 @@ function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
       const collectionConfig = COLLECTION_STAGE_CONFIG[group.collection] ?? {};
       const collectionMediaOverride = collectionStageMediaOverrides[group.collection] ?? {};
       const anchorProduct = group.products.find((product) => product.featured) ?? group.products[0];
-      const collectionId = slugify(group.collection) || slugify(anchorProduct.slug) || anchorProduct.id;
+      const collectionId = slugify(group.collectionLabel) || slugify(anchorProduct.slug) || anchorProduct.id;
       const availableMedia = Array.from(
         new Set(group.products.flatMap((product) => [product.primaryMedia, product.secondaryMedia]).filter(Boolean)),
       );
@@ -160,22 +170,25 @@ function buildCollectionEntries(products, collectionStageMediaOverrides = {}) {
       return {
         id: `collection-${collectionId}`,
         collection: group.collection,
-        title: collectionConfig.title || group.collection,
+        collectionLabel: group.collectionLabel,
+        collectionFilterLabel: group.collectionLabel,
+        title: collectionConfig.title && collectionConfig.title !== group.collection ? collectionConfig.title : group.collectionLabel,
         subtitle: collectionConfig.subtitle || anchorProduct.subtitle || 'Curated collection edit.',
         primaryMedia,
         secondaryMedia,
         pieceCount: group.products.length,
-        sortOrder: collectionConfig.order ?? group.sortOrder,
+        sortOrder: group.sortOrder,
       };
     })
-    .sort((left, right) => left.sortOrder - right.sortOrder || left.collection.localeCompare(right.collection));
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.collectionLabel.localeCompare(right.collectionLabel));
 }
 
 function getTheme(collection) {
   return COLLECTION_THEMES[collection] ?? COLLECTION_THEMES.default;
 }
 
-function App({ collectionStageMediaOverrides = {} }) {
+function App({ activeLanguage = 'en', collectionStageMediaOverrides = {}, initialProducts = FALLBACK_PRODUCTS }) {
+  const siteCopy = useSiteCopy();
   const rootRef = useRef(null);
   const stageRef = useRef(null);
   const focusCountRef = useRef(null);
@@ -183,18 +196,19 @@ function App({ collectionStageMediaOverrides = {} }) {
   const touchStartRef = useRef(null);
   const lockRef = useRef(false);
   const unlockTimerRef = useRef(null);
-  const [products, setProducts] = useState(FALLBACK_PRODUCTS);
+  const [products, setProducts] = useState(initialProducts.length ? initialProducts : FALLBACK_PRODUCTS);
   const [, setCatalogStatus] = useState('fallback');
   const [activeIndex, setActiveIndex] = useState(0);
   const collectionStageOverridesKey = JSON.stringify(collectionStageMediaOverrides || {});
-  const collectionEntries = buildCollectionEntries(products, collectionStageMediaOverrides);
-  const fallbackCollections = buildCollectionEntries(FALLBACK_PRODUCTS, collectionStageMediaOverrides);
+  const resolveCollectionDisplayLabel = (value) => resolveTaxonomyLabel(siteCopy, 'collection', value);
+  const collectionEntries = buildCollectionEntries(products, collectionStageMediaOverrides, resolveCollectionDisplayLabel);
+  const fallbackCollections = buildCollectionEntries(FALLBACK_PRODUCTS, collectionStageMediaOverrides, resolveCollectionDisplayLabel);
 
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
 
-    loadProducts({ signal: controller.signal })
+    loadProducts({ signal: controller.signal, language: activeLanguage })
       .then((catalog) => {
         if (cancelled || !catalog.length) {
           return;
@@ -217,7 +231,7 @@ function App({ collectionStageMediaOverrides = {} }) {
       cancelled = true;
       controller.abort();
     };
-  }, [collectionStageOverridesKey]);
+  }, [activeLanguage, collectionStageOverridesKey]);
 
   useEffect(() => {
     setActiveIndex((current) => wrapIndex(current, collectionEntries.length || 1));
@@ -275,8 +289,9 @@ function App({ collectionStageMediaOverrides = {} }) {
   const activeCollection = collectionEntries[activeIndex] ?? fallbackCollections[0];
   const activeTheme = getTheme(activeCollection.collection);
   const titleParts = getDisplayParts(activeCollection.title);
+  const useCompactTitle = titleParts.primary.length >= 8;
   const pieceLabel = activeCollection.pieceCount === 1 ? 'piece' : 'pieces';
-  const activeCollectionHref = `/collections?collection=${encodeURIComponent(activeCollection.collection)}`;
+  const activeCollectionHref = buildCollectionsHref({ collection: activeCollection.collectionFilterLabel });
 
   const scheduleUnlock = () => {
     if (unlockTimerRef.current) {
@@ -522,7 +537,7 @@ function App({ collectionStageMediaOverrides = {} }) {
         </section>
 
         <section key={activeCollection.id} className="stage__copy">
-          <h1 className="stage__title">
+          <h1 className={`stage__title${useCompactTitle ? ' stage__title--compact' : ''}`}>
             <span className="js-product-line">
               <span className="inner">{titleParts.primary.toUpperCase()}</span>
             </span>
@@ -540,7 +555,7 @@ function App({ collectionStageMediaOverrides = {} }) {
           <p className="stage__subtitle js-product-fade">{activeCollection.subtitle}</p>
 
           <div className="stage__controls js-product-fade">
-            <a className="transition-link" href={activeCollectionHref} aria-label={`Visit ${activeCollection.collection} in collections`}>
+            <a className="transition-link" href={activeCollectionHref} aria-label={`Visit ${activeCollection.collectionLabel} in collections`}>
               Visit Collection
             </a>
           </div>
@@ -556,7 +571,7 @@ function App({ collectionStageMediaOverrides = {} }) {
                 onClick={() => jumpTo(index)}
               >
                 <span>{padIndex(index + 1)}</span>
-                <span>{entry.collection}</span>
+                <span>{entry.collectionLabel}</span>
               </button>
             );
           })}
