@@ -794,6 +794,7 @@ function TaxonomyField({
     options,
     helperText,
     displayLabels,
+    className = '',
     onChange,
     onAdd,
     onEditLabels,
@@ -802,7 +803,7 @@ function TaxonomyField({
     removeDisabled,
 }) {
     return (
-        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+        <label className={`flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 ${className}`.trim()}>
             {label}
             <div className="grid grid-cols-[minmax(0,1fr)_4.75rem_3rem_3rem] gap-3">
                 <select value={value} onChange={(event) => onChange(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
@@ -820,7 +821,7 @@ function TaxonomyField({
                     -
                 </button>
             </div>
-            <p className="text-[11px] normal-case tracking-normal leading-relaxed text-[#1C1C1C]/52">{helperText}</p>
+            {helperText ? <p className="text-[11px] normal-case tracking-normal leading-relaxed text-[#1C1C1C]/52">{helperText}</p> : null}
             {value && displayLabels ? (
                 <div className="flex flex-wrap gap-2 text-[10px] normal-case tracking-normal text-[#1C1C1C]/62">
                     <span className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2"><span className="text-[#1C1C1C]/42">EN:</span> {displayLabels.en}</span>
@@ -2430,7 +2431,7 @@ export default function AdminDashboard({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="grid grid-cols-1 items-start md:grid-cols-2 gap-5">
                             <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
                                 Product Name
                                 <input value={draft.name} onChange={(event) => handleFieldChange('name', event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
@@ -2471,8 +2472,9 @@ export default function AdminDashboard({
                                 label="Category"
                                 value={draft.category}
                                 options={categoryOptions}
-                                helperText="Keep one base category value here. Use EN/BG to decide how shoppers should see that same value in English and Bulgarian instead of creating duplicate language-specific categories."
+                                helperText=""
                                 displayLabels={categoryDisplayLabels}
+                                className="md:col-span-2"
                                 onChange={(value) => handleFieldChange('category', value)}
                                 onAdd={() => openValueDialog('category')}
                                 onEditLabels={() => openTaxonomyLabelDialog('category')}
@@ -2485,8 +2487,9 @@ export default function AdminDashboard({
                                 label="Collection"
                                 value={draft.collection}
                                 options={collectionOptions}
-                                helperText="Keep one base collection value here. Use EN/BG to decide how shoppers should see that same value in English and Bulgarian instead of creating duplicate language-specific collections."
+                                helperText=""
                                 displayLabels={collectionDisplayLabels}
+                                className="md:col-span-2"
                                 onChange={(value) => handleFieldChange('collection', value)}
                                 onAdd={() => openValueDialog('collection')}
                                 onEditLabels={() => openTaxonomyLabelDialog('collection')}

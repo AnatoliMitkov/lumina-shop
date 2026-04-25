@@ -110,16 +110,9 @@ const heroSubtextFallback = localizedFallback(
         {
             type: 'paragraph',
             size: 'sm',
-            text: 'Elevating traditional craftsmanship into avant-garde fashion. Hand-knotted in Victoria.',
+            text: 'Elevating traditional craftsmanship into avant-garde fashion. A true Handmade fashion. ZERO machine work. Hand-knotted by Victoria.',
         },
     ]),
-    createSiteCopyRichTextDocument([
-        {
-            type: 'paragraph',
-            size: 'sm',
-            text: 'Превръщаме традиционното занаятчийство в авангардна мода. Изработено на ръка от Victoria.',
-        },
-    ])
 );
 
 const heroTitleSizeClassNames = {
