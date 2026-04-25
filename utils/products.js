@@ -228,6 +228,38 @@ export function slugifyProductName(value = '') {
   return normalized || 'atelier-piece';
 }
 
+function normalizeRouteSlugSegment(value = '') {
+  return toText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function buildProductRouteSlug(product = {}) {
+  const normalizedProduct = normalizeProductRecord(product);
+  const existingSlug = toText(normalizedProduct.slug).toLowerCase();
+
+  if (existingSlug && normalizeRouteSlugSegment(existingSlug) === existingSlug) {
+    return existingSlug;
+  }
+
+  const nameSlug = normalizeRouteSlugSegment(normalizedProduct.name);
+
+  if (nameSlug) {
+    return nameSlug;
+  }
+
+  const legacySlug = normalizeRouteSlugSegment(existingSlug);
+
+  if (legacySlug) {
+    return legacySlug;
+  }
+
+  const idSlug = normalizeRouteSlugSegment(normalizedProduct.id);
+
+  return idSlug || existingSlug || normalizedProduct.id || 'atelier-piece';
+}
+
 function normalizeStatus(value) {
   const normalizedValue = toText(value, PRODUCT_DEFAULTS.status).toLowerCase();
   const validValues = PRODUCT_STATUS_OPTIONS.map((option) => option.value);
@@ -327,8 +359,7 @@ export function sortProducts(products = []) {
 }
 
 export function buildProductHref(product = {}) {
-  const normalizedProduct = normalizeProductRecord(product);
-  const slugOrId = normalizedProduct.slug || normalizedProduct.id;
+  const slugOrId = buildProductRouteSlug(product);
 
   return `/product/${encodeURIComponent(slugOrId)}`;
 }

@@ -243,7 +243,7 @@ export default function ProductGallery({ productName, collection, category, gall
             <section className="flex flex-col gap-4 md:gap-5">
                 <div className={`grid ${galleryLayoutClassName} gap-4 md:gap-5 items-start`}>
                 {hasMultipleImages && (
-                    <div className="order-2 lg:order-1 flex lg:flex-col gap-3 overflow-auto pr-1 lg:max-h-[48rem]" data-lenis-prevent-wheel>
+                    <div className="order-2 lg:order-1 flex lg:flex-col gap-3 overflow-auto pr-1 lg:max-h-[min(90svh,56rem)]" data-lenis-prevent-wheel>
                         {images.map((image, index) => {
                             const isActive = index === activeIndex;
 
@@ -266,7 +266,7 @@ export default function ProductGallery({ productName, collection, category, gall
                     </div>
                 )}
 
-                <div className="order-1 relative overflow-hidden rounded-sm border border-[#1C1C1C]/10 bg-[#F5F0EA] product-gallery-stage">
+                <div className="order-1 relative overflow-hidden rounded-sm border border-[#1C1C1C]/10 bg-[#F5F0EA] product-gallery-stage lg:h-[min(90svh,56rem)]">
                     <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-white/12 bg-black/28 px-3 py-2 text-[11px] lg:text-[1rem] uppercase tracking-[0.24em] text-white/72 backdrop-blur-sm">
                         <span>{collection}</span>
                         <span>/</span>
@@ -292,7 +292,7 @@ export default function ProductGallery({ productName, collection, category, gall
                         type="button"
                         onClick={() => handleOpenLightbox(activeIndex)}
                         aria-label={`Open ${productName} image ${activeIndex + 1} in fullscreen`}
-                        className="group relative block aspect-[4/5] w-full overflow-hidden view-img hover-target text-left"
+                        className="group relative block aspect-[4/5] w-full overflow-hidden view-img hover-target text-left lg:h-full lg:aspect-auto"
                         data-cursor-text="Expand"
                     >
                         <img key={`stage-${activeImage}`} src={activeImage} alt={productName} className="product-gallery-frame h-full w-full object-cover object-center transition-transform duration-[1800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06]" />
@@ -301,21 +301,6 @@ export default function ProductGallery({ productName, collection, category, gall
                     </button>
                 </div>
 
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
-                    <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Gallery</p>
-                        <p className="font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] text-[#1C1C1C]">{images.length} frames</p>
-                    </div>
-                    <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Palette</p>
-                        <p className="font-serif text-2xl md:text-3xl font-light leading-none uppercase tracking-[0.08em] text-[#1C1C1C]">{palette.length > 0 ? formatIndex(palette.length) : '01'}</p>
-                    </div>
-                    <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm px-5 py-4 flex flex-col gap-2">
-                        <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42">Tone Notes</p>
-                        <p className="text-base lg:text-[1.12rem] leading-relaxed text-[#1C1C1C]/58">{paletteLabel}</p>
-                    </div>
                 </div>
             </section>
 

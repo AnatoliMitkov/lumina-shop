@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers';
-import { cache } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import ProductDetailAccordions from '../../../components/ProductDetailAccordions';
 import ProductGallery from '../../../components/ProductGallery';
 import ProductContactWrapper from '../../../components/ProductContactWrapper';
@@ -11,6 +10,7 @@ import { getProductFieldCopyKey, getProductIndexedCopyKey, getProductOptionCopyK
 import { createClient } from '../../../utils/supabase/server';
 import {
     buildProductHref,
+    buildProductRouteSlug,
     filterProductsByLanguage,
     formatProductCurrency,
     normalizeProductRecord,
@@ -70,37 +70,88 @@ const SIZE_MEASUREMENTS = [
 ];
 
 const productBodySizeClassNames = {
-    xs: 'text-sm lg:text-[1.08rem]',
-    sm: 'text-base lg:text-[1.18rem]',
-    body: 'text-base lg:text-[1.25rem]',
-    lg: 'text-lg lg:text-[1.45rem]',
-    xl: 'text-xl lg:text-[1.65rem]',
-    display: 'text-2xl lg:text-[1.95rem]',
+    xs: 'text-sm lg:text-[0.98rem]',
+    sm: 'text-[0.98rem] lg:text-[1.04rem]',
+    body: 'text-base lg:text-[1.12rem]',
+    lg: 'text-[1.08rem] lg:text-[1.22rem]',
+    xl: 'text-[1.18rem] lg:text-[1.38rem]',
+    display: 'text-[1.45rem] lg:text-[1.7rem]',
+};
+
+const productPurchaseBodySizeClassNames = {
+    xs: 'text-[0.84rem] lg:text-[0.86rem]',
+    sm: 'text-[0.88rem] lg:text-[0.91rem]',
+    body: 'text-[0.92rem] lg:text-[0.96rem]',
+    lg: 'text-[0.98rem] lg:text-[1.02rem]',
+    xl: 'text-[1.06rem] lg:text-[1.1rem]',
+    display: 'text-[1.18rem] lg:text-[1.28rem]',
 };
 
 const productQuoteSizeClassNames = {
-    xs: 'text-lg lg:text-[1.35rem]',
-    sm: 'text-xl lg:text-[1.55rem]',
-    body: 'text-xl lg:text-[1.6rem]',
-    lg: 'text-2xl lg:text-[1.85rem]',
-    xl: 'text-3xl lg:text-[2.15rem]',
-    display: 'text-4xl lg:text-[2.65rem]',
+    xs: 'text-[1.05rem] lg:text-[1.18rem]',
+    sm: 'text-[1.15rem] lg:text-[1.32rem]',
+    body: 'text-[1.18rem] lg:text-[1.42rem]',
+    lg: 'text-[1.35rem] lg:text-[1.62rem]',
+    xl: 'text-[1.6rem] lg:text-[1.9rem]',
+    display: 'text-[1.9rem] lg:text-[2.25rem]',
 };
 
-const getCatalog = cache(async () => {
+async function getCatalog() {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: products } = await supabase.from('products').select('*');
 
     return sortProducts(products ?? []).map((entry) => normalizeProductRecord(entry));
-});
+}
+
+function decodeRouteSegment(value) {
+    if (typeof value !== 'string' || value.length === 0) {
+        return '';
+    }
+
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
+    }
+}
+
+function buildProductRouteCandidates(value) {
+    const candidates = new Set();
+    const normalizedValue = typeof value === 'string' ? value.trim() : '';
+
+    if (normalizedValue) {
+        candidates.add(normalizedValue);
+    }
+
+    const decodedValue = decodeRouteSegment(normalizedValue).trim();
+
+    if (decodedValue) {
+        candidates.add(decodedValue);
+    }
+
+    return candidates;
+}
+
+function findProductByRouteSegment(catalog, routeSegment) {
+    const routeCandidates = buildProductRouteCandidates(routeSegment);
+
+    return catalog.find((entry) => {
+        const entryCandidates = buildProductRouteCandidates(entry.id);
+
+        buildProductRouteCandidates(entry.slug).forEach((candidate) => entryCandidates.add(candidate));
+        buildProductRouteCandidates(buildProductRouteSlug(entry)).forEach((candidate) => entryCandidates.add(candidate));
+
+        return Array.from(routeCandidates).some((candidate) => entryCandidates.has(candidate));
+    });
+}
 
 export async function generateMetadata({ params }) {
     const { id } = await params;
     const cookieStore = await cookies();
     const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
     const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
-    const product = catalog.find((entry) => entry.id === id || entry.slug === id);
+    const product = findProductByRouteSegment(catalog, id);
 
     if (!product) {
         return {
@@ -213,10 +264,10 @@ function buildDispatchCopy(product) {
 
 function DetailCard({ eyebrow, eyebrowKey, title, titleKey, copy, copyKey, wide = false, editorLabelBase = 'Detail card' }) {
     return (
-        <div className={`reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-5 md:p-6 flex flex-col gap-3 ${wide ? 'md:col-span-2' : ''}`}>
-            <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/45">{eyebrowKey ? <EditableText contentKey={eyebrowKey} fallback={eyebrow} editorLabel={`${editorLabelBase} eyebrow`} /> : eyebrow}</p>
-            <p className="font-serif text-2xl md:text-3xl font-light leading-tight uppercase tracking-[0.06em] text-[#1C1C1C]">{titleKey ? <EditableText contentKey={titleKey} fallback={title} editorLabel={`${editorLabelBase} title`} /> : title}</p>
-            <p className="text-base lg:text-[1.12rem] leading-relaxed text-[#1C1C1C]/58">{copyKey ? <EditableText contentKey={copyKey} fallback={copy} editorLabel={`${editorLabelBase} copy`} /> : copy}</p>
+        <div className={`reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/72 rounded-[1rem] p-6 md:p-7 flex flex-col gap-4 shadow-[0_18px_40px_rgba(92,75,67,0.06)] ${wide ? 'md:col-span-2' : ''}`}>
+            <p className="text-[10px] lg:text-[0.78rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{eyebrowKey ? <EditableText contentKey={eyebrowKey} fallback={eyebrow} editorLabel={`${editorLabelBase} eyebrow`} /> : eyebrow}</p>
+            <p className="font-serif text-[1.7rem] md:text-[2.05rem] font-light leading-[0.94] uppercase tracking-[0.05em] text-[#1C1C1C]">{titleKey ? <EditableText contentKey={titleKey} fallback={title} editorLabel={`${editorLabelBase} title`} /> : title}</p>
+            <p className="text-[0.96rem] lg:text-[1.04rem] leading-[1.72] text-[#1C1C1C]/58">{copyKey ? <EditableText contentKey={copyKey} fallback={copy} editorLabel={`${editorLabelBase} copy`} /> : copy}</p>
         </div>
     );
 }
@@ -259,10 +310,16 @@ export default async function ProductPage({ params }) {
     const cookieStore = await cookies();
     const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
     const catalog = filterProductsByLanguage(await getCatalog(), currentLanguage);
-    const product = catalog.find((entry) => entry.id === id || entry.slug === id);
+    const product = findProductByRouteSegment(catalog, id);
 
     if (!product) {
         notFound();
+    }
+
+    const preferredRouteSegment = buildProductRouteSlug(product);
+
+    if (preferredRouteSegment && !buildProductRouteCandidates(id).has(preferredRouteSegment)) {
+        redirect(buildProductHref(product));
     }
 
     const gallery = resolveProductGallery(product);
@@ -386,7 +443,7 @@ export default async function ProductPage({ params }) {
             <section className="mb-8 md:mb-10 border-b border-[#1C1C1C]/10 pb-6 md:pb-8">
                 <div className="grid grid-cols-1 xl:grid-cols-[1.08fr_0.92fr] gap-6 md:gap-8 xl:gap-10 items-start">
                     <div className="flex flex-col gap-4 md:gap-5 max-w-4xl">
-                        <p className="hero-sub opacity-0 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.34em] text-[#1C1C1C]/45"><EditableText contentKey="product.hero.eyebrow_prefix" fallback={localizedFallback('Product', 'Продукт')} editorLabel="Product hero eyebrow prefix" /> / <EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} collection`} /></p>
+                        <p className="hero-sub opacity-0 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><EditableText contentKey="product.hero.eyebrow_prefix" fallback={localizedFallback('Product', 'Продукт')} editorLabel="Product hero eyebrow prefix" /> / <EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} collection`} /></p>
                         <div className="overflow-hidden"><h1 className="hero-title storefront-panel-display font-serif font-light tracking-[-0.02em] translate-y-full"><EditableText contentKey={productNameKey} fallback={product.name} editorLabel={`${product.name || 'Product'} title`} /></h1></div>
                     </div>
 
@@ -397,39 +454,32 @@ export default async function ProductPage({ params }) {
                                 fallback={product.subtitle}
                                 editorLabel={`${product.name || 'Product'} subtitle`}
                                 className="hero-sub storefront-copy-measure opacity-0"
-                                blockBaseClassName="leading-relaxed text-[#1C1C1C]/62"
+                                blockBaseClassName="leading-[1.7] text-[#1C1C1C]/62"
                                 sizeClassNames={productBodySizeClassNames}
                             />
                         )}
-                        <div className="hero-sub opacity-0 flex flex-wrap gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
-                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} category`} /></span>
-                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} availability label`} /></span>
-                            {product.palette.slice(0, 3).map((tone) => (
-                                <span key={tone} className="rounded-full border border-[#1C1C1C]/10 bg-white/70 px-3 py-2"><EditableText contentKey={getProductOptionCopyKey(product, 'palette', tone)} fallback={tone} editorLabel={`${product.name || 'Product'} hero tone ${tone}`} /></span>
-                            ))}
-                        </div>
                     </div>
                 </div>
             </section>
 
-            <section className="mb-16 md:mb-20 grid grid-cols-1 xl:grid-cols-[1.08fr_0.92fr] gap-8 md:gap-10 items-start">
+            <section className="mb-10 md:mb-12 grid grid-cols-1 xl:grid-cols-[1.08fr_0.92fr] gap-8 md:gap-10 items-start">
                 <div className="min-w-0">
                     <ProductGallery productName={product.name} collection={product.collection} category={product.category} gallery={gallery} palette={product.palette} />
                 </div>
 
                 <div className="xl:pl-4">
                     <div className="sticky top-28 flex flex-col gap-5 md:gap-6">
-                        <div className="border border-[#1C1C1C]/10 bg-white/60 rounded-sm p-6 md:p-8 flex flex-col gap-6 md:gap-7">
-                            <div className="grid gap-5 border-b border-[#1C1C1C]/10 pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                        <div className="border border-[#1C1C1C]/10 bg-white/72 backdrop-blur-xl rounded-[1rem] p-5 md:p-6 flex flex-col gap-5 md:gap-6 shadow-[0_22px_48px_rgba(92,75,67,0.08)]">
+                            <div className="grid gap-4 border-b border-[#1C1C1C]/10 pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                                 <div className="min-w-0 flex flex-col gap-2">
-                                    <p className="hero-sub opacity-0 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/42"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} purchase collection`} /> / <EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} purchase category`} /></p>
-                                    <p className="hero-sub opacity-0 font-serif text-4xl md:text-5xl font-light leading-none text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
+                                    <p className="hero-sub opacity-0 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42"><EditableText contentKey={productCollectionKey} fallback={product.collection} editorLabel={`${product.name || 'Product'} purchase collection`} /> / <EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} purchase category`} /></p>
+                                    <p className="hero-sub opacity-0 font-serif text-[2.35rem] md:text-[2.95rem] font-light leading-none text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
                                     {hasDiscount && (
-                                        <p className="hero-sub opacity-0 text-xs lg:text-[1rem] uppercase tracking-[0.24em] text-[#ff0000] line-through">{formatProductCurrency(product.compare_at_price)}</p>
+                                        <p className="hero-sub opacity-0 text-[0.75rem] lg:text-[0.92rem] uppercase tracking-[0.18em] text-[#b74638] line-through">{formatProductCurrency(product.compare_at_price)}</p>
                                     )}
                                 </div>
 
-                                <div className="hero-sub opacity-0 flex flex-col gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/45 lg:text-right lg:justify-self-end">
+                                <div className="hero-sub opacity-0 flex flex-col gap-2 text-[9px] lg:text-[0.72rem] uppercase tracking-[0.18em] text-[#1C1C1C]/48 lg:text-right lg:justify-self-end">
                                     <span><EditableText contentKey={productAvailabilityLabelKey} fallback={buildAvailabilityLabel(product)} editorLabel={`${product.name || 'Product'} price card availability`} /></span>
                                     <span><EditableText contentKey={productLeadTimeLabelKey} fallback={buildLeadTimeLabel(product)} editorLabel={`${product.name || 'Product'} lead time`} /></span>
                                 </div>
@@ -440,44 +490,46 @@ export default async function ProductPage({ params }) {
                                 fallback={product.description}
                                 editorLabel={`${product.name || 'Product'} description`}
                                 className="hero-sub opacity-0"
-                                blockBaseClassName="leading-relaxed text-[#1C1C1C]/65"
-                                sizeClassNames={productBodySizeClassNames}
+                                blockBaseClassName="leading-[1.68] text-[#1C1C1C]/63"
+                                sizeClassNames={productPurchaseBodySizeClassNames}
                             />
 
-                            <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback={localizedFallback('Availability', 'Наличност')} editorLabel="Product availability label" /></p>
-                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'availability_state')} fallback={localizedFallback(buildAvailabilityState(product), product.inventory_count > 0 ? 'Налично' : 'Изработка')} editorLabel={`${product.name || 'Product'} availability state`} /></p>
+                            <div className="hero-sub opacity-0 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                <div className="border border-[#1C1C1C]/10 bg-white/76 rounded-[0.9rem] p-3.5 shadow-[0_10px_22px_rgba(92,75,67,0.04)]">
+                                    <p className="text-[9px] lg:text-[0.68rem] uppercase tracking-[0.18em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.availability" fallback={localizedFallback('Availability', 'Наличност')} editorLabel="Product availability label" /></p>
+                                    <p className="text-[0.875rem] lg:text-[0.92rem] font-medium leading-[1.45] uppercase tracking-[0.12em] text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'availability_state')} fallback={localizedFallback(buildAvailabilityState(product), product.inventory_count > 0 ? 'Налично' : 'Изработка')} editorLabel={`${product.name || 'Product'} availability state`} /></p>
                                 </div>
-                                <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback={localizedFallback('Lead Time', 'Срок')} editorLabel="Product lead time label" /></p>
-                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'lead_time_compact')} fallback={localizedFallback(`${product.lead_time_days}d`, `${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'}`)} editorLabel={`${product.name || 'Product'} compact lead time`} /></p>
+                                <div className="border border-[#1C1C1C]/10 bg-white/76 rounded-[0.9rem] p-3.5 shadow-[0_10px_22px_rgba(92,75,67,0.04)]">
+                                    <p className="text-[9px] lg:text-[0.68rem] uppercase tracking-[0.18em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.lead_time" fallback={localizedFallback('Lead Time', 'Срок')} editorLabel="Product lead time label" /></p>
+                                    <p className="text-[0.875rem] lg:text-[0.92rem] font-medium leading-[1.45] uppercase tracking-[0.12em] text-[#1C1C1C]"><EditableText contentKey={getProductFieldCopyKey(product, 'lead_time_compact')} fallback={localizedFallback(`${product.lead_time_days}d`, `${product.lead_time_days} ${product.lead_time_days === 1 ? 'ден' : 'дни'}`)} editorLabel={`${product.name || 'Product'} compact lead time`} /></p>
                                 </div>
-                                <div className="border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4">
-                                    <p className="text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback={localizedFallback('Piece Type', 'Тип изделие')} editorLabel="Product piece type label" /></p>
-                                    <p className="font-serif text-2xl lg:text-[2rem] font-light leading-none text-[#1C1C1C]"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} summary category`} /></p>
+                                <div className="border border-[#1C1C1C]/10 bg-white/76 rounded-[0.9rem] p-3.5 shadow-[0_10px_22px_rgba(92,75,67,0.04)]">
+                                    <p className="text-[9px] lg:text-[0.68rem] uppercase tracking-[0.18em] text-[#1C1C1C]/42 mb-2"><EditableText contentKey="product.summary.piece_type" fallback={localizedFallback('Piece Type', 'Тип изделие')} editorLabel="Product piece type label" /></p>
+                                    <p className="text-[0.875rem] lg:text-[0.92rem] font-medium leading-[1.45] uppercase tracking-[0.12em] text-[#1C1C1C]"><EditableText contentKey={productCategoryKey} fallback={product.category} editorLabel={`${product.name || 'Product'} summary category`} /></p>
                                 </div>
                             </div>
 
                             <ProductContactWrapper product={product} sizeOptions={sizeOptions} toneOptions={product.palette} />
                         </div>
-
-                        <ProductDetailAccordions sections={accordionSections} language={currentLanguage} />
                     </div>
                 </div>
             </section>
 
+            <section className="mx-auto max-w-[1540px] mb-14 md:mb-16">
+                <ProductDetailAccordions sections={accordionSections} language={currentLanguage} />
+            </section>
+
             <section className="mx-auto max-w-[1540px] mb-14 md:mb-16 grid grid-cols-1 xl:grid-cols-[0.9fr_1fr] gap-5 md:gap-6 items-stretch">
-                <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-5 justify-between">
+                <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-[1rem] p-6 md:p-8 flex flex-col gap-5 justify-between shadow-[0_24px_52px_rgba(28,28,28,0.2)]">
                     <div className="flex flex-col gap-6">
-                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.3em] text-white/42"><EditableText contentKey="product.story.eyebrow" fallback={localizedFallback('Atelier Story', 'История на ателието')} editorLabel="Product story eyebrow" /></p>
-                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.08em]"><EditableText contentKey="product.story.title" fallback={localizedFallback('A piece should read with clarity from the first glance and hold attention once you move closer.', 'Една дреха трябва да се чете ясно от пръв поглед и да задържа вниманието, когато се приближите.')} editorLabel="Product story title" /></h2>
+                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.24em] text-white/42"><EditableText contentKey="product.story.eyebrow" fallback={localizedFallback('Atelier Story', 'История на ателието')} editorLabel="Product story eyebrow" /></p>
+                        <h2 className="reveal-text opacity-0 translate-y-8 storefront-panel-display font-serif font-light uppercase tracking-[0.06em]"><EditableText contentKey="product.story.title" fallback={localizedFallback('A piece should read with clarity from the first glance and hold attention once you move closer.', 'Една дреха трябва да се чете ясно от пръв поглед и да задържа вниманието, когато се приближите.')} editorLabel="Product story title" /></h2>
                         <EditableRichText
                             contentKey={productStoryKey}
                             fallback={productStory}
                             editorLabel={`${product.name || 'Product'} story`}
                             className="reveal-text opacity-0 translate-y-8"
-                            blockBaseClassName="leading-relaxed text-white/70"
+                            blockBaseClassName="leading-[1.72] text-white/70"
                             sizeClassNames={productBodySizeClassNames}
                         />
                     </div>
@@ -503,10 +555,10 @@ export default async function ProductPage({ params }) {
                 <section>
                     <div className="mb-10 md:mb-12 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#1C1C1C]/10 pb-8">
                         <div>
-                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.related.eyebrow" fallback={localizedFallback('Continue The Story', 'Продължете историята')} editorLabel="Product related eyebrow" /></p>
+                            <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 mb-4"><EditableText contentKey="product.related.eyebrow" fallback={localizedFallback('Continue The Story', 'Продължете историята')} editorLabel="Product related eyebrow" /></p>
                             <h2 className="reveal-text opacity-0 translate-y-8 storefront-section-display font-serif font-light uppercase tracking-[0.1em]"><EditableText contentKey="product.related.title" fallback={localizedFallback('Related Pieces', 'Свързани модели')} editorLabel="Product related title" /></h2>
                         </div>
-                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target text-xs uppercase tracking-[0.22em] font-medium"><EditableText contentKey="product.related.view_archive" fallback={localizedFallback('View Full Archive', 'Вижте целия архив')} editorLabel="Product related view archive CTA" /></a>
+                        <a href="/collections" className="reveal-text opacity-0 translate-y-8 transition-link hover-target lumina-button lumina-button--compact uppercase tracking-[0.18em] text-[0.8rem] font-medium"><EditableText contentKey="product.related.view_archive" fallback={localizedFallback('View Full Archive', 'Вижте целия архив')} editorLabel="Product related view archive CTA" /></a>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">

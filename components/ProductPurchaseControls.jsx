@@ -84,9 +84,9 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
         <div className="hero-sub opacity-0 flex flex-col gap-5">
             {sizeOptions.length > 0 && (
                 <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between gap-4 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/44">
+                    <div className="flex items-center justify-between gap-4 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
                         <span><EditableText contentKey="product.purchase.choose_size" fallback={localizedFallback('Choose Size', 'Изберете размер')} editorLabel="Product choose size label" /></span>
-                        <span>{sizeStatusLabel}</span>
+                        <span className="text-[#1C1C1C]/58">{sizeStatusLabel}</span>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -99,7 +99,8 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                                     type="button"
                                     onClick={() => handleSizeSelect(sizeOption)}
                                     aria-pressed={isActive}
-                                    className={`hover-target rounded-full border px-4 py-3 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] transition-colors ${isActive ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/12 bg-white/70 text-[#1C1C1C]/58 hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]'}`}
+                                    data-state={isActive ? 'active' : 'inactive'}
+                                    className="hover-target lumina-button lumina-button--compact uppercase tracking-[0.18em] text-[0.8rem] lg:text-[0.92rem] font-medium"
                                 >
                                     {sizeOption}
                                 </button>
@@ -107,17 +108,17 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                         })}
                     </div>
 
-                    <p className="text-xs lg:text-[1.08rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                    <p className="text-[0.82rem] lg:text-[0.92rem] leading-relaxed text-[#1C1C1C]/42">
                         {isCustomSize
                             ? <EditableText contentKey="product.purchase.custom_size_help" fallback={localizedFallback('Enter all four measurements below for a custom atelier fit.', 'Въведете и четирите мерки по-долу за индивидуална atelierna кройка.')} editorLabel="Product custom size help" />
                             : <EditableText contentKey="product.purchase.measurements_help" fallback={localizedFallback('Measurements guide is available in the accordion below.', 'Ръководството за мерките е достъпно по-долу.')} editorLabel="Product measurements help" />}
                     </p>
 
                     {isCustomSize && (
-                        <div className="grid grid-cols-1 gap-4 border border-[#1C1C1C]/10 bg-white/70 rounded-sm p-4 md:p-5">
+                        <div className="grid grid-cols-1 gap-4 border border-[#1C1C1C]/10 bg-white/78 rounded-[1rem] p-4 md:p-5 shadow-[0_16px_34px_rgba(92,75,67,0.06)]">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {customMeasurementFields.map((field) => (
-                                    <label key={field.key} className="flex flex-col gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
+                                    <label key={field.key} className="flex flex-col gap-2 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.18em] text-[#1C1C1C]/48">
                                         <span><EditableText contentKey={`product.purchase.custom_measurements.${field.key}.label`} fallback={localizedFallback(field.label, field.label)} editorLabel={`${field.label} measurement label`} /></span>
                                         <input
                                             type="number"
@@ -127,23 +128,23 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                                             value={customMeasurements[field.key]}
                                             onChange={(event) => handleCustomMeasurementChange(field.key, event.target.value)}
                                             placeholder={field.placeholder}
-                                            className="hover-target h-12 border border-[#1C1C1C]/12 bg-white px-4 text-base lg:text-[1.12rem] tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]/30"
+                                            className="hover-target lumina-field text-base lg:text-[1rem] tracking-normal text-[#1C1C1C]"
                                         />
                                     </label>
                                 ))}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_9rem] gap-3 items-end">
-                                <p className="text-xs lg:text-[1.08rem] uppercase tracking-[0.22em] text-[#1C1C1C]/42">
+                                <p className="text-[0.82rem] lg:text-[0.92rem] leading-relaxed text-[#1C1C1C]/42">
                                     <EditableText contentKey="product.purchase.custom_measurements.copy" fallback={localizedFallback('These measurements will be sent with the cart item so the atelier can review the fit before final confirmation.', 'Тези мерки се изпращат заедно с артикула в количката, за да може ателието да прегледа пасването преди финалното потвърждение.')} editorLabel="Product custom measurements copy" />
                                 </p>
 
-                                <label className="flex flex-col gap-2 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
+                                <label className="flex flex-col gap-2 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.18em] text-[#1C1C1C]/48">
                                     <span><EditableText contentKey="product.purchase.custom_measurements.units" fallback={localizedFallback('Units', 'Единици')} editorLabel="Product custom measurement units" /></span>
                                     <select
                                         value={customMeasurementUnit}
                                         onChange={(event) => setCustomMeasurementUnit(event.target.value)}
-                                        className="hover-target h-12 border border-[#1C1C1C]/12 bg-white px-4 text-base lg:text-[1.08rem] tracking-[0.16em] uppercase text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]/30"
+                                        className="hover-target lumina-field text-base lg:text-[0.96rem] tracking-[0.16em] uppercase text-[#1C1C1C]"
                                     >
                                         <option value="CM">CM</option>
                                         <option value="INCH">INCH</option>
@@ -157,9 +158,9 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
 
             {toneOptions.length > 0 && (
                 <div className="flex flex-col gap-3 border-t border-[#1C1C1C]/10 pt-5">
-                    <div className="flex items-center justify-between gap-4 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.28em] text-[#1C1C1C]/44">
+                    <div className="flex items-center justify-between gap-4 text-[10px] lg:text-[0.78rem] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
                         <span><EditableText contentKey="product.purchase.choose_tone" fallback={localizedFallback('Choose Tone', 'Изберете тон')} editorLabel="Product choose tone label" /></span>
-                        <span>{resolveToneLabel(selectedTone || toneOptions[0] || '')}</span>
+                        <span className="text-[#1C1C1C]/58">{resolveToneLabel(selectedTone || toneOptions[0] || '')}</span>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -175,7 +176,8 @@ export default function ProductPurchaseControls({ product, sizeOptions = [], ton
                                         onToneChange?.(toneOption);
                                     }}
                                     aria-pressed={isActive}
-                                    className={`hover-target rounded-full border px-4 py-3 text-[11px] lg:text-[1.05rem] uppercase tracking-[0.24em] transition-colors ${isActive ? 'border-[#1C1C1C] bg-[#1C1C1C] text-[#EFECE8]' : 'border-[#1C1C1C]/12 bg-white/70 text-[#1C1C1C]/58 hover:border-[#1C1C1C]/24 hover:text-[#1C1C1C]'}`}
+                                    data-state={isActive ? 'active' : 'inactive'}
+                                    className="hover-target lumina-button lumina-button--compact uppercase tracking-[0.18em] text-[0.8rem] lg:text-[0.92rem] font-medium"
                                 >
                                     <EditableText contentKey={getProductOptionCopyKey(product, 'palette', toneOption)} fallback={toneOption} editorLabel={`${product.name || 'Product'} tone ${toneOption}`} />
                                 </button>
