@@ -41,14 +41,16 @@ const storyBackdropMediaDefaults = {
 const storyPanelLabelFallback = 'My Story / Моята история';
 
 // Story surface tuning:
-// - `mobileImageOverlay` / `desktopImageOverlay` control the darkening color and opacity over the image.
-// - `copyPanel` controls the text panel color, opacity, shadow, and `backdrop-blur-*` strength.
+// - `mobileImageOverlay` / `desktopImageOverlay` control the base darkening over the image.
+// - `desktopGlassPanel` is the desktop-only frosted glass slab behind the copy.
+// - `copyPanel` keeps the mobile glass treatment and becomes layout-only on desktop.
 const storySurfaceClassNames = {
     mobileImageOverlay: 'bg-[linear-gradient(180deg,rgba(10,10,10,0.14)_0%,rgba(10,10,10,0.12)_24%,rgba(10,10,10,0.44)_58%,rgba(10,10,10,0.88)_100%)]',
-    desktopImageOverlay: 'bg-[linear-gradient(90deg,rgba(10,10,10,0.92)_0%,rgba(10,10,10,0.82)_32%,rgba(10,10,10,0.58)_50%,rgba(10,10,10,0.16)_72%,rgba(10,10,10,0)_100%)]',
+    desktopImageOverlay: 'bg-[linear-gradient(90deg,rgba(12,12,12,0.24)_0%,rgba(12,12,12,0.18)_28%,rgba(12,12,12,0.12)_46%,rgba(12,12,12,0.06)_70%,rgba(12,12,12,0)_100%)]',
     ambientGlow: 'bg-[radial-gradient(circle_at_top_left,rgba(239,236,232,0.14)_0%,rgba(239,236,232,0)_36%)]',
     overallShade: 'bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.14)_36%,rgba(0,0,0,0.3)_100%)]',
-    copyPanel: 'h-full w-full border-t border-white/10 bg-[linear-gradient(180deg,rgba(8,8,8,0.78)_0%,rgba(8,8,8,0.72)_100%)] shadow-[0_-20px_60px_rgba(0,0,0,0.24)] backdrop-blur-[14px] md:border-0 md:bg-[linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,0.98)_18%,rgba(0,0,0,0.88)_28%,rgba(0,0,0,0.52)_34%,rgba(0,0,0,0)_40%)] md:shadow-none md:backdrop-blur-none',
+    desktopGlassPanel: 'pointer-events-none absolute inset-y-0 left-0 hidden md:block md:w-[44rem] md:max-w-[58vw] xl:w-[46rem] xl:max-w-[54vw] md:bg-[linear-gradient(90deg,rgba(12,14,16,0.82)_0%,rgba(12,14,16,0.76)_42%,rgba(12,14,16,0.52)_68%,rgba(12,14,16,0.2)_88%,rgba(12,14,16,0)_100%)] md:backdrop-blur-[18px] md:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:[-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_76%,rgba(0,0,0,0)_100%)] md:[mask-image:linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_76%,rgba(0,0,0,0)_100%)]',
+    copyPanel: 'h-full w-full border-t border-white/10 bg-[linear-gradient(180deg,rgba(8,8,8,0.78)_0%,rgba(8,8,8,0.72)_100%)] shadow-[0_-20px_60px_rgba(0,0,0,0.24)] backdrop-blur-[14px] md:border-0 md:bg-transparent md:shadow-none md:backdrop-blur-none',
 };
 
 const storyContentViewportStyle = {
@@ -583,6 +585,7 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                     <div className={`absolute inset-0 hidden md:block ${storySurfaceClassNames.desktopImageOverlay}`}></div>
                     <div className={`absolute inset-0 mix-blend-screen ${storySurfaceClassNames.ambientGlow}`}></div>
                     <div className={`absolute inset-0 ${storySurfaceClassNames.overallShade}`}></div>
+                    <div className={storySurfaceClassNames.desktopGlassPanel}></div>
 
                     <div className="relative z-[1] flex h-full items-stretch">
                         <div className="w-full">
@@ -599,7 +602,7 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                                             heading1: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
                                             heading2: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
                                             heading3: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
-                                            paragraph: 'font-serif !normal-case !not-italic max-w-none !text-[0.98rem] min-[380px]:!text-[1.04rem] leading-[1.68] tracking-[0.035em] text-white/82 md:max-w-[36rem] md:!text-[1rem] md:leading-[1.58] md:tracking-[0.03em] md:text-white/74',
+                                            paragraph: 'font-serif !normal-case !not-italic max-w-none !text-[0.98rem] min-[380px]:!text-[1.04rem] leading-[1.68] tracking-[0.035em] text-white/82 md:max-w-[36rem] md:!text-[1.12rem] md:leading-[1.58] md:tracking-[0.03em] md:text-white/74',
                                             quote: 'border-l border-white/20 pl-5 italic text-white/82',
                                             'bullet-list': 'text-white/74 list-disc pl-5 space-y-2',
                                             'numbered-list': 'text-white/74 list-decimal pl-5 space-y-2',
