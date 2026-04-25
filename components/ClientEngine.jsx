@@ -1147,12 +1147,6 @@ export default function ClientEngine({ children, initialLanguage }) {
         );
     }
 
-    // v2 routes use their own layout (Nav, Footer) defined in app/v2/layout.jsx.
-    // Skip the v1 shell entirely so there is no overlap.
-    if (pathname.startsWith('/v2')) {
-        return <>{children}</>;
-    }
-
     return (
         <>
             <div ref={cursorRef} id="cursor" aria-hidden="true" className={baseCursorClassName}>
