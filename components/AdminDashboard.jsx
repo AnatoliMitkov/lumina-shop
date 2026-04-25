@@ -6,6 +6,7 @@ import AdminAffiliateCodesPanel from './AdminAffiliateCodesPanel';
 import AdminInquiriesPanel from './AdminInquiriesPanel';
 import AdminDiscountCodesPanel from './AdminDiscountCodesPanel';
 import AdminOrdersPanel from './AdminOrdersPanel';
+import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { countAdminAttentionItems, normalizeAdminAttentionStatus } from '../utils/admin-attention';
 import {
     PRODUCT_DEFAULTS,
@@ -23,6 +24,7 @@ import {
     slugifyProductName,
     sortProducts,
 } from '../utils/products';
+import { getTaxonomyStorageKey } from '../utils/product-taxonomy';
 import {
     buildCollectionMediaKey,
     parseCollectionMediaValue,
@@ -434,6 +436,46 @@ function getTaxonomyLabel(field) {
     return field === 'collection' ? 'Collection' : 'Category';
 }
 
+function createTaxonomyLabelDialogState(overrides = {}) {
+    return {
+        open: false,
+        field: 'category',
+        value: '',
+        englishLabel: '',
+        bulgarianLabel: '',
+        error: '',
+        ...overrides,
+    };
+}
+
+function normalizeStoredTextValue(value, fallback = '') {
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+
+        return trimmedValue || fallback;
+    }
+
+    if (value == null) {
+        return fallback;
+    }
+
+    const normalizedValue = String(value).trim();
+    return normalizedValue || fallback;
+}
+
+function resolveStoredTaxonomyLabel(getStoredEntry, field, value, language) {
+    const normalizedValue = normalizeOptionValue(value);
+
+    if (!normalizedValue) {
+        return '';
+    }
+
+    return normalizeStoredTextValue(
+        getStoredEntry?.(getTaxonomyStorageKey(field, normalizedValue, language)),
+        normalizedValue,
+    );
+}
+
 function ModalShell({ open, onClose, children, maxWidth = 'max-w-xl' }) {
     const [isVisible, setIsVisible] = useState(false);
 
@@ -581,6 +623,91 @@ function ValueDialog({
     );
 }
 
+function TaxonomyLabelDialog({
+    open,
+    field,
+    value,
+    englishLabel,
+    bulgarianLabel,
+    error,
+    isLoading,
+    onCancel,
+    onChangeEnglish,
+    onChangeBulgarian,
+    onConfirm,
+}) {
+    const baseValue = normalizeOptionValue(value);
+
+    return (
+        <ModalShell open={open} onClose={isLoading ? undefined : onCancel} maxWidth="max-w-2xl">
+            <div className="flex flex-col gap-6 p-6 md:p-8">
+                <div className="flex flex-col gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Taxonomy Labels</p>
+                    <h3 className="font-serif text-3xl font-light uppercase tracking-[0.1em] leading-none">{getTaxonomyLabel(field)} EN / BG Labels</h3>
+                    <p className="text-sm leading-relaxed text-white/70">Keep one shared {field} value for products and filters, then set the visible shopper label for each language here.</p>
+                </div>
+
+                <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Base Value</p>
+                    <p className="mt-3 font-serif text-2xl font-light leading-tight text-white">{baseValue}</p>
+                    <p className="mt-3 text-xs leading-relaxed text-white/48">This shared value stays in the product record and filter URL. Only the visible English and Bulgarian labels change below.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/55">
+                        English Label
+                        <input
+                            autoFocus
+                            value={englishLabel}
+                            onChange={(event) => onChangeEnglish(event.target.value)}
+                            placeholder={baseValue}
+                            className="h-14 border border-white/12 bg-white/6 px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/24"
+                        />
+                    </label>
+
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/55">
+                        Bulgarian Label
+                        <input
+                            value={bulgarianLabel}
+                            onChange={(event) => onChangeBulgarian(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' && baseValue) {
+                                    event.preventDefault();
+                                    onConfirm();
+                                }
+                            }}
+                            placeholder={baseValue}
+                            className="h-14 border border-white/12 bg-white/6 px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/24"
+                        />
+                    </label>
+                </div>
+
+                <p className="text-xs leading-relaxed text-white/48">If a field is left empty, the base value will be used as the visible label for that language.</p>
+                {error ? <p className="text-sm text-red-200">{error}</p> : null}
+
+                <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        disabled={isLoading}
+                        className={`hover-target h-12 px-5 rounded-full border border-white/12 bg-white/5 text-[10px] uppercase tracking-[0.22em] text-white/72 transition-colors ${isLoading ? 'opacity-60' : 'hover:bg-white/10'}`}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={!baseValue || isLoading}
+                        className={`hover-target h-12 px-6 rounded-full bg-[#EFE7DA] text-[#1C1C1C] text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${!baseValue || isLoading ? 'opacity-60' : 'hover:bg-white'}`}
+                    >
+                        {isLoading ? 'Saving Labels' : `Save ${getTaxonomyLabel(field)} Labels`}
+                    </button>
+                </div>
+            </div>
+        </ModalShell>
+    );
+}
+
 function AttentionDialog({
     open,
     orderCounts,
@@ -666,20 +793,26 @@ function TaxonomyField({
     value,
     options,
     helperText,
+    displayLabels,
     onChange,
     onAdd,
+    onEditLabels,
     onRemove,
+    editLabelsDisabled,
     removeDisabled,
 }) {
     return (
         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
             {label}
-            <div className="grid grid-cols-[minmax(0,1fr)_3rem_3rem] gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_4.75rem_3rem_3rem] gap-3">
                 <select value={value} onChange={(event) => onChange(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                     {options.map((option) => (
                         <option key={option} value={option}>{option}</option>
                     ))}
                 </select>
+                <button type="button" onClick={onEditLabels} disabled={editLabelsDisabled} className={`hover-target h-14 border border-[#1C1C1C]/12 bg-white px-2 text-[9px] uppercase tracking-[0.16em] text-[#1C1C1C] transition-colors ${editLabelsDisabled ? 'opacity-50' : 'hover:bg-[#1C1C1C] hover:text-[#EFECE8]'}`} aria-label={`Edit ${label} English and Bulgarian labels`}>
+                    EN/BG
+                </button>
                 <button type="button" onClick={onAdd} className="hover-target h-14 border border-[#1C1C1C]/12 bg-white text-lg leading-none text-[#1C1C1C] transition-colors hover:bg-[#1C1C1C] hover:text-[#EFECE8]" aria-label={`Add ${label}`}>
                     +
                 </button>
@@ -688,6 +821,12 @@ function TaxonomyField({
                 </button>
             </div>
             <p className="text-[11px] normal-case tracking-normal leading-relaxed text-[#1C1C1C]/52">{helperText}</p>
+            {value && displayLabels ? (
+                <div className="flex flex-wrap gap-2 text-[10px] normal-case tracking-normal text-[#1C1C1C]/62">
+                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2"><span className="text-[#1C1C1C]/42">EN:</span> {displayLabels.en}</span>
+                    <span className="rounded-full border border-[#1C1C1C]/10 bg-white/75 px-3 py-2"><span className="text-[#1C1C1C]/42">BG:</span> {displayLabels.bg}</span>
+                </div>
+            ) : null}
         </label>
     );
 }
@@ -936,7 +1075,7 @@ function BulkEditorPanel({
                         </select>
                     </BulkFieldRow>
 
-                    <BulkFieldRow active={enabledFields.category} label="Category" hint="Reclassify the selection under one product category." onToggle={() => onToggleField('category')}>
+                    <BulkFieldRow active={enabledFields.category} label="Category" hint="Use one shared category value for the batch. If the shopper label should differ by language, update its EN/BG labels from the product editor instead of creating a second BG-only category." onToggle={() => onToggleField('category')}>
                         <select value={value.category} onChange={(event) => onChange('category', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                             {categoryOptions.map((option) => (
                                 <option key={option} value={option}>{option}</option>
@@ -944,7 +1083,7 @@ function BulkEditorPanel({
                         </select>
                     </BulkFieldRow>
 
-                    <BulkFieldRow active={enabledFields.collection} label="Collection" hint="Move the selected products into a single storefront collection." onToggle={() => onToggleField('collection')}>
+                    <BulkFieldRow active={enabledFields.collection} label="Collection" hint="Use one shared collection value for the batch. If the shopper label should differ by language, update its EN/BG labels from the product editor instead of creating a second BG-only collection." onToggle={() => onToggleField('collection')}>
                         <select value={value.collection} onChange={(event) => onChange('collection', event.target.value)} className="h-14 w-full border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
                             {collectionOptions.map((option) => (
                                 <option key={option} value={option}>{option}</option>
@@ -1083,8 +1222,10 @@ export default function AdminDashboard({
     const [bulkFeedback, setBulkFeedback] = useState({ type: 'idle', message: '' });
     const [isBulkSaving, setIsBulkSaving] = useState(false);
     const [valueDialog, setValueDialog] = useState({ open: false, field: 'category', value: '' });
+    const [taxonomyLabelDialog, setTaxonomyLabelDialog] = useState(createTaxonomyLabelDialogState);
     const [taxonomyDeleteDialog, setTaxonomyDeleteDialog] = useState({ open: false, field: 'category', value: '' });
     const [isTaxonomyUpdating, setIsTaxonomyUpdating] = useState(false);
+    const [isTaxonomyLabelSaving, setIsTaxonomyLabelSaving] = useState(false);
     const [isAttentionDialogOpen, setIsAttentionDialogOpen] = useState(false);
     const [hasAttentionDialogOpened, setHasAttentionDialogOpened] = useState(false);
     const [collectionStageMediaEntries, setCollectionStageMediaEntries] = useState(initialCollectionStageMediaEntries);
@@ -1093,6 +1234,7 @@ export default function AdminDashboard({
     const [isStageMediaSaving, setIsStageMediaSaving] = useState(false);
     const [isStageMediaUploading, setIsStageMediaUploading] = useState(false);
     const [stageMediaFeedback, setStageMediaFeedback] = useState({ type: 'idle', message: '' });
+    const siteCopy = useSiteCopy();
 
     const activeCount = products.filter((product) => product.status === 'active').length;
     const draftCount = products.filter((product) => product.status === 'draft').length;
@@ -1106,6 +1248,15 @@ export default function AdminDashboard({
         draft.collection,
         ...Object.keys(collectionStageMediaEntries),
     ]);
+    const resolveAdminTaxonomyLabel = (field, value, language) => resolveStoredTaxonomyLabel(siteCopy?.getStoredEntry, field, value, language);
+    const categoryDisplayLabels = {
+        en: resolveAdminTaxonomyLabel('category', draft.category, 'en'),
+        bg: resolveAdminTaxonomyLabel('category', draft.category, 'bg'),
+    };
+    const collectionDisplayLabels = {
+        en: resolveAdminTaxonomyLabel('collection', draft.collection, 'en'),
+        bg: resolveAdminTaxonomyLabel('collection', draft.collection, 'bg'),
+    };
 
     useEffect(() => {
         setCollectionStageMediaEntries(initialCollectionStageMediaEntries || {});
@@ -1325,6 +1476,30 @@ export default function AdminDashboard({
         setValueDialog((currentDialog) => ({ ...currentDialog, open: false, value: '' }));
     };
 
+    const openTaxonomyLabelDialog = (field, value = draft[field]) => {
+        const currentValue = normalizeOptionValue(value);
+
+        if (!currentValue || isTaxonomyLabelSaving) {
+            return;
+        }
+
+        setTaxonomyLabelDialog(createTaxonomyLabelDialogState({
+            open: true,
+            field,
+            value: currentValue,
+            englishLabel: resolveAdminTaxonomyLabel(field, currentValue, 'en'),
+            bulgarianLabel: resolveAdminTaxonomyLabel(field, currentValue, 'bg'),
+        }));
+    };
+
+    const closeTaxonomyLabelDialog = () => {
+        if (isTaxonomyLabelSaving) {
+            return;
+        }
+
+        setTaxonomyLabelDialog(createTaxonomyLabelDialogState());
+    };
+
     const confirmValueDialog = () => {
         const nextValue = normalizeOptionValue(valueDialog.value);
 
@@ -1333,8 +1508,65 @@ export default function AdminDashboard({
         }
 
         handleFieldChange(valueDialog.field, nextValue);
-        setFeedback({ type: 'success', message: `${getTaxonomyLabel(valueDialog.field)} added to the draft. Save the product to persist it.` });
         closeValueDialog();
+        openTaxonomyLabelDialog(valueDialog.field, nextValue);
+        setFeedback({ type: 'success', message: `${getTaxonomyLabel(valueDialog.field)} added to the draft. Set its EN/BG labels here if shoppers should see different names per language.` });
+    };
+
+    const handleTaxonomyLabelSave = async () => {
+        const field = taxonomyLabelDialog.field;
+        const currentValue = normalizeOptionValue(taxonomyLabelDialog.value);
+
+        if (!currentValue || isTaxonomyLabelSaving) {
+            return;
+        }
+
+        const nextLabels = [
+            {
+                key: getTaxonomyStorageKey(field, currentValue, 'en'),
+                value: normalizeOptionValue(taxonomyLabelDialog.englishLabel) || currentValue,
+            },
+            {
+                key: getTaxonomyStorageKey(field, currentValue, 'bg'),
+                value: normalizeOptionValue(taxonomyLabelDialog.bulgarianLabel) || currentValue,
+            },
+        ];
+
+        setIsTaxonomyLabelSaving(true);
+        setTaxonomyLabelDialog((currentDialog) => ({ ...currentDialog, error: '' }));
+
+        try {
+            const savedEntries = await Promise.all(nextLabels.map(async (entry) => {
+                const response = await fetch('/api/admin/site-copy', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(entry),
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Unable to save this ${field} label right now.`);
+                }
+
+                return {
+                    key: entry.key,
+                    value: data.entry?.value ?? entry.value,
+                };
+            }));
+
+            siteCopy?.mergeEntries?.(Object.fromEntries(savedEntries.map((entry) => [entry.key, entry.value])));
+            setFeedback({ type: 'success', message: `${getTaxonomyLabel(field)} labels saved for ${currentValue}. Filters and menus will now show those labels by language.` });
+            setTaxonomyLabelDialog(createTaxonomyLabelDialogState());
+        } catch (error) {
+            setTaxonomyLabelDialog((currentDialog) => ({
+                ...currentDialog,
+                error: error.message || `Unable to save this ${field} label right now.`,
+            }));
+        } finally {
+            setIsTaxonomyLabelSaving(false);
+        }
     };
 
     const openTaxonomyDeleteDialog = (field) => {
@@ -2239,10 +2471,13 @@ export default function AdminDashboard({
                                 label="Category"
                                 value={draft.category}
                                 options={categoryOptions}
-                                helperText="Add a new category for this draft or remove the current one from every product that still uses it."
+                                helperText="Keep one base category value here. Use EN/BG to decide how shoppers should see that same value in English and Bulgarian instead of creating duplicate language-specific categories."
+                                displayLabels={categoryDisplayLabels}
                                 onChange={(value) => handleFieldChange('category', value)}
                                 onAdd={() => openValueDialog('category')}
+                                onEditLabels={() => openTaxonomyLabelDialog('category')}
                                 onRemove={() => openTaxonomyDeleteDialog('category')}
+                                editLabelsDisabled={!draft.category || isTaxonomyLabelSaving}
                                 removeDisabled={!draft.category || isTaxonomyUpdating}
                             />
 
@@ -2250,10 +2485,13 @@ export default function AdminDashboard({
                                 label="Collection"
                                 value={draft.collection}
                                 options={collectionOptions}
-                                helperText="Add a new collection name quickly or remove the current one and reassign matching products in one step."
+                                helperText="Keep one base collection value here. Use EN/BG to decide how shoppers should see that same value in English and Bulgarian instead of creating duplicate language-specific collections."
+                                displayLabels={collectionDisplayLabels}
                                 onChange={(value) => handleFieldChange('collection', value)}
                                 onAdd={() => openValueDialog('collection')}
+                                onEditLabels={() => openTaxonomyLabelDialog('collection')}
                                 onRemove={() => openTaxonomyDeleteDialog('collection')}
+                                editLabelsDisabled={!draft.collection || isTaxonomyLabelSaving}
                                 removeDisabled={!draft.collection || isTaxonomyUpdating}
                             />
 
@@ -2409,6 +2647,20 @@ export default function AdminDashboard({
                 onCancel={closeValueDialog}
                 onChange={(nextValue) => setValueDialog((currentDialog) => ({ ...currentDialog, value: nextValue }))}
                 onConfirm={confirmValueDialog}
+            />
+
+            <TaxonomyLabelDialog
+                open={taxonomyLabelDialog.open}
+                field={taxonomyLabelDialog.field}
+                value={taxonomyLabelDialog.value}
+                englishLabel={taxonomyLabelDialog.englishLabel}
+                bulgarianLabel={taxonomyLabelDialog.bulgarianLabel}
+                error={taxonomyLabelDialog.error}
+                isLoading={isTaxonomyLabelSaving}
+                onCancel={closeTaxonomyLabelDialog}
+                onChangeEnglish={(nextValue) => setTaxonomyLabelDialog((currentDialog) => ({ ...currentDialog, englishLabel: nextValue, error: '' }))}
+                onChangeBulgarian={(nextValue) => setTaxonomyLabelDialog((currentDialog) => ({ ...currentDialog, bulgarianLabel: nextValue, error: '' }))}
+                onConfirm={handleTaxonomyLabelSave}
             />
 
             </div>

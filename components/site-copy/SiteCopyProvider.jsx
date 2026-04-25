@@ -821,6 +821,35 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         return matchingKey ? entries[matchingKey] : undefined;
     }, [activeLanguage, activeTextViewport, entries]);
 
+    const getStoredEntry = useCallback((key) => {
+        if (typeof key !== 'string' || !key.trim()) {
+            return undefined;
+        }
+
+        return hasSiteCopyEntry(entries, key) ? entries[key] : undefined;
+    }, [entries]);
+
+    const mergeEntries = useCallback((nextEntries = {}) => {
+        setEntries((currentEntries) => {
+            const updatedEntries = { ...currentEntries };
+
+            Object.entries(nextEntries).forEach(([key, value]) => {
+                if (!key) {
+                    return;
+                }
+
+                if (value == null) {
+                    delete updatedEntries[key];
+                    return;
+                }
+
+                updatedEntries[key] = value;
+            });
+
+            return updatedEntries;
+        });
+    }, []);
+
     const canEditEntryType = useCallback((entryType) => entryType === 'media', []);
 
     useEffect(() => {
@@ -1010,11 +1039,13 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         resolveMedia,
         resolveMediaEntry,
         getRawEntry,
+        getStoredEntry,
+        mergeEntries,
         openEditor,
         registerHoverTarget,
         clearHoverTarget,
         canEditEntryType,
-    }), [activeLanguage, canEditEntryType, clearHoverTarget, getRawEntry, isAdmin, isEditMode, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveRichTextEntry, resolveText]);
+    }), [activeLanguage, canEditEntryType, clearHoverTarget, getRawEntry, getStoredEntry, isAdmin, isEditMode, mergeEntries, openEditor, registerHoverTarget, resolveMedia, resolveMediaEntry, resolveRichTextEntry, resolveText]);
 
     return (
         <SiteCopyContext.Provider value={value}>

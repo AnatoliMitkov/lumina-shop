@@ -12,6 +12,7 @@ import { useCart } from './CartProvider';
 import PromoCodePopup from './PromoCodePopup';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
+import { getTaxonomyCopyKey } from '../utils/product-taxonomy';
 import { formatCustomMeasurementSummary } from '../utils/cart';
 import {
     applyPreferredLanguage,
@@ -1273,7 +1274,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                                     href={buildCollectionsHref({ category })}
                                     className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-3 text-[#F1F1F1] transition-colors hover:bg-white/[0.11]"
                                 >
-                                    <span>{category}</span>
+                                    <span><EditableText contentKey={getTaxonomyCopyKey('category', category)} fallback={category} editorLabel={`${category} navigation category label`} /></span>
                                 </a>
                             ))}
                         </div>
@@ -1316,7 +1317,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                                                 onClick={handleMobileNavClose}
                                                 className="hover-target transition-link flex items-center rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] text-white/72 transition-colors hover:bg-white/[0.08]"
                                             >
-                                                <span>{category}</span>
+                                                <span><EditableText contentKey={getTaxonomyCopyKey('category', category)} fallback={category} editorLabel={`${category} mobile navigation category label`} /></span>
                                             </a>
                                         ))}
                                     </div>

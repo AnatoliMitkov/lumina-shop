@@ -365,22 +365,22 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                     </label>
 
                     {selectedDiscount && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                            <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Redemptions</p>
-                                <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscount.usage_count || 0}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Redemptions</p>
+                                <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{selectedDiscount.usage_count || 0}</p>
                             </div>
-                            <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Remaining</p>
-                                <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscountRemainingUses == null ? 'Open' : selectedDiscountRemainingUses}</p>
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Remaining</p>
+                                <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{selectedDiscountRemainingUses == null ? 'Open' : selectedDiscountRemainingUses}</p>
                             </div>
-                            <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Limit</p>
-                                <p className="font-serif text-2xl font-light text-[#1C1C1C]">{selectedDiscount.usage_limit || 'Open'}</p>
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Limit</p>
+                                <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{selectedDiscount.usage_limit || 'Open'}</p>
                             </div>
-                            <div className="border border-[#1C1C1C]/10 bg-white/72 rounded-sm p-4">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42 mb-2">Window</p>
-                                <p className="font-serif text-xl font-light text-[#1C1C1C] leading-tight">{buildStatusLabel(selectedDiscount)}</p>
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:col-span-2 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Window</p>
+                                <p className="max-w-[18rem] text-sm font-medium leading-snug tracking-[0.04em] text-[#1C1C1C] sm:text-[0.95rem]">{buildStatusLabel(selectedDiscount)}</p>
                             </div>
                         </div>
                     )}
