@@ -15,6 +15,15 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+        port: '',
+        // Full path wildcard is required because Pexels photo URLs vary by ID.
+        // The storefront only uses Pexels for fallback stock images when a
+        // product has no uploaded media.
+        pathname: '/**',
+      },
     ],
   },
 };

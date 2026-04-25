@@ -1,8 +1,302 @@
 @import "tailwindcss";
 
 @theme {
-    --font-sans: 'Cormorant Garamond', serif;
-        --font-serif: 'Cormorant Garamond', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
+
+  /* ── Brand palette ─────────────────────────────────────────────── */
+  --color-stone: #1C1C1C;
+  --color-cream: #EFECE8;
+  --color-parchment: #D9CBB9;
+  --color-gold: #D7B56D;
+  --color-gold-muted: #A78B65;
+  --color-slate: #7F8EA3;
+  --color-espresso: #5C4B43;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   v2 Design System
+   All custom properties that drive the v2 storefront are defined
+   here in a single place.  Components reference these tokens so
+   every visual decision has exactly one source of truth.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Colours */
+  --v2-dark:    #1C1C1C;
+  --v2-light:   #EFECE8;
+  --v2-accent:  #D7B56D;
+  --v2-parchment: #D9CBB9;
+  --v2-muted:   #A78B65;
+
+  --v2-border-light: rgba(28, 28, 28, 0.10);
+  --v2-border-dark:  rgba(239, 236, 232, 0.12);
+
+  /* Typography scale (used as CSS utilities below) */
+  --v2-text-xs:   0.6875rem;   /* 11px */
+  --v2-text-sm:   0.8125rem;   /* 13px */
+  --v2-text-base: 0.9375rem;   /* 15px */
+  --v2-text-lg:   1.0625rem;   /* 17px */
+  --v2-text-xl:   1.25rem;     /* 20px */
+  --v2-text-2xl:  1.5rem;      /* 24px */
+  --v2-text-3xl:  1.875rem;    /* 30px */
+  --v2-text-4xl:  2.25rem;     /* 36px */
+  --v2-text-display: clamp(2.4rem, 5.8vw, 4.8rem);
+
+  /* Letter-spacing */
+  --v2-tracking-tight:   -0.02em;
+  --v2-tracking-normal:   0;
+  --v2-tracking-wide:     0.08em;
+  --v2-tracking-wider:    0.14em;
+  --v2-tracking-widest:   0.22em;
+  --v2-tracking-caps:     0.32em;
+
+  /* Line-heights */
+  --v2-leading-tight:   0.94;
+  --v2-leading-snug:    1.1;
+  --v2-leading-normal:  1.5;
+  --v2-leading-relaxed: 1.65;
+
+  /* Layout */
+  --v2-container-max: 1280px;
+  --v2-container-px:  clamp(1rem, 4vw, 3rem);
+  --v2-section-gap:   clamp(3.5rem, 8vw, 6rem);
+  --v2-nav-height:    4rem;
+
+  /* Radii */
+  --v2-radius-xs: 2px;
+  --v2-radius-sm: 4px;
+  --v2-radius-md: 8px;
+  --v2-radius-lg: 16px;
+
+  /* Transitions */
+  --v2-ease:          cubic-bezier(0.16, 1, 0.3, 1);
+  --v2-transition:    0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --v2-transition-lg: 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── v2 Layout helpers ─────────────────────────────────────────── */
+
+.v2-page {
+  min-height: 100vh;
+  background-color: var(--v2-light);
+  color: var(--v2-dark);
+}
+
+.v2-container {
+  width: 100%;
+  max-width: var(--v2-container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--v2-container-px);
+  padding-right: var(--v2-container-px);
+}
+
+.v2-section {
+  padding-top: var(--v2-section-gap);
+  padding-bottom: var(--v2-section-gap);
+}
+
+/* ── v2 Typography utilities ───────────────────────────────────── */
+
+/* Display heading (hero titles) */
+.v2-heading-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  font-size: var(--v2-text-display);
+  line-height: var(--v2-leading-tight);
+  letter-spacing: var(--v2-tracking-tight);
+  text-transform: uppercase;
+}
+
+/* XL section heading */
+.v2-heading-xl {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(1.7rem, 3.2vw, 2.85rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+/* LG card/sub heading */
+.v2-heading-lg {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+  line-height: var(--v2-leading-snug);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Eyebrow / small caps label */
+.v2-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--v2-text-xs);
+  line-height: var(--v2-leading-normal);
+  letter-spacing: var(--v2-tracking-widest);
+  text-transform: uppercase;
+}
+
+/* Body copy */
+.v2-body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: var(--v2-text-base);
+  line-height: var(--v2-leading-relaxed);
+  letter-spacing: 0.01em;
+}
+
+/* Small body */
+.v2-body-sm {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: var(--v2-text-sm);
+  line-height: var(--v2-leading-relaxed);
+  letter-spacing: 0.01em;
+}
+
+/* Product price */
+.v2-price {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--v2-text-base);
+  letter-spacing: 0.02em;
+}
+
+/* ── v2 Button tokens ──────────────────────────────────────────── */
+
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 2rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--v2-text-xs);
+  font-weight: 500;
+  letter-spacing: var(--v2-tracking-widest);
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background-color var(--v2-transition), color var(--v2-transition),
+              border-color var(--v2-transition);
+  white-space: nowrap;
+}
+
+.v2-btn-primary {
+  background-color: var(--v2-dark);
+  color: var(--v2-light);
+  border-color: var(--v2-dark);
+}
+.v2-btn-primary:hover { background-color: #000; border-color: #000; }
+
+.v2-btn-primary-light {
+  background-color: var(--v2-light);
+  color: var(--v2-dark);
+  border-color: var(--v2-light);
+}
+.v2-btn-primary-light:hover {
+  background-color: var(--v2-parchment);
+  border-color: var(--v2-parchment);
+}
+
+.v2-btn-secondary {
+  background-color: transparent;
+  color: var(--v2-dark);
+  border-color: var(--v2-border-light);
+}
+.v2-btn-secondary:hover { background-color: rgba(28, 28, 28, 0.06); }
+
+.v2-btn-ghost-light {
+  background-color: transparent;
+  color: rgba(239, 236, 232, 0.72);
+  border-color: rgba(239, 236, 232, 0.20);
+}
+.v2-btn-ghost-light:hover {
+  color: var(--v2-light);
+  border-color: rgba(239, 236, 232, 0.40);
+  background-color: rgba(239, 236, 232, 0.06);
+}
+
+/* ── v2 Product card ───────────────────────────────────────────── */
+
+.v2-product-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.v2-product-card__image-wrap {
+  overflow: hidden;
+  background-color: var(--v2-parchment);
+  aspect-ratio: 3/4;
+}
+
+.v2-product-card__image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--v2-transition-lg);
+}
+
+.v2-product-card:hover .v2-product-card__image-wrap img {
+  transform: scale(1.045);
+}
+
+/* ── v2 Nav ────────────────────────────────────────────────────── */
+
+.v2-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background-color: var(--v2-dark);
+  border-bottom: 1px solid var(--v2-border-dark);
+  height: var(--v2-nav-height);
+}
+
+/* ── v2 Section divider ────────────────────────────────────────── */
+
+.v2-divider {
+  border: none;
+  border-top: 1px solid var(--v2-border-light);
+  margin: 0;
+}
+
+/* ── v2 Input / Form elements ──────────────────────────────────── */
+
+.v2-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: white;
+  border: 1px solid var(--v2-border-light);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--v2-text-sm);
+  color: var(--v2-dark);
+  outline: none;
+  transition: border-color var(--v2-transition);
+}
+.v2-input:focus { border-color: rgba(28, 28, 28, 0.35); }
+.v2-input::placeholder { color: rgba(28, 28, 28, 0.35); }
+
+/* ── v2 Badge ──────────────────────────────────────────────────── */
+
+.v2-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: var(--v2-tracking-caps);
+  text-transform: uppercase;
+  border: 1px solid var(--v2-border-light);
+  background-color: rgba(255, 255, 255, 0.55);
 }
 
 :root {
