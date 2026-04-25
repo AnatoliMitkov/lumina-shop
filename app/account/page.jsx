@@ -284,12 +284,12 @@ export default async function AccountPage({ searchParams }) {
                 </div>
             )}
             <div className="mb-10 md:mb-12 grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-5 md:gap-6 items-stretch">
-                <section className="account-surface border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+                <section className="route-reveal account-surface border border-[#1C1C1C]/10 bg-white/55 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
-                        <p className="text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><LocalizedText value={localizedFallback('Client Room / The VA Store', 'Клиентска зона / The VA Store')} language={currentLanguage} /></p>
-                        <div className="overflow-hidden"><h1 className="hero-title storefront-section-display font-serif font-light uppercase"><LocalizedText value={localizedFallback('My Account', 'Моят профил')} language={currentLanguage} /></h1></div>
+                        <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.35em] text-[#1C1C1C]/45 mb-4"><LocalizedText value={localizedFallback('Client Room / The VA Store', 'Клиентска зона / The VA Store')} language={currentLanguage} /></p>
+                        <div className="overflow-hidden"><h1 className="hero-title storefront-section-display font-serif font-light uppercase translate-y-full"><LocalizedText value={localizedFallback('My Account', 'Моят профил')} language={currentLanguage} /></h1></div>
                     </div>
-                    <p className="hero-sub text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed"><LocalizedText value={localizedFallback('Signed in as', 'Влезли сте като')} language={currentLanguage} /> {user.email}. <LocalizedText value={localizedFallback('Keep your profile sharp, save atelier-ready details faster, and review orders and requests without the oversized empty intro.', 'Поддържайте профила си подреден, пазете важните детайли под ръка и преглеждайте поръчки и запитвания без излишни стъпки.')} language={currentLanguage} /></p>
+                    <p className="hero-sub opacity-0 text-sm md:text-base max-w-2xl text-[#1C1C1C]/62 leading-relaxed"><LocalizedText value={localizedFallback('Signed in as', 'Влезли сте като')} language={currentLanguage} /> {user.email}. <LocalizedText value={localizedFallback('Keep your profile sharp, save atelier-ready details faster, and review orders and requests without the oversized empty intro.', 'Поддържайте профила си подреден, пазете важните детайли под ръка и преглеждайте поръчки и запитвания без излишни стъпки.')} language={currentLanguage} /></p>
                     <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">
                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full"><LocalizedText value={localizedFallback('Verified account', 'Потвърден профил')} language={currentLanguage} /></span>
                         <span className="px-3 py-2 border border-[#1C1C1C]/10 bg-white/70 rounded-full"><LocalizedText value={profileStorageMode === 'metadata' ? localizedFallback('Metadata-backed profile', 'Профил от метаданни') : localizedFallback('Supabase profile table', 'Профилна таблица в Supabase')} language={currentLanguage} /></span>
@@ -299,7 +299,7 @@ export default async function AccountPage({ searchParams }) {
 
                 <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
                     {dashboardMetrics.map(({ id, label, value, valueKey, copy }) => (
-                        <div key={id} className="account-metric-card account-surface storefront-stat-card border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-4 md:p-5 flex flex-col justify-between">
+                        <div key={id} className="route-reveal account-metric-card account-surface storefront-stat-card border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-4 md:p-5 flex flex-col justify-between">
                             <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45"><LocalizedText value={label} language={currentLanguage} /></p>
                             <p className="storefront-stat-display font-serif font-light text-[#1C1C1C]">{valueKey ? <LocalizedText value={value} language={currentLanguage} /> : value}</p>
                             <p className="text-sm leading-relaxed text-[#1C1C1C]/58"><LocalizedText value={copy} language={currentLanguage} /></p>

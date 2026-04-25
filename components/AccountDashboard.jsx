@@ -340,7 +340,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     return (
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-10 md:gap-12 xl:items-start">
             <div className="flex flex-col gap-10">
-            <section ref={savedAccountSectionRef} className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
+            <section ref={savedAccountSectionRef} className="route-reveal account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm">
                     <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45 mb-3">{getText('account.dashboard.profile_card.eyebrow', localizedFallback('Saved Account', 'Вашият профил'))}</p>
@@ -424,7 +424,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                     </form>
                 </section>
 
-                <section ref={requestThreadSectionRef} className="account-surface border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] p-6 md:p-8 rounded-sm">
+                <section ref={requestThreadSectionRef} className="route-reveal account-surface border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] p-6 md:p-8 rounded-sm">
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-white/40 mb-3">{getText('account.dashboard.requests.eyebrow', localizedFallback('Submitted Requests', 'Изпратени запитвания'))}</p>
@@ -454,7 +454,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
             </div>
 
             <section
-                className="account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm xl:self-start xl:flex xl:min-h-0 xl:flex-col"
+                className="route-reveal account-surface border border-[#1C1C1C]/10 bg-white/60 p-6 md:p-8 rounded-sm xl:self-start xl:flex xl:min-h-0 xl:flex-col"
                 style={desktopOrdersPanelHeight ? { height: `${desktopOrdersPanelHeight}px` } : undefined}
             >
                 <div className="flex flex-col gap-3 mb-8">

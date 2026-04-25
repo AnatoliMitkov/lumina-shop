@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '../../../utils/supabase/server';
 import { createAdminClient, isAdminConfigured } from '../../../utils/supabase/admin';
 import { sendContactEmail, isContactMailConfigured } from '../../../utils/contact-mail';
 import { validatePhoneNumber } from '../../../utils/contact';
 import { isLikelyBotSubmission, verifyContactCaptcha } from '../../../utils/contact-captcha';
 import { buildCartSnapshot } from '../../../utils/cart';
+import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY, detectPreferredLanguageFromHeader, normalizeLanguage } from '../../../utils/language';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +18,16 @@ function toText(value, maxLength = 500) {
     return value.trim().slice(0, maxLength);
 }
 
-function formatContactError(error) {
+function getContactMessage(language, englishValue, bulgarianValue) {
+    return language === 'bg' ? bulgarianValue : englishValue;
+}
+
+function formatContactError(error, language) {
     if (error?.code === '42P01') {
-        return 'Contact inquiry tables are missing. Re-run supabase/cart-orders.sql before using the contact form.';
+        return getContactMessage(language, 'Contact inquiry tables are missing. Re-run supabase/cart-orders.sql before using the contact form.', 'Липсват таблиците за контактните запитвания. Стартирайте отново supabase/cart-orders.sql, преди да използвате формата.');
     }
 
-    return error?.message || 'Unable to send your message right now.';
+    return error?.message || getContactMessage(language, 'Unable to send your message right now.', 'Не успяхме да изпратим съобщението ви в момента.');
 }
 
 function getContactErrorStatus(error) {
@@ -59,8 +64,16 @@ function buildSelectionSummary(selectionSnapshot) {
     return lines.join('\n');
 }
 
+function resolveRequestLanguage(cookieStore, headerStore) {
+    return normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value)
+        || detectPreferredLanguageFromHeader(headerStore.get('accept-language'))
+        || DEFAULT_LANGUAGE;
+}
+
 export async function POST(request) {
     const cookieStore = await cookies();
+    const headerStore = await headers();
+    const language = resolveRequestLanguage(cookieStore, headerStore);
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -68,10 +81,10 @@ export async function POST(request) {
         const payload = await request.json();
 
         if (isLikelyBotSubmission({ honeypotValue: payload?.studio, startedAt: payload?.startedAt })) {
-            return NextResponse.json({ message: 'Your request is with the atelier. Expect a personal reply soon.' });
+            return NextResponse.json({ message: getContactMessage(language, 'Your request is with the atelier. Expect a personal reply soon.', 'Запитването ви е при ателието. Очаквайте личен отговор скоро.') });
         }
 
-        const captchaCheck = verifyContactCaptcha(payload?.captchaToken, payload?.captchaAnswer);
+        const captchaCheck = verifyContactCaptcha(payload?.captchaToken, payload?.captchaAnswer, language);
 
         if (!captchaCheck.isValid) {
             throw createContactError(captchaCheck.message, 400);
@@ -97,15 +110,15 @@ export async function POST(request) {
         };
 
         if (!inquiry.full_name || !inquiry.email || !inquiry.phone || !inquiry.message) {
-            throw createContactError('Please provide your name, email, phone number, and message.', 400);
+            throw createContactError(getContactMessage(language, 'Please provide your name, email, phone number, and message.', 'Попълнете име, имейл, телефон и съобщение.'), 400);
         }
 
         if (!isValidEmail(inquiry.email)) {
-            throw createContactError('Please provide a valid email address.', 400);
+            throw createContactError(getContactMessage(language, 'Please provide a valid email address.', 'Моля, въведете валиден имейл адрес.'), 400);
         }
 
         if (!normalizedPhone.isValid) {
-            throw createContactError('Please provide a valid phone number, including the correct country code.', 400);
+            throw createContactError(getContactMessage(language, 'Please provide a valid phone number, including the correct country code.', 'Моля, въведете валиден телефонен номер с правилния код на държавата.'), 400);
         }
 
         inquiry.phone = normalizedPhone.normalized;
@@ -114,7 +127,7 @@ export async function POST(request) {
         const canPersistInquiry = isAdminConfigured();
 
         if (!canSendEmail && !canPersistInquiry) {
-            throw createContactError('Contact delivery is not configured yet. Add CONTACT_SMTP_PASSWORD to .env.local to send email requests.', 503);
+            throw createContactError(getContactMessage(language, 'Contact delivery is not configured yet. Add CONTACT_SMTP_PASSWORD to .env.local to send email requests.', 'Изпращането на контактната форма още не е настроено. Добавете CONTACT_SMTP_PASSWORD в .env.local, за да могат запитванията да се изпращат.'), 503);
         }
 
         let emailSent = false;
@@ -146,10 +159,10 @@ export async function POST(request) {
 
         return NextResponse.json({
             message: emailSent
-                ? 'Your request landed in both inboxes: the atelier and yours.'
-                : 'Your request has been recorded for the atelier.',
+                ? getContactMessage(language, 'Your request landed in both inboxes: the atelier and yours.', 'Запитването ви вече е изпратено и до ателието, и до вашия имейл.')
+                : getContactMessage(language, 'Your request has been recorded for the atelier.', 'Запитването ви е записано за ателието.'),
         });
     } catch (error) {
-        return NextResponse.json({ error: formatContactError(error) }, { status: getContactErrorStatus(error) });
+        return NextResponse.json({ error: formatContactError(error, language) }, { status: getContactErrorStatus(error) });
     }
 }

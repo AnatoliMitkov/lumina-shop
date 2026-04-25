@@ -1,5 +1,7 @@
 import { getCountries, getCountryCallingCode, parsePhoneNumberFromString } from 'libphonenumber-js/min';
 import contactCountryLabels from './contact-country-labels';
+import contactCountryLabelsBg from './contact-country-labels-bg';
+import { createLocalizedValue as localizedValue, DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from './language';
 
 export const defaultContactCountry = 'BG';
 
@@ -13,27 +15,27 @@ export const queryOptions = [
 
 const prioritizedCountries = ['BG', 'RO', 'GR', 'TR', 'IT', 'DE', 'GB', 'US'];
 
-const featuredLocations = [
-    'Ruse, Bulgaria',
-    'Sofia, Bulgaria',
-    'Varna, Bulgaria',
-    'Plovdiv, Bulgaria',
-    'Burgas, Bulgaria',
-    'Veliko Tarnovo, Bulgaria',
-    'Shumen, Bulgaria',
-    'Pleven, Bulgaria',
-    'Dobrich, Bulgaria',
-    'Blagoevgrad, Bulgaria',
-    'Bucharest, Romania',
-    'Athens, Greece',
-    'Istanbul, Turkey',
-    'Milan, Italy',
-    'Paris, France',
-    'London, United Kingdom',
-    'New York, United States',
-    'Los Angeles, United States',
-    'Dubai, United Arab Emirates',
-    'Tokyo, Japan',
+const featuredLocationRecords = [
+    { city: localizedValue('Ruse', 'Русе'), country: 'BG' },
+    { city: localizedValue('Sofia', 'София'), country: 'BG' },
+    { city: localizedValue('Varna', 'Варна'), country: 'BG' },
+    { city: localizedValue('Plovdiv', 'Пловдив'), country: 'BG' },
+    { city: localizedValue('Burgas', 'Бургас'), country: 'BG' },
+    { city: localizedValue('Veliko Tarnovo', 'Велико Търново'), country: 'BG' },
+    { city: localizedValue('Shumen', 'Шумен'), country: 'BG' },
+    { city: localizedValue('Pleven', 'Плевен'), country: 'BG' },
+    { city: localizedValue('Dobrich', 'Добрич'), country: 'BG' },
+    { city: localizedValue('Blagoevgrad', 'Благоевград'), country: 'BG' },
+    { city: localizedValue('Bucharest', 'Букурещ'), country: 'RO' },
+    { city: localizedValue('Athens', 'Атина'), country: 'GR' },
+    { city: localizedValue('Istanbul', 'Истанбул'), country: 'TR' },
+    { city: localizedValue('Milan', 'Милано'), country: 'IT' },
+    { city: localizedValue('Paris', 'Париж'), country: 'FR' },
+    { city: localizedValue('London', 'Лондон'), country: 'GB' },
+    { city: localizedValue('New York', 'Ню Йорк'), country: 'US' },
+    { city: localizedValue('Los Angeles', 'Лос Анджелис'), country: 'US' },
+    { city: localizedValue('Dubai', 'Дубай'), country: 'AE' },
+    { city: localizedValue('Tokyo', 'Токио'), country: 'JP' },
 ];
 
 const timeZoneCountryMap = {
@@ -51,76 +53,147 @@ const timeZoneCountryMap = {
 };
 
 function getCountryLabel(country) {
-    return contactCountryLabels[country] || country;
+    const normalizedCountry = typeof country === 'string' ? country.trim().toUpperCase() : '';
+
+    if (!normalizedCountry) {
+        return '';
+    }
+
+    return contactCountryLabels[normalizedCountry] || normalizedCountry;
 }
 
 const priorityRank = new Map(prioritizedCountries.map((country, index) => [country, index]));
 
-export const countryPhoneOptions = getCountries()
-    .map((country) => ({
-        country,
-        dialCode: `+${getCountryCallingCode(country)}`,
-        label: getCountryLabel(country),
-    }))
-    .sort((left, right) => {
-        const leftPriority = priorityRank.get(left.country);
-        const rightPriority = priorityRank.get(right.country);
+const baseCountryPhoneOptions = getCountries().map((country) => ({
+    country,
+    dialCode: `+${getCountryCallingCode(country)}`,
+}));
 
-        if (leftPriority !== undefined || rightPriority !== undefined) {
-            if (leftPriority === undefined) {
-                return 1;
+const countrySet = new Set(baseCountryPhoneOptions.map((option) => option.country));
+const countryPhoneOptionsCache = new Map();
+const phoneOptionsByLongestCode = [...baseCountryPhoneOptions].sort((left, right) => right.dialCode.length - left.dialCode.length);
+
+function getSortLocale(language = DEFAULT_LANGUAGE) {
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+    return normalizedLanguage === 'bg' ? 'bg' : 'en';
+}
+
+export function getLocalizedCountryLabel(country, language = DEFAULT_LANGUAGE) {
+    const normalizedCountry = typeof country === 'string' ? country.trim().toUpperCase() : '';
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+    if (!normalizedCountry) {
+        return '';
+    }
+
+    if (normalizedLanguage === 'bg') {
+        return contactCountryLabelsBg[normalizedCountry] || getCountryLabel(normalizedCountry);
+    }
+
+    return getCountryLabel(normalizedCountry);
+}
+
+function getCountryLabelCandidates(country) {
+    return Array.from(new Set(
+        [country, contactCountryLabels[country], contactCountryLabelsBg[country]]
+            .filter((label) => typeof label === 'string' && label.trim())
+            .map((label) => label.trim())
+    ));
+}
+
+function buildCountryPhoneOptions(language = DEFAULT_LANGUAGE) {
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+    return baseCountryPhoneOptions
+        .map((option) => ({
+            ...option,
+            label: getLocalizedCountryLabel(option.country, normalizedLanguage),
+        }))
+        .sort((left, right) => {
+            const leftPriority = priorityRank.get(left.country);
+            const rightPriority = priorityRank.get(right.country);
+
+            if (leftPriority !== undefined || rightPriority !== undefined) {
+                if (leftPriority === undefined) {
+                    return 1;
+                }
+
+                if (rightPriority === undefined) {
+                    return -1;
+                }
+
+                return leftPriority - rightPriority;
             }
 
-            if (rightPriority === undefined) {
-                return -1;
-            }
+            return left.label.localeCompare(right.label, getSortLocale(normalizedLanguage));
+        });
+}
 
-            return leftPriority - rightPriority;
-        }
+export function getCountryPhoneOptions(language = DEFAULT_LANGUAGE) {
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
 
-        return left.label.localeCompare(right.label, 'en');
-    });
+    if (!countryPhoneOptionsCache.has(normalizedLanguage)) {
+        countryPhoneOptionsCache.set(normalizedLanguage, buildCountryPhoneOptions(normalizedLanguage));
+    }
 
-const countrySet = new Set(countryPhoneOptions.map((option) => option.country));
+    return countryPhoneOptionsCache.get(normalizedLanguage);
+}
 
-const phoneOptionsByLongestCode = [...countryPhoneOptions].sort((left, right) => right.dialCode.length - left.dialCode.length);
+export const countryPhoneOptions = getCountryPhoneOptions(DEFAULT_LANGUAGE);
 
-export const locationSuggestions = Array.from(
-    new Set([...featuredLocations, ...countryPhoneOptions.map((option) => option.label)])
-);
+function formatFeaturedLocation(record, language = DEFAULT_LANGUAGE) {
+    return `${resolveLocalizedValue(record.city, language)}, ${getLocalizedCountryLabel(record.country, language)}`;
+}
 
-const featuredLocationRecords = featuredLocations.map((location) => {
-    const [city = '', country = ''] = location.split(',').map((part) => part.trim());
+export function getLocationSuggestions(language = DEFAULT_LANGUAGE) {
+    return Array.from(
+        new Set([
+            ...featuredLocationRecords.map((record) => formatFeaturedLocation(record, language)),
+            ...getCountryPhoneOptions(language).map((option) => option.label),
+        ])
+    );
+}
 
-    return {
-        city,
-        country,
-        location,
-    };
-});
+export const locationSuggestions = getLocationSuggestions(DEFAULT_LANGUAGE);
 
-function normalizeCountryLabel(country) {
+function resolveCountryCode(country = '') {
     const normalizedCountry = typeof country === 'string' ? country.trim() : '';
 
     if (!normalizedCountry) {
         return '';
     }
 
-    if (countrySet.has(normalizedCountry.toUpperCase())) {
-        return getCountryLabel(normalizedCountry.toUpperCase());
+    const upperCaseCountry = normalizedCountry.toUpperCase();
+
+    if (countrySet.has(upperCaseCountry)) {
+        return upperCaseCountry;
     }
 
-    return normalizedCountry;
+    const lowerCaseCountry = normalizedCountry.toLowerCase();
+    const exactMatch = baseCountryPhoneOptions.find((option) => (
+        getCountryLabelCandidates(option.country).some((label) => label.toLowerCase() === lowerCaseCountry)
+    ));
+
+    if (exactMatch) {
+        return exactMatch.country;
+    }
+
+    const partialMatch = baseCountryPhoneOptions.find((option) => (
+        getCountryLabelCandidates(option.country).some((label) => lowerCaseCountry.includes(label.toLowerCase()))
+    ));
+
+    return partialMatch?.country || '';
 }
 
-export function getLocationSuggestionsForCountry(country = '') {
-    const normalizedCountry = normalizeCountryLabel(country).toLowerCase();
-    const matchingLocations = normalizedCountry
-        ? featuredLocationRecords.filter((record) => record.country.toLowerCase() === normalizedCountry)
+export function getLocationSuggestionsForCountry(country = '', language = DEFAULT_LANGUAGE) {
+    const resolvedCountry = resolveCountryCode(country);
+    const matchingLocations = resolvedCountry
+        ? featuredLocationRecords.filter((record) => record.country === resolvedCountry)
         : featuredLocationRecords;
     const sourceLocations = matchingLocations.length > 0 ? matchingLocations : featuredLocationRecords;
 
-    return Array.from(new Set(sourceLocations.map((record) => record.city).filter(Boolean)));
+    return Array.from(new Set(sourceLocations.map((record) => resolveLocalizedValue(record.city, language)).filter(Boolean)));
 }
 
 export function detectCountryFromLocale(locale) {
@@ -169,7 +242,9 @@ export function detectCountryFromLocationText(location) {
         return '';
     }
 
-    const match = countryPhoneOptions.find((option) => normalizedLocation.includes(option.label.toLowerCase()));
+    const match = baseCountryPhoneOptions.find((option) => (
+        getCountryLabelCandidates(option.country).some((label) => normalizedLocation.includes(label.toLowerCase()))
+    ));
 
     return match?.country || '';
 }
@@ -243,6 +318,6 @@ export function validatePhoneNumber(phone) {
     };
 }
 
-export function getCountryPhoneOption(country) {
-    return countryPhoneOptions.find((option) => option.country === country) || null;
+export function getCountryPhoneOption(country, language = DEFAULT_LANGUAGE) {
+    return getCountryPhoneOptions(language).find((option) => option.country === country) || null;
 }

@@ -18,7 +18,7 @@ export default function EditableText({
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
     const canEditText = isAdmin && isEditMode && Boolean(context?.canEditEntryType?.('text'));
-    const rawEntry = context?.getRawEntry?.(contentKey);
+    const rawEntry = context?.getRawEntry?.(contentKey, fallback);
     const isRichEntry = isLuminaTextValue(rawEntry);
     const resolvedText = context ? context.resolveText(contentKey, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
     const isEmptyEditableText = resolvedText === '' && canEditText;

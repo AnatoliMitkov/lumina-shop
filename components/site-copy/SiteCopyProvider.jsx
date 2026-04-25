@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useTranslation } from 'react-i18next';
 import EditableMediaAsset from './EditableMediaAsset';
 import { detectEditableMediaKind } from './media-kind';
-import { DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
+import { DEFAULT_LANGUAGE, isLocalizedValueMap, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
 import {
     createDefaultMediaSettings,
     extractSiteCopyPlainText,
@@ -85,11 +85,18 @@ function buildAdaptiveSiteCopyStorageKey(key = '', language, viewport = SHARED_T
     return keySegments.join('::');
 }
 
-function getAdaptiveSiteCopyKeyCandidates(key = '', language, viewport = SHARED_TEXT_VARIANT_VIEWPORT) {
+function shouldUseSharedTextSiteCopyEntries(language, fallback) {
+    const normalizedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+
+    return normalizedLanguage === DEFAULT_LANGUAGE || !isLocalizedValueMap(fallback);
+}
+
+function getAdaptiveSiteCopyKeyCandidates(key = '', language, viewport = SHARED_TEXT_VARIANT_VIEWPORT, options = {}) {
     if (!key) {
         return [];
     }
 
+    const { includeSharedEntries = true } = options;
     const normalizedLanguage = normalizeLanguage(language);
     const normalizedViewport = normalizeTextVariantViewport(viewport);
     const candidates = [];
@@ -102,17 +109,22 @@ function getAdaptiveSiteCopyKeyCandidates(key = '', language, viewport = SHARED_
         candidates.push(buildAdaptiveSiteCopyStorageKey(key, normalizedLanguage, SHARED_TEXT_VARIANT_VIEWPORT));
     }
 
-    if (normalizedViewport !== SHARED_TEXT_VARIANT_VIEWPORT) {
+    if (includeSharedEntries && normalizedViewport !== SHARED_TEXT_VARIANT_VIEWPORT) {
         candidates.push(buildAdaptiveSiteCopyStorageKey(key, null, normalizedViewport));
     }
 
-    candidates.push(key);
+    if (includeSharedEntries) {
+        candidates.push(key);
+    }
+
     return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 function resolveAdaptiveSiteCopyEntry(entries = {}, key = '', fallback = '', language, viewport = SHARED_TEXT_VARIANT_VIEWPORT) {
     const localizedFallback = resolveLocalizedValue(fallback, language);
-    const matchingKey = getAdaptiveSiteCopyKeyCandidates(key, language, viewport).find((candidate) => hasSiteCopyEntry(entries, candidate));
+    const matchingKey = getAdaptiveSiteCopyKeyCandidates(key, language, viewport, {
+        includeSharedEntries: shouldUseSharedTextSiteCopyEntries(language, fallback),
+    }).find((candidate) => hasSiteCopyEntry(entries, candidate));
 
     return {
         value: matchingKey ? entries[matchingKey] : localizedFallback,
@@ -133,7 +145,7 @@ function resolveLocalizedSiteCopyEntry(entries = {}, key = '', fallback = '', la
         };
     }
 
-    if (hasSiteCopyEntry(entries, key)) {
+    if (shouldUseSharedTextSiteCopyEntries(language, fallback) && hasSiteCopyEntry(entries, key)) {
         return {
             value: entries[key],
             storageKey: localizedKey || key,
@@ -816,8 +828,10 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
     // Returns the raw stored value for a key (localized-aware), or undefined if
     // no entry exists. Used by display components to detect lumina-text-v1 rich
     // values and render their HTML accordingly.
-    const getRawEntry = useCallback((key) => {
-        const matchingKey = getAdaptiveSiteCopyKeyCandidates(key, activeLanguage, activeTextViewport).find((candidate) => hasSiteCopyEntry(entries, candidate));
+    const getRawEntry = useCallback((key, fallback) => {
+        const matchingKey = getAdaptiveSiteCopyKeyCandidates(key, activeLanguage, activeTextViewport, {
+            includeSharedEntries: shouldUseSharedTextSiteCopyEntries(activeLanguage, fallback),
+        }).find((candidate) => hasSiteCopyEntry(entries, candidate));
         return matchingKey ? entries[matchingKey] : undefined;
     }, [activeLanguage, activeTextViewport, entries]);
 

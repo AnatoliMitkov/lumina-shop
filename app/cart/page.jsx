@@ -45,13 +45,13 @@ export default function CartPage() {
         ? getText('cart.status.account_linked', localizedFallback('Account-Linked', 'Свързано с профила'))
         : getText('cart.status.browser_held', localizedFallback('Browser-Held', 'Запазено в браузъра'));
     const storageCopy = isSupabaseMode
-        ? getText('cart.status.account_linked_copy', localizedFallback('This selection is ready to move into structured checkout with customer and delivery details.', 'Тази селекция е готова да премине към структуриран checkout с клиентските и доставните данни.'))
+        ? getText('cart.status.account_linked_copy', localizedFallback('This selection is ready to move into structured checkout with customer and delivery details.', 'Тази селекция е готова да премине към финализиране на поръчката с клиентските и доставните данни.'))
         : getText('cart.status.browser_held_copy', localizedFallback('For now, the selection stays in this browser, so the experience feels polished even before the account archive is switched on.', 'Засега селекцията остава в този браузър, така че преживяването да е подредено още преди архивът на профила да е активен.'));
     const primaryHref = cartItems.length === 0 ? '/collections' : isSupabaseMode ? '/checkout' : '/contact';
     const primaryLabel = cartItems.length === 0
         ? getText('cart.primary.explore_collections', localizedFallback('Explore Collections', 'Разгледай колекциите'))
         : isSupabaseMode
-            ? getText('cart.primary.continue_checkout', localizedFallback('Continue To Checkout', 'Продължи към checkout'))
+            ? getText('cart.primary.continue_checkout', localizedFallback('Continue To Checkout', 'Към поръчката'))
             : getText('cart.primary.request_atelier', localizedFallback('Request Through Atelier', 'Изпрати към ателието'));
 
     return (
@@ -63,7 +63,7 @@ export default function CartPage() {
                 </div>
 
                 <p className="hero-sub storefront-copy-measure opacity-0 text-sm md:text-base max-w-xl text-[#1C1C1C]/60 leading-relaxed">
-                    <EditableText contentKey="cart.hero.copy" fallback={localizedFallback('Review the pieces here first, then move into a quieter checkout flow where the atelier gets your customer and delivery details with the order itself.', 'Прегледайте избраните модели тук, а после преминете към по-спокоен checkout, където ателието получава и клиентските, и доставните детайли заедно с поръчката.')} editorLabel="Cart hero copy" />
+                    <EditableText contentKey="cart.hero.copy" fallback={localizedFallback('Review the pieces here first, then move into a quieter checkout flow where the atelier gets your customer and delivery details with the order itself.', 'Прегледайте избраните модели тук, а после преминете към по-спокойно финализиране, където ателието получава и клиентските, и доставните детайли заедно с поръчката.')} editorLabel="Cart hero copy" />
                 </p>
             </div>
 
@@ -170,7 +170,7 @@ export default function CartPage() {
 
                     <div className="reveal-text opacity-0 translate-y-8 border border-[#1C1C1C]/10 bg-white/40 rounded-sm p-6 md:p-8">
                         <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="cart.note.eyebrow" fallback={localizedFallback('Atelier Note', 'Бележка от ателието')} editorLabel="Cart atelier note eyebrow" /></p>
-                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="cart.note.copy" fallback={localizedFallback('The next step is a structured checkout rather than instant payment. That keeps the order elegant while giving the atelier your shipping preferences, delivery details, and any codes tied to the request.', 'Следващата стъпка е структуриран checkout, а не мигновено плащане. Така поръчката остава подредена, а ателието получава предпочитанията ви за доставка, адресните детайли и всички кодове към запитването.')} editorLabel="Cart atelier note copy" /></p>
+                        <p className="text-sm md:text-base leading-relaxed text-[#1C1C1C]/62"><EditableText contentKey="cart.note.copy" fallback={localizedFallback('The next step is a structured checkout rather than instant payment. That keeps the order elegant while giving the atelier your shipping preferences, delivery details, and any codes tied to the request.', 'Следващата стъпка е финализиране на поръчката, а не мигновено плащане. Така поръчката остава подредена, а ателието получава предпочитанията ви за доставка, адресните детайли и всички кодове към запитването.')} editorLabel="Cart atelier note copy" /></p>
                     </div>
                 </aside>
             </div>

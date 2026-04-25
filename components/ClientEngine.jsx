@@ -227,7 +227,7 @@ function normalizeTransitionPath(pathname) {
 function shouldAnimateRouteTransition(pathname) {
     const normalizedPathname = normalizeTransitionPath(pathname);
 
-    return normalizedPathname === '/' || normalizedPathname === '/account' || isSpotlightPath(normalizedPathname);
+    return normalizedPathname === '/' || normalizedPathname === '/collections' || isSpotlightPath(normalizedPathname);
 }
 
 export default function ClientEngine({ children, initialLanguage }) {
@@ -249,6 +249,7 @@ export default function ClientEngine({ children, initialLanguage }) {
     const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
     const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const loaderCopy = getLoaderCopyConfig(pathname);
+    const shouldAnimateCurrentRoute = shouldAnimateRouteTransition(pathname);
     const isUtilityRoute = pathname === '/admin' || pathname === '/account' || pathname === '/cart';
     const isImmersiveRoute = isSpotlightPath(pathname);
     const isMobileOverlayOpen = isMobileMenuOpen || isMobileLanguageMenuOpen;
@@ -858,7 +859,7 @@ export default function ClientEngine({ children, initialLanguage }) {
 
     // --- 3. Page Load & Scroll Animations (Triggers on Route Change) ---
     useGSAP(() => {
-        if (isPageMotionEnabled) {
+        if (isPageMotionEnabled && shouldAnimateCurrentRoute) {
             const isInitialLoad = !hasPlayedInitialLoadRef.current;
             const transitionTimings = isInitialLoad
                 ? {
@@ -929,12 +930,48 @@ export default function ClientEngine({ children, initialLanguage }) {
                     "-=0.5"
                 );
             }
+        } else if (isPageMotionEnabled) {
+            const lightEntranceTargets = gsap.utils.toArray('.route-reveal');
+
+            gsap.set(preloaderRef.current, { yPercent: -100 });
+            gsap.set('.loader-text', { y: '0%', opacity: 0 });
+            gsap.set('.hero-img', { opacity: 0, scale: 1.03 });
+            gsap.set('.hero-title', { y: '100%' });
+            gsap.set('.hero-sub', { opacity: 0, y: 14 });
+
+            if (lightEntranceTargets.length > 0) {
+                gsap.set(lightEntranceTargets, { opacity: 0, y: 22 });
+            }
+
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    dispatchPageRevealComplete(pathname);
+                },
+            });
+
+            tl.to('.hero-img', { opacity: 1, scale: 1, duration: 0.82, ease: 'power3.out' })
+                .to('.hero-title', { y: '0%', duration: 0.8, stagger: 0.06, ease: 'power4.out' }, 0.04)
+                .to('.hero-sub', { opacity: 1, y: 0, duration: 0.62, ease: 'power3.out' }, 0.18);
+
+            if (lightEntranceTargets.length > 0) {
+                tl.to(lightEntranceTargets, {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.72,
+                    stagger: 0.08,
+                    ease: 'power3.out',
+                    clearProps: 'opacity,transform',
+                }, 0.16);
+            }
+
+            gsap.set('#nav', { opacity: 1 });
         } else {
             gsap.set(preloaderRef.current, { yPercent: -100 });
             gsap.set('.loader-text', { y: '0%', opacity: 0 });
             gsap.set('.hero-img', { opacity: 1, scale: 1 });
             gsap.set('.hero-title', { y: '0%' });
             gsap.set('.hero-sub', { opacity: 1 });
+            gsap.set('.route-reveal', { opacity: 1, y: 0 });
             gsap.set('#nav', { opacity: 1 });
 
             dispatchPageRevealComplete(pathname);
@@ -1132,7 +1169,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                     <span ref={cursorLabelRef} className="cursor-label"></span>
                 </div>
 
-                <div ref={preloaderRef} id="preloader" className="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center">
+                <div ref={preloaderRef} id="preloader" className="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center" style={shouldAnimateCurrentRoute ? undefined : { transform: 'translateY(-100%)', pointerEvents: 'none' }}>
                     {loaderIntro}
                 </div>
 
@@ -1156,7 +1193,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 <span ref={cursorLabelRef} className="cursor-label"></span>
             </div>
 
-            <div ref={preloaderRef} id="preloader" className="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center">
+            <div ref={preloaderRef} id="preloader" className="fixed inset-0 z-[100] bg-[#1C1C1C] text-[#EFECE8] flex flex-col justify-center items-center" style={shouldAnimateCurrentRoute ? undefined : { transform: 'translateY(-100%)', pointerEvents: 'none' }}>
                 {loaderIntro}
             </div>
 
@@ -1179,7 +1216,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 </div>
             </div>
 
-            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white opacity-0 ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
+            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white ${shouldAnimateCurrentRoute ? 'opacity-0' : 'opacity-100'} ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="relative z-[131] flex md:hidden items-center gap-3">
                     <div ref={mobileLanguageMenuRef} className="relative">

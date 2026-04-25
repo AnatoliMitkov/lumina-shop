@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCart } from './CartProvider';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { buildCartSnapshot } from '../utils/cart';
-import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, resolveLocalizedValue } from '../utils/language';
+import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, normalizeLanguage, resolveLocalizedValue } from '../utils/language';
 import {
     buildPhoneValue,
-    countryPhoneOptions,
     defaultContactCountry,
     detectCountryFromLocationText,
+    getCountryPhoneOptions,
     getCountryPhoneOption,
-    locationSuggestions,
+    getLocationSuggestions,
     queryOptions,
     resolveUserCountry,
     splitStoredPhoneNumber,
@@ -34,10 +35,14 @@ async function fetchCaptchaChallenge(fallbackMessage) {
 export default function ContactForm({ initialValues, hasProductContext = false }) {
     const { cartItems, cartTotal } = useCart();
     const siteCopy = useSiteCopy();
-    const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
+    const { i18n } = useTranslation();
+    const currentLanguage = normalizeLanguage(siteCopy?.activeLanguage || i18n.resolvedLanguage || i18n.language) || DEFAULT_LANGUAGE;
+    const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, currentLanguage);
     const initialPhoneParts = splitStoredPhoneNumber(initialValues?.phone || '');
     const initialCountryFromLocation = detectCountryFromLocationText(initialValues?.location || '');
     const locationListId = useId();
+    const countryOptions = getCountryPhoneOptions(currentLanguage);
+    const locationOptions = getLocationSuggestions(currentLanguage);
     const cartSnapshot = buildCartSnapshot(cartItems);
     const visibleCartItems = cartSnapshot.items.slice(0, 4);
     const hiddenCartItemCount = Math.max(0, cartSnapshot.itemCount - visibleCartItems.length);
@@ -50,8 +55,8 @@ export default function ContactForm({ initialValues, hasProductContext = false }
                 : localizedFallback('Tell us about the piece, fit, occasion, or support you need.', 'Разкажете ни от какво имате нужда за модела, размера, повода или консултацията.')
         )
         : hasSelectionAttached
-            ? resolveLocalizedValue(localizedFallback('Tell us what you need about the selected pieces, fit, occasion, or timing.', 'Разкажете ни какво ви е нужно за избраните модели, размера, повода или срока.'), DEFAULT_LANGUAGE)
-            : resolveLocalizedValue(localizedFallback('Tell us about the piece, fit, occasion, or support you need.', 'Разкажете ни от какво имате нужда за модела, размера, повода или консултацията.'), DEFAULT_LANGUAGE);
+            ? resolveLocalizedValue(localizedFallback('Tell us what you need about the selected pieces, fit, occasion, or timing.', 'Разкажете ни какво ви е нужно за избраните модели, размера, повода или срока.'), currentLanguage)
+            : resolveLocalizedValue(localizedFallback('Tell us about the piece, fit, occasion, or support you need.', 'Разкажете ни от какво имате нужда за модела, размера, повода или консултацията.'), currentLanguage);
     const captchaPlaceholder = getText('contact.form.captcha.answer_placeholder', localizedFallback('Type the answer here', 'Въведете отговора тук'));
     const selectionUnit = cartSnapshot.itemCount === 1
         ? getText('contact.form.selection.unit_singular', localizedFallback('piece', 'модел'))
@@ -137,18 +142,18 @@ export default function ContactForm({ initialValues, hasProductContext = false }
 
         setSelectedCountry((currentCountry) => currentCountry === defaultContactCountry ? detectedCountry : currentCountry);
 
-        const detectedLocation = getCountryPhoneOption(detectedCountry)?.label || '';
+        const detectedLocation = getCountryPhoneOption(detectedCountry, currentLanguage)?.label || '';
 
         if (detectedLocation) {
             setLocation((currentLocation) => currentLocation || detectedLocation);
         }
-    }, [initialCountryFromLocation, initialPhoneParts.country]);
+    }, [currentLanguage, initialCountryFromLocation, initialPhoneParts.country]);
 
     useEffect(() => {
         void loadCaptcha();
     }, []);
 
-    const selectedCountryOption = getCountryPhoneOption(selectedCountry) || getCountryPhoneOption(defaultContactCountry);
+    const selectedCountryOption = getCountryPhoneOption(selectedCountry, currentLanguage) || getCountryPhoneOption(defaultContactCountry, currentLanguage);
     const phoneValue = buildPhoneValue(selectedCountryOption?.dialCode || '', phoneNumber);
 
     const handleSubmit = async (event) => {
@@ -245,8 +250,8 @@ export default function ContactForm({ initialValues, hasProductContext = false }
                 <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                     <EditableText contentKey="contact.form.phone" fallback={localizedFallback('Phone', 'Телефон')} editorLabel="Contact form phone label" />
                     <div className="grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] gap-3">
-                        <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} aria-label="Country calling code" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
-                            {countryPhoneOptions.map((option) => (
+                        <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} aria-label={getText('contact.form.phone.country_code', localizedFallback('Country calling code', 'Код на държавата'))} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                            {countryOptions.map((option) => (
                                 <option key={option.country} value={option.country}>{`${option.label} (${option.dialCode})`}</option>
                             ))}
                         </select>
@@ -258,7 +263,7 @@ export default function ContactForm({ initialValues, hasProductContext = false }
                     <>
                         <input value={location} onChange={(event) => setLocation(event.target.value)} list={locationListId} autoComplete="address-level2" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         <datalist id={locationListId}>
-                            {locationSuggestions.map((option) => (
+                            {locationOptions.map((option) => (
                                 <option key={option} value={option} />
                             ))}
                         </datalist>

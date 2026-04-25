@@ -24,7 +24,7 @@ export default function EditableRichText({
     const isAdmin = context?.isAdmin;
     const isEditMode = context?.isEditMode;
     const canEditRichText = isAdmin && isEditMode && Boolean(context?.canEditEntryType?.('rich-text'));
-    const rawEntry = context?.getRawEntry?.(contentKey);
+    const rawEntry = context?.getRawEntry?.(contentKey, fallback);
     const isLuminaEntry = isLuminaTextValue(rawEntry);
     const resolvedDocument = context
         ? context.resolveRichTextEntry(contentKey, fallback)
