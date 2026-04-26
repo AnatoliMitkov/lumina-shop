@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 
 const ADMIN_ORDER_SELECT = '*';
 const ADMIN_INQUIRY_SELECT = '*';
-const ADMIN_DISCOUNT_SELECT = 'id, code, label, description, discount_type, discount_value, shipping_benefit, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
-const ADMIN_AFFILIATE_SELECT = 'id, code, partner_name, notes, customer_discount_type, customer_discount_value, commission_type, commission_value, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
+const ADMIN_DISCOUNT_SELECT = 'id, code, label, description, discount_type, discount_value, shipping_benefit, can_stack_with_affiliate, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
+const ADMIN_AFFILIATE_SELECT = 'id, code, partner_name, notes, customer_discount_type, customer_discount_value, commission_type, commission_value, can_stack_with_discount, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
 const ADMIN_ACTIVITY_LIMIT = 500;
 
 function isCatalogSetupError(error) {

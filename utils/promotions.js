@@ -65,6 +65,29 @@ function toBoolean(value) {
     return Boolean(value);
 }
 
+function buildBlockedAffiliateStackMessage({ discount = {}, affiliate = {} } = {}) {
+    if (!discount?.code || !affiliate?.code) {
+        return '';
+    }
+
+    const discountBlocksStacking = !discount.canStackWithAffiliate;
+    const affiliateBlocksStacking = !affiliate.canStackWithDiscount;
+
+    if (discountBlocksStacking && affiliateBlocksStacking) {
+        return `${affiliate.code} still tracks the referral, but ${discount.code} keeps the shopper discount because both codes must allow stacking.`;
+    }
+
+    if (discountBlocksStacking) {
+        return `${affiliate.code} still tracks the referral, but ${discount.code} keeps the shopper discount because that discount is not set to stack with affiliate shopper savings.`;
+    }
+
+    if (affiliateBlocksStacking) {
+        return `${affiliate.code} still tracks the referral, but ${discount.code} keeps the shopper discount because this affiliate code is not set to stack with discount codes.`;
+    }
+
+    return `${affiliate.code} still tracks the referral, but ${discount.code} keeps the shopper discount because stacking is off.`;
+}
+
 function toIsoDateTime(value, boundary = 'start') {
     const normalizedValue = toText(value, 64);
 
@@ -207,6 +230,7 @@ export function buildDiscountCodeMutationInput(payload = {}) {
         discount_type: discountType,
         discount_value: discountValue,
         shipping_benefit: normalizeShippingBenefit(payload?.shipping_benefit),
+        can_stack_with_affiliate: toBoolean(payload?.can_stack_with_affiliate),
         minimum_subtotal: Math.max(0, toAmount(payload?.minimum_subtotal)),
         usage_limit: toPositiveIntegerOrNull(payload?.usage_limit),
         is_active: toBoolean(payload?.is_active),
@@ -235,6 +259,7 @@ export function buildAffiliateCodeMutationInput(payload = {}) {
         customer_discount_value: customerDiscountValue,
         commission_type: commissionType,
         commission_value: commissionValue,
+        can_stack_with_discount: toBoolean(payload?.can_stack_with_discount),
         minimum_subtotal: Math.max(0, toAmount(payload?.minimum_subtotal)),
         usage_limit: toPositiveIntegerOrNull(payload?.usage_limit),
         is_active: toBoolean(payload?.is_active),
@@ -294,6 +319,7 @@ export function createBaseCheckoutPricing({ subtotal = 0, shippingAmount = 0, sh
             type: '',
             value: 0,
             shippingBenefit: 'none',
+            canStackWithAffiliate: false,
             status: 'idle',
             message: '',
             appliedAmount: 0,
@@ -308,6 +334,7 @@ export function createBaseCheckoutPricing({ subtotal = 0, shippingAmount = 0, sh
             commissionType: '',
             commissionValue: 0,
             commissionAmount: 0,
+            canStackWithDiscount: false,
             status: 'idle',
             message: '',
         },
@@ -396,16 +423,28 @@ export function evaluateDiscountRecord({ codeInput = '', subtotal = 0, record = 
         type: record.discount_type,
         value: toAmount(record.discount_value),
         shippingBenefit: normalizeShippingBenefit(record.shipping_benefit),
+        canStackWithAffiliate: Boolean(record.can_stack_with_affiliate),
         status: 'applied',
         message: `${normalizedCode} is active.`,
         appliedAmount,
     };
 }
 
-export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record = null, now = new Date() } = {}) {
+export function evaluateAffiliateRecord({
+    codeInput = '',
+    eligibilitySubtotal = 0,
+    shopperSubtotal = null,
+    commissionSubtotal = null,
+    record = null,
+    now = new Date(),
+    shopperDiscountEnabled = true,
+    messageOverride = '',
+} = {}) {
     const normalizedCode = normalizePromotionCode(codeInput);
-    const normalizedSubtotal = toAmount(subtotal);
-    const baseAffiliate = createBaseCheckoutPricing({ subtotal: normalizedSubtotal }).affiliate;
+    const normalizedEligibilitySubtotal = toAmount(eligibilitySubtotal);
+    const normalizedShopperSubtotal = shopperSubtotal == null ? normalizedEligibilitySubtotal : toAmount(shopperSubtotal);
+    const normalizedCommissionSubtotal = commissionSubtotal == null ? normalizedShopperSubtotal : toAmount(commissionSubtotal);
+    const baseAffiliate = createBaseCheckoutPricing({ subtotal: normalizedEligibilitySubtotal }).affiliate;
 
     if (!normalizedCode) {
         return baseAffiliate;
@@ -430,6 +469,7 @@ export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record =
             customerDiscountValue: toAmount(record.customer_discount_value),
             commissionType: record.commission_type,
             commissionValue: toAmount(record.commission_value),
+            canStackWithDiscount: Boolean(record.can_stack_with_discount),
             status: 'invalid',
             message: 'This affiliate code is currently disabled.',
         };
@@ -445,6 +485,7 @@ export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record =
             customerDiscountValue: toAmount(record.customer_discount_value),
             commissionType: record.commission_type,
             commissionValue: toAmount(record.commission_value),
+            canStackWithDiscount: Boolean(record.can_stack_with_discount),
             status: 'invalid',
             message: 'This affiliate code is outside its active schedule.',
         };
@@ -460,12 +501,13 @@ export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record =
             customerDiscountValue: toAmount(record.customer_discount_value),
             commissionType: record.commission_type,
             commissionValue: toAmount(record.commission_value),
+            canStackWithDiscount: Boolean(record.can_stack_with_discount),
             status: 'invalid',
             message: 'This affiliate code has reached its usage limit.',
         };
     }
 
-    if (normalizedSubtotal < toAmount(record.minimum_subtotal)) {
+    if (normalizedEligibilitySubtotal < toAmount(record.minimum_subtotal)) {
         return {
             ...baseAffiliate,
             id: record.id,
@@ -475,16 +517,18 @@ export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record =
             customerDiscountValue: toAmount(record.customer_discount_value),
             commissionType: record.commission_type,
             commissionValue: toAmount(record.commission_value),
+            canStackWithDiscount: Boolean(record.can_stack_with_discount),
             status: 'invalid',
             message: `This affiliate code requires at least ${formatPromotionCurrency(record.minimum_subtotal)} in the cart.`,
         };
     }
 
-    const customerDiscountAmount = record.customer_discount_type === 'none'
+    const customerDiscountAmount = !shopperDiscountEnabled || record.customer_discount_type === 'none'
         ? 0
-        : calculateAdjustment(normalizedSubtotal, record.customer_discount_type, record.customer_discount_value);
-    const commissionBase = Math.max(0, normalizedSubtotal - customerDiscountAmount);
+        : calculateAdjustment(normalizedShopperSubtotal, record.customer_discount_type, record.customer_discount_value);
+    const commissionBase = Math.max(0, normalizedCommissionSubtotal - customerDiscountAmount);
     const commissionAmount = calculateCommission(commissionBase, record.commission_type, record.commission_value);
+    const status = customerDiscountAmount > 0 ? 'applied' : 'tracked';
 
     return {
         id: record.id,
@@ -496,24 +540,67 @@ export function evaluateAffiliateRecord({ codeInput = '', subtotal = 0, record =
         commissionType: record.commission_type,
         commissionValue: toAmount(record.commission_value),
         commissionAmount,
-        status: customerDiscountAmount > 0 ? 'applied' : 'tracked',
-        message: customerDiscountAmount > 0 ? `${normalizedCode} is active.` : `${normalizedCode} is tracking the referral.`,
+        canStackWithDiscount: Boolean(record.can_stack_with_discount),
+        status,
+        message: messageOverride || (customerDiscountAmount > 0 ? `${normalizedCode} is active.` : `${normalizedCode} is tracking the referral.`),
     };
 }
 
 export function createCheckoutPricingPreview({ subtotal = 0, shippingAmount = 0, shippingInput = null, discountCode = '', affiliateCode = '', discountRecord = null, affiliateRecord = null } = {}) {
     const normalizedSubtotal = toAmount(subtotal);
     const discount = evaluateDiscountRecord({ codeInput: discountCode, subtotal: normalizedSubtotal, record: discountRecord });
-    const subtotalAfterDiscount = Math.max(0, normalizedSubtotal - discount.appliedAmount);
-    const affiliate = evaluateAffiliateRecord({ codeInput: affiliateCode, subtotal: subtotalAfterDiscount, record: affiliateRecord });
-    const shippingBenefit = discount.status === 'applied' ? discount.shippingBenefit : 'none';
+    const affiliateBaseline = evaluateAffiliateRecord({
+        codeInput: affiliateCode,
+        eligibilitySubtotal: normalizedSubtotal,
+        shopperSubtotal: normalizedSubtotal,
+        commissionSubtotal: normalizedSubtotal,
+        record: affiliateRecord,
+    });
+    const hasAppliedDiscount = discount.status === 'applied';
+    const hasValidAffiliate = affiliateBaseline.status === 'applied' || affiliateBaseline.status === 'tracked';
+    const affiliateProvidesShopperDiscount = affiliateBaseline.customerDiscountAmount > 0;
+    const stackAllowed = hasAppliedDiscount
+        && hasValidAffiliate
+        && affiliateProvidesShopperDiscount
+        && discount.canStackWithAffiliate
+        && affiliateBaseline.canStackWithDiscount;
+    let resolvedDiscount = discount;
+    let resolvedAffiliate = affiliateBaseline;
+
+    if (hasAppliedDiscount && hasValidAffiliate) {
+        const subtotalAfterDiscount = Math.max(0, normalizedSubtotal - discount.appliedAmount);
+
+        if (stackAllowed) {
+            resolvedAffiliate = evaluateAffiliateRecord({
+                codeInput: affiliateCode,
+                eligibilitySubtotal: normalizedSubtotal,
+                shopperSubtotal: subtotalAfterDiscount,
+                commissionSubtotal: subtotalAfterDiscount,
+                record: affiliateRecord,
+            });
+        } else {
+            resolvedAffiliate = evaluateAffiliateRecord({
+                codeInput: affiliateCode,
+                eligibilitySubtotal: normalizedSubtotal,
+                shopperSubtotal: subtotalAfterDiscount,
+                commissionSubtotal: subtotalAfterDiscount,
+                record: affiliateRecord,
+                shopperDiscountEnabled: false,
+                messageOverride: affiliateProvidesShopperDiscount
+                    ? buildBlockedAffiliateStackMessage({ discount, affiliate: affiliateBaseline })
+                    : affiliateBaseline.message,
+            });
+        }
+    }
+
+    const shippingBenefit = resolvedDiscount.status === 'applied' ? resolvedDiscount.shippingBenefit : 'none';
     const basePricing = createBaseCheckoutPricing({
         subtotal: normalizedSubtotal,
         shippingAmount,
         shippingInput,
         shippingBenefit,
     });
-    const totalSavings = toAmount(discount.appliedAmount + affiliate.customerDiscountAmount);
+    const totalSavings = toAmount(resolvedDiscount.appliedAmount + resolvedAffiliate.customerDiscountAmount);
     const total = toAmount(Math.max(0, normalizedSubtotal - totalSavings) + basePricing.shipping.amount);
 
     return {
@@ -521,8 +608,8 @@ export function createCheckoutPricingPreview({ subtotal = 0, shippingAmount = 0,
         discountAmount: totalSavings,
         totalSavings,
         total,
-        discount,
-        affiliate,
+        discount: resolvedDiscount,
+        affiliate: resolvedAffiliate,
     };
 }
 

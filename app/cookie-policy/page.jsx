@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import CookiePolicyPreferencesPanel from '../../components/CookiePolicyPreferencesPanel';
 import {
     createLocalizedValue as localizedFallback,
     DEFAULT_LANGUAGE,
@@ -40,8 +41,8 @@ const cookieSections = [
     {
         title: localizedFallback('Performance and analytics', 'Производителност и анализ'),
         body: localizedFallback(
-            'We may use privacy-conscious analytics, diagnostics, or performance tooling to understand storefront reliability and visitor interactions. These tools may process technical signals such as browser type, pages visited, approximate device data, and performance events.',
-            'Възможно е да използваме аналитични, диагностични или performance инструменти, съобразени с поверителността, за да разбираме надеждността на сайта и начина, по който посетителите го използват. Тези инструменти могат да обработват технически сигнали като тип браузър, посетени страници, приблизителни данни за устройството и събития, свързани с производителността.'
+            'We may use privacy-conscious analytics, diagnostics, or performance tooling to understand storefront reliability and visitor interactions. When analytics cookies are offered through the consent banner, analytics only starts after you allow that category. These tools may process technical signals such as browser type, pages visited, approximate device data, and performance events.',
+            'Възможно е да използваме аналитични, диагностични или performance инструменти, съобразени с поверителността, за да разбираме надеждността на сайта и начина, по който посетителите го използват. Когато аналитичните бисквитки се предлагат чрез банера за съгласие, анализът започва едва след като разрешите тази категория. Тези инструменти могат да обработват технически сигнали като тип браузър, посетени страници, приблизителни данни за устройството и събития, свързани с производителността.'
         ),
     },
     {
@@ -54,8 +55,8 @@ const cookieSections = [
     {
         title: localizedFallback('Managing cookies', 'Управление на бисквитките'),
         body: localizedFallback(
-            'Most browsers let you block or delete cookies through their settings. Please note that disabling essential cookies can prevent parts of the store, including account, cart, and checkout features, from working correctly.',
-            'Повечето браузъри ви позволяват да блокирате или изтривате бисквитки чрез настройките си. Имайте предвид, че изключването на необходимите бисквитки може да попречи части от магазина, включително профилът, количката и процесът по поръчка, да работят правилно.'
+            'Most browsers let you block or delete cookies through their settings. You can also review or change the optional cookie choices directly on this page. Please note that disabling essential cookies can prevent parts of the store, including account, cart, and checkout features, from working correctly.',
+            'Повечето браузъри ви позволяват да блокирате или изтривате бисквитки чрез настройките си. Можете също да прегледате или промените избора си за допълнителните бисквитки директно на тази страница. Имайте предвид, че изключването на необходимите бисквитки може да попречи части от магазина, включително профилът, количката и процесът по поръчка, да работят правилно.'
         ),
     },
     {
@@ -98,7 +99,22 @@ export default async function CookiePolicyPage() {
                             'Тази страница обяснява как The VA Store използва бисквитки, local storage и сходни технологии в магазина, профилната зона, контактните инструменти и процеса по поръчка.'
                         ))}
                     </p>
-                    <p className="mt-4 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/38">{getText(localizedFallback('Last updated: April 24, 2026', 'Последна актуализация: 24 април 2026'))}</p>
+                    <p className="mt-4 text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/38">{getText(localizedFallback('Last updated: April 26, 2026', 'Последна актуализация: 26 април 2026'))}</p>
+                </section>
+
+                <section className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(19rem,0.95fr)] lg:items-start">
+                    <article className="rounded-[1.6rem] border border-[#1C1C1C]/10 bg-white/55 p-6 md:p-8">
+                        <p className="text-[10px] uppercase tracking-[0.3em] text-[#1C1C1C]/42">{getText(localizedFallback('Second thoughts welcome', 'Промяната е възможна'))}</p>
+                        <h2 className="mt-4 font-serif text-2xl font-light uppercase tracking-[0.06em] text-[#1C1C1C] md:text-3xl">{getText(localizedFallback('Cookie choices now live here', 'Изборът за бисквитки вече е тук'))}</h2>
+                        <p className="mt-4 text-sm leading-relaxed text-[#1C1C1C]/66 md:text-base">
+                            {getText(localizedFallback(
+                                'To keep the storefront visually clean after you accept or reject optional cookies, the floating cookie button is no longer pinned across the site. If you want to review or change that choice later, use the control panel on this page.',
+                                'За да остане сайтът визуално чист след като приемете или откажете допълнителните бисквитки, плаващият бутон вече не стои закрепен навсякъде в магазина. Ако по-късно искате да прегледате или промените избора си, използвайте контролния панел на тази страница.'
+                            ))}
+                        </p>
+                    </article>
+
+                    <CookiePolicyPreferencesPanel language={currentLanguage} />
                 </section>
 
                 <section className="grid gap-5">

@@ -9,6 +9,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import Lenis from 'lenis';
 import { useCart } from './CartProvider';
+import CookieConsentBanner from './CookieConsentBanner';
 import PromoCodePopup from './PromoCodePopup';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
@@ -32,14 +33,37 @@ import {
 import { buildCollectionsHref, isProductVisibleInLanguage, PRODUCT_CATEGORY_OPTIONS } from '../utils/products';
 import { LEGACY_SPOTLIGHT_PATH, SPOTLIGHT_PATH, isSpotlightPath } from '../utils/site-routes';
 import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../utils/supabase/client';
+import {
+    COOKIE_CONSENT_UPDATED_EVENT,
+    createCookieConsentState,
+    hasCookieConsentDecision,
+    isAnalyticsConsentGranted,
+    persistCookieConsent,
+    readStoredCookieConsent,
+} from '../utils/cookie-consent';
 import { createLocalizedValue as localizedFallback, resolveLocalizedValue } from '../utils/language';
 
 gsap.registerPlugin(ScrollTrigger);
 gsap.config({ nullTargetWarn: false });
 
 const GTAG_ID = 'G-HS1V41ZYQ4';
+const GA_COOKIE_NAME = `_ga_${GTAG_ID.replace(/^G-/, '')}`;
 
 const baseCursorClassName = 'hidden md:flex fixed top-0 left-0 relative rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 justify-center items-center text-white text-[10px] uppercase font-medium text-opacity-0 select-none';
+
+function clearCookie(name) {
+    if (typeof document === 'undefined' || !name) {
+        return;
+    }
+
+    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+}
+
+function clearAnalyticsCookies() {
+    clearCookie('_ga');
+    clearCookie('_gid');
+    clearCookie(GA_COOKIE_NAME);
+}
 
 function syncPageMotionAttribute(isEnabled) {
     if (typeof document === 'undefined') {
@@ -246,6 +270,9 @@ export default function ClientEngine({ children, initialLanguage }) {
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(() => resolvePageMotionEnabled());
     const [categoryMenuItems, setCategoryMenuItems] = useState(() => PRODUCT_CATEGORY_OPTIONS.filter(Boolean));
     const [isPromoPopupOpen, setIsPromoPopupOpen] = useState(false);
+    const [cookieConsent, setCookieConsent] = useState(null);
+    const [isCookiePreferencesOpen, setIsCookiePreferencesOpen] = useState(false);
+    const [analyticsConsentDraft, setAnalyticsConsentDraft] = useState(false);
     const normalizedInitialLanguage = normalizeLanguage(initialLanguage) || DEFAULT_LANGUAGE;
     const [activeLanguage, setActiveLanguage] = useState(normalizedInitialLanguage);
     const loaderCopy = getLoaderCopyConfig(pathname);
@@ -466,7 +493,56 @@ export default function ClientEngine({ children, initialLanguage }) {
     }, []);
 
     useEffect(() => {
+        const storedConsent = readStoredCookieConsent();
+
+        if (storedConsent) {
+            setCookieConsent(storedConsent);
+            setAnalyticsConsentDraft(Boolean(storedConsent.analytics));
+            return;
+        }
+
+        setCookieConsent(null);
+        setAnalyticsConsentDraft(false);
+        setIsCookiePreferencesOpen(true);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const handleCookieConsentUpdated = (event) => {
+            const nextConsent = event?.detail && typeof event.detail === 'object'
+                ? createCookieConsentState({ analytics: Boolean(event.detail.analytics) })
+                : readStoredCookieConsent();
+
+            setCookieConsent(nextConsent);
+            setAnalyticsConsentDraft(Boolean(nextConsent?.analytics));
+        };
+
+        window.addEventListener(COOKIE_CONSENT_UPDATED_EVENT, handleCookieConsentUpdated);
+
+        return () => window.removeEventListener(COOKIE_CONSENT_UPDATED_EVENT, handleCookieConsentUpdated);
+    }, []);
+
+    useEffect(() => {
         if (typeof window === 'undefined' || typeof document === 'undefined') {
+            return undefined;
+        }
+
+        const analyticsEnabled = isAnalyticsConsentGranted(cookieConsent);
+
+        window[`ga-disable-${GTAG_ID}`] = !analyticsEnabled;
+
+        if (!analyticsEnabled) {
+            clearAnalyticsCookies();
+
+            if (typeof window.gtag === 'function') {
+                window.gtag('consent', 'update', {
+                    analytics_storage: 'denied',
+                });
+            }
+
             return undefined;
         }
 
@@ -474,21 +550,35 @@ export default function ClientEngine({ children, initialLanguage }) {
         window.gtag = window.gtag || function gtag() {
             window.dataLayer.push(arguments);
         };
+        window.gtag('consent', 'update', {
+            analytics_storage: 'granted',
+        });
         window.gtag('js', new Date());
-        window.gtag('config', GTAG_ID);
+        window.gtag('config', GTAG_ID, {
+            anonymize_ip: true,
+        });
 
-        if (document.getElementById('lumina-gtag-loader')) {
-            return undefined;
+        if (!document.getElementById('lumina-gtag-loader')) {
+            const script = document.createElement('script');
+            script.id = 'lumina-gtag-loader';
+            script.async = true;
+            script.src = `https://www.googletagmanager.com/gtag/js?id=${GTAG_ID}`;
+            document.head.appendChild(script);
         }
 
-        const script = document.createElement('script');
-        script.id = 'lumina-gtag-loader';
-        script.async = true;
-        script.src = `https://www.googletagmanager.com/gtag/js?id=${GTAG_ID}`;
-        document.head.appendChild(script);
-
         return undefined;
-    }, []);
+    }, [cookieConsent]);
+
+    useEffect(() => {
+        if (!isAnalyticsConsentGranted(cookieConsent) || typeof window === 'undefined' || typeof window.gtag !== 'function') {
+            return;
+        }
+
+        window.gtag('config', GTAG_ID, {
+            anonymize_ip: true,
+            page_path: pathname,
+        });
+    }, [cookieConsent, pathname]);
 
     useEffect(() => {
         if (!isSupabaseConfigured()) {
@@ -733,6 +823,41 @@ export default function ClientEngine({ children, initialLanguage }) {
         if (!nextMotionEnabled && typeof window !== 'undefined') {
             dispatchPageRevealComplete(pathname);
         }
+    };
+
+    const applyCookieConsent = ({ analytics = false } = {}) => {
+        const nextConsent = persistCookieConsent(createCookieConsentState({ analytics }));
+
+        setCookieConsent(nextConsent);
+        setAnalyticsConsentDraft(Boolean(nextConsent.analytics));
+        setIsCookiePreferencesOpen(false);
+
+        return nextConsent;
+    };
+
+    const handleAcceptAllCookies = () => {
+        applyCookieConsent({ analytics: true });
+    };
+
+    const handleRejectNonEssentialCookies = () => {
+        applyCookieConsent({ analytics: false });
+    };
+
+    const handleSaveCookiePreferences = () => {
+        applyCookieConsent({ analytics: analyticsConsentDraft });
+    };
+
+    const openCookiePreferences = () => {
+        setAnalyticsConsentDraft(Boolean(cookieConsent?.analytics));
+        setIsCookiePreferencesOpen(true);
+    };
+
+    const closeCookiePreferences = () => {
+        if (!hasCookieConsentDecision(cookieConsent)) {
+            return;
+        }
+
+        setIsCookiePreferencesOpen(false);
     };
 
     useGSAP(() => {
@@ -1199,6 +1324,19 @@ export default function ClientEngine({ children, initialLanguage }) {
 
             <PromoCodePopup pathname={pathname} onOpenChange={setIsPromoPopupOpen} />
             {introEditorDock}
+            <CookieConsentBanner
+                language={activeLanguage}
+                isOpen={isCookiePreferencesOpen}
+                hasDecision={hasCookieConsentDecision(cookieConsent)}
+                preferencesOpen={isCookiePreferencesOpen}
+                analyticsEnabled={analyticsConsentDraft}
+                onOpenPreferences={openCookiePreferences}
+                onToggleAnalytics={() => setAnalyticsConsentDraft((currentValue) => !currentValue)}
+                onAcceptAll={handleAcceptAllCookies}
+                onRejectNonEssential={handleRejectNonEssentialCookies}
+                onSavePreferences={handleSaveCookiePreferences}
+                onClosePreferences={closeCookiePreferences}
+            />
 
             <div className={`fixed inset-x-0 top-0 z-[55] border-b border-white/10 bg-[rgba(12,12,14,0.82)] text-[#EFECE8] backdrop-blur-xl ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-6 py-2 md:min-h-10 md:px-12">

@@ -2651,8 +2651,8 @@ export default function AdminDashboard({
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
-                <AdminDiscountCodesPanel initialDiscounts={discountCodes} setupMessage={promotionMessage} />
-                <AdminAffiliateCodesPanel initialAffiliates={affiliateCodes} setupMessage={promotionMessage} />
+                <AdminDiscountCodesPanel initialDiscounts={discountCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
+                <AdminAffiliateCodesPanel initialAffiliates={affiliateCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
             </section>
 
             <ConfirmDialog

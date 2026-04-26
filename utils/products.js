@@ -369,6 +369,7 @@ export function buildCollectionsHref(filters = {}) {
   const searchParams = new URLSearchParams();
   const category = toText(filters.category);
   const collection = toText(filters.collection);
+  const pricing = toText(filters.pricing);
 
   if (category && category.toLowerCase() !== 'all') {
     searchParams.set('category', normalizeProductCopySegment(category, 'category'));
@@ -376,6 +377,10 @@ export function buildCollectionsHref(filters = {}) {
 
   if (collection && collection.toLowerCase() !== 'all') {
     searchParams.set('collection', normalizeProductCopySegment(collection, 'collection'));
+  }
+
+  if (pricing && pricing.toLowerCase() !== 'all') {
+    searchParams.set('pricing', normalizeProductCopySegment(pricing, 'pricing'));
   }
 
   const query = searchParams.toString();

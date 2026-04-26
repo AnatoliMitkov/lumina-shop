@@ -316,6 +316,109 @@ html[data-page-motion='off'] .hero-img {
     transform-origin: var(--editable-media-position-desktop-x, 50%) var(--editable-media-position-desktop-y, 50%);
 }
 
+@keyframes lumina-cookie-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-2deg);
+    }
+
+    50% {
+        transform: translateY(-7px) rotate(2deg);
+    }
+}
+
+@keyframes lumina-cookie-wave {
+    0%,
+    100% {
+        transform: rotate(0deg);
+        transform-origin: 49px 120px;
+    }
+
+    35% {
+        transform: rotate(11deg);
+        transform-origin: 49px 120px;
+    }
+
+    70% {
+        transform: rotate(-7deg);
+        transform-origin: 49px 120px;
+    }
+}
+
+@keyframes lumina-cookie-heart {
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.82;
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.08);
+        opacity: 1;
+    }
+}
+
+@keyframes lumina-cookie-shadow {
+    0%,
+    100% {
+        transform: scaleX(1);
+        opacity: 0.9;
+    }
+
+    50% {
+        transform: scaleX(0.9);
+        opacity: 0.65;
+    }
+}
+
+@keyframes lumina-cookie-blink {
+    0%,
+    44%,
+    100% {
+        transform: scaleY(1);
+        transform-origin: center;
+    }
+
+    47%,
+    51% {
+        transform: scaleY(0.14);
+        transform-origin: center;
+    }
+}
+
+.lumina-cookie-mascot {
+    width: 7.4rem;
+    height: 7.4rem;
+}
+
+.lumina-cookie-float {
+    animation: lumina-cookie-float 3.2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.lumina-cookie-wave {
+    animation: lumina-cookie-wave 2.2s ease-in-out infinite;
+}
+
+.lumina-cookie-heart {
+    animation: lumina-cookie-heart 2.6s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.lumina-cookie-shadow {
+    animation: lumina-cookie-shadow 3.2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.lumina-cookie-blink {
+    animation: lumina-cookie-blink 4.2s ease-in-out infinite;
+}
+
+.lumina-cookie-launcher {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
 @media (max-width: 767px) {
     .editable-media-asset-responsive {
         object-fit: var(--editable-media-fit-mobile, var(--editable-media-fit-desktop, cover));

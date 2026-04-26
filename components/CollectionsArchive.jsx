@@ -20,6 +20,7 @@ import {
 } from '../utils/products';
 
 const MOBILE_ARCHIVE_MEDIA_QUERY = '(max-width: 767px)';
+const PRICING_FILTER_OPTIONS = ['All', 'Discounted'];
 
 function buildSearchString(product) {
     return [
@@ -34,6 +35,25 @@ function buildSearchString(product) {
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
+}
+
+function getProductDiscountMetrics(product = {}) {
+    const compareAtPrice = Number(product.compare_at_price ?? 0);
+    const currentPrice = Number(product.price ?? 0);
+
+    if (!Number.isFinite(compareAtPrice) || !Number.isFinite(currentPrice) || compareAtPrice <= currentPrice || currentPrice < 0) {
+        return {
+            hasDiscount: false,
+            compareAtPrice: null,
+            discountPercent: 0,
+        };
+    }
+
+    return {
+        hasDiscount: true,
+        compareAtPrice,
+        discountPercent: Math.max(1, Math.round(((compareAtPrice - currentPrice) / compareAtPrice) * 100)),
+    };
 }
 
 function normalizeOptionValue(value) {
@@ -296,6 +316,7 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd, t
     const image = resolveProductGallery(product)[0] || product.image_main;
     const collectionCopyKey = getTaxonomyCopyKey('collection', product.collection);
     const categoryCopyKey = getTaxonomyCopyKey('category', product.category);
+    const discountMetrics = getProductDiscountMetrics(product);
     const cardStyle = isFocused
         ? { transform: 'translateY(-10px) scale(1.035)' }
         : isDimmed
@@ -319,7 +340,13 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd, t
         >
             <div className="pointer-events-none absolute inset-x-3 top-4 bottom-20 -z-10 rounded-[1.4rem] md:inset-x-5 md:top-6 md:bottom-24 md:rounded-[2rem] bg-[radial-gradient(circle_at_center,_rgba(28,28,28,0.2),_rgba(28,28,28,0))] transition-all duration-500 ease-out" style={glowStyle}></div>
 
-            <a href={href} className="transition-link w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text={translations.inspect}>
+            <a href={href} className="transition-link relative w-full aspect-[4/5] overflow-hidden rounded-sm view-img group hover-target block bg-[#1C1C1C] ring-1 ring-transparent transition-[box-shadow,transform,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={mediaStyle} data-cursor-text={translations.inspect}>
+                {discountMetrics.hasDiscount && (
+                    <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-[#b74638]/18 bg-[#fff6f3]/96 px-3 py-2 text-[#b74638] shadow-[0_14px_32px_rgba(183,70,56,0.12)] md:left-4 md:top-4">
+                        <span className="text-[9px] uppercase tracking-[0.28em]">{translations.promo}</span>
+                        <span className="font-serif text-sm font-light leading-none">-{discountMetrics.discountPercent}%</span>
+                    </div>
+                )}
                 <img className={`w-full h-full object-cover transition-transform duration-[1.8s] ease-out ${isFocused ? 'scale-[1.08]' : 'group-hover:scale-[1.04]'}`} src={image} alt={product.name} />
             </a>
 
@@ -335,7 +362,15 @@ function ProductCard({ product, isFocused, isDimmed, onHoverStart, onHoverEnd, t
                         {product.subtitle && <p className="mt-2 hidden max-w-md text-sm leading-relaxed text-[#1C1C1C]/58 md:block">{product.subtitle}</p>}
                     </div>
 
-                    <p className="shrink-0 text-xs md:text-sm uppercase tracking-[0.18em] md:tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
+                    <div className="shrink-0 flex flex-col items-start gap-1 md:items-end md:text-right">
+                        <p className="text-xs md:text-sm uppercase tracking-[0.18em] md:tracking-[0.2em] font-medium text-[#1C1C1C]">{formatProductCurrency(product.price)}</p>
+                        {discountMetrics.hasDiscount && (
+                            <>
+                                <p className="text-[0.72rem] md:text-[0.82rem] uppercase tracking-[0.18em] text-[#b74638] line-through">{formatProductCurrency(discountMetrics.compareAtPrice)}</p>
+                                <p className="text-[0.65rem] md:text-[0.72rem] uppercase tracking-[0.24em] text-[#b74638]">{translations.save} {discountMetrics.discountPercent}%</p>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5 border-t border-[#1C1C1C]/10 pt-3 text-[9px] md:flex-row md:items-center md:justify-between md:gap-4 md:pt-4 md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.24em] text-[#1C1C1C]/45">
@@ -387,16 +422,27 @@ export default function CollectionsArchive({ products = [] }) {
     };
     const collectionFilterGroups = buildFilterGroups(collectionOptions, (option) => getFilterOptionLabel('collection', option));
     const categoryFilterGroups = buildFilterGroups(categoryOptions, (option) => getFilterOptionLabel('category', option));
+    const pricingFilterGroups = buildFilterGroups(PRICING_FILTER_OPTIONS, (option) => {
+        if (option === 'All') {
+            return getText('collections.filters.pricing_all', localizedFallback('All Pricing', 'Всички цени'));
+        }
+
+        return getText('collections.filters.pricing_discounted', localizedFallback('Promo Pieces', 'Промо модели'));
+    });
     const activeCollectionGroup = resolveFilterGroup(searchParams.get('collection'), collectionFilterGroups);
     const activeCategoryGroup = resolveFilterGroup(searchParams.get('category'), categoryFilterGroups);
+    const activePricingGroup = resolveFilterGroup(searchParams.get('pricing'), pricingFilterGroups);
     const activeCollection = activeCollectionGroup.key;
     const activeCategory = activeCategoryGroup.key;
+    const activePricing = activePricingGroup.key;
     const activeCollectionLabel = activeCollectionGroup.label;
     const activeCategoryLabel = activeCategoryGroup.label;
+    const activePricingLabel = activePricingGroup.label;
     const searchPlaceholder = getText('collections.filters.search_placeholder', localizedFallback('Search by collection, category, mood, or name', 'Търсене по колекция, категория, настроение или име'));
     const filteredProducts = normalizedProducts.filter((product) => {
         const matchesCollection = activeCollection === 'All' || activeCollectionGroup.values.includes(product.collection);
         const matchesCategory = activeCategory === 'All' || activeCategoryGroup.values.includes(product.category);
+        const matchesPricing = activePricing === 'All' || getProductDiscountMetrics(product).hasDiscount;
         const matchesSearch = !deferredSearch || [
             buildSearchString(product),
             resolveCollectionLabel(product.collection),
@@ -407,7 +453,7 @@ export default function CollectionsArchive({ products = [] }) {
             .toLowerCase()
             .includes(deferredSearch);
 
-        return matchesCollection && matchesCategory && matchesSearch;
+        return matchesCollection && matchesCategory && matchesPricing && matchesSearch;
     });
     const readyToBrowseLabel = filteredProducts.length === 1
         ? getText('collections.filters.ready_singular', localizedFallback('piece ready to browse', 'модел за разглеждане'))
@@ -420,12 +466,15 @@ export default function CollectionsArchive({ products = [] }) {
         ready: getText('collections.card.ready', localizedFallback('ready', 'готови')),
         madeToOrder: getText('collections.card.made_to_order', localizedFallback('Made to order', 'По поръчка')),
         dayLeadTime: getText('collections.card.day_lead_time', localizedFallback('day lead time', 'дни срок')),
+        promo: getText('collections.card.promo', localizedFallback('Promo', 'Промо')),
+        save: getText('collections.card.save', localizedFallback('Save', 'Спестяваш')),
     };
-    const hasActiveFilters = activeCollection !== 'All' || activeCategory !== 'All' || Boolean(searchValue);
-    const activeFilterCount = [activeCollection !== 'All', activeCategory !== 'All', Boolean(searchValue)].filter(Boolean).length;
+    const hasActiveFilters = activeCollection !== 'All' || activeCategory !== 'All' || activePricing !== 'All' || Boolean(searchValue);
+    const activeFilterCount = [activeCollection !== 'All', activeCategory !== 'All', activePricing !== 'All', Boolean(searchValue)].filter(Boolean).length;
     const activeFilterLabels = [
         activeCollection !== 'All' ? { key: `collection-${activeCollection}`, value: activeCollectionLabel } : null,
         activeCategory !== 'All' ? { key: `category-${activeCategory}`, value: activeCategoryLabel } : null,
+        activePricing !== 'All' ? { key: `pricing-${activePricing}`, value: activePricingLabel } : null,
         searchValue ? { group: 'search', value: `${getText('collections.filters.search_prefix', localizedFallback('Search:', 'Търсене:'))} ${searchValue}` } : null,
     ].filter(Boolean);
 
@@ -553,7 +602,7 @@ export default function CollectionsArchive({ products = [] }) {
         return () => {
             ctx.revert();
         };
-    }, [activeCategory, activeCollection, deferredSearch, filteredProducts.length]);
+    }, [activeCategory, activeCollection, activePricing, deferredSearch, filteredProducts.length]);
 
     useEffect(() => {
         return () => {
@@ -563,8 +612,8 @@ export default function CollectionsArchive({ products = [] }) {
         };
     }, []);
 
-    const updateArchiveFilters = ({ collection = activeCollection, category = activeCategory }) => {
-        const nextHref = buildCollectionsHref({ collection, category });
+    const updateArchiveFilters = ({ collection = activeCollection, category = activeCategory, pricing = activePricing }) => {
+        const nextHref = buildCollectionsHref({ collection, category, pricing });
         const currentQuery = searchParams.toString();
         const currentHref = currentQuery ? `${pathname}?${currentQuery}` : pathname;
 
@@ -577,7 +626,7 @@ export default function CollectionsArchive({ products = [] }) {
 
     const handleReset = () => {
         setSearchValue('');
-        updateArchiveFilters({ collection: 'All', category: 'All' });
+        updateArchiveFilters({ collection: 'All', category: 'All', pricing: 'All' });
     };
 
     const handleProductHoverStart = (productId) => {
@@ -614,6 +663,7 @@ export default function CollectionsArchive({ products = [] }) {
                             {String(filteredProducts.length).padStart(2, '0')} {readyToBrowseLabel}
                             {activeCollection !== 'All' ? ` / ${activeCollectionLabel}` : ''}
                             {activeCategory !== 'All' ? ` / ${activeCategoryLabel}` : ''}
+                            {activePricing !== 'All' ? ` / ${activePricingLabel}` : ''}
                         </p>
                     </div>
 
@@ -709,6 +759,15 @@ export default function CollectionsArchive({ products = [] }) {
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {categoryFilterGroups.map((group) => (
                                             <FilterButton key={group.key} label={group.label} theme="dark" isActive={activeCategory === group.key} onClick={() => updateArchiveFilters({ category: group.key })} />
+                                        ))}
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/42 md:tracking-[0.24em]"><EditableText contentKey="collections.filters.pricing_title" fallback={localizedFallback('Pricing', 'Цени')} editorLabel="Collections filter pricing title" /></p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {pricingFilterGroups.map((group) => (
+                                            <FilterButton key={group.key} label={group.label} theme="dark" isActive={activePricing === group.key} onClick={() => updateArchiveFilters({ pricing: group.key })} />
                                         ))}
                                     </div>
                                 </section>

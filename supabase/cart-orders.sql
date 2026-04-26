@@ -211,6 +211,7 @@ create table if not exists public.discount_codes (
   discount_type text not null default 'percentage' check (discount_type in ('percentage', 'fixed_amount')),
   discount_value numeric(10, 2) not null default 0,
   shipping_benefit text not null default 'none' check (shipping_benefit in ('none', 'sender_covers', 'receiver_covers')),
+  can_stack_with_affiliate boolean not null default false,
   minimum_subtotal numeric(10, 2) not null default 0,
   usage_limit integer,
   usage_count integer not null default 0,
@@ -230,6 +231,7 @@ create table if not exists public.affiliate_codes (
   customer_discount_value numeric(10, 2) not null default 0,
   commission_type text not null default 'percentage' check (commission_type in ('percentage', 'fixed_amount')),
   commission_value numeric(10, 2) not null default 0,
+  can_stack_with_discount boolean not null default false,
   minimum_subtotal numeric(10, 2) not null default 0,
   usage_limit integer,
   usage_count integer not null default 0,
@@ -245,6 +247,8 @@ create index if not exists contact_inquiries_user_id_idx on public.contact_inqui
 create index if not exists contact_inquiries_created_at_idx on public.contact_inquiries (created_at desc);
 create index if not exists site_copy_entries_updated_at_idx on public.site_copy_entries (updated_at desc);
 alter table public.discount_codes add column if not exists shipping_benefit text not null default 'none' check (shipping_benefit in ('none', 'sender_covers', 'receiver_covers'));
+alter table public.discount_codes add column if not exists can_stack_with_affiliate boolean not null default false;
+alter table public.affiliate_codes add column if not exists can_stack_with_discount boolean not null default false;
 create index if not exists discount_codes_code_idx on public.discount_codes (code);
 create index if not exists discount_codes_active_idx on public.discount_codes (is_active, starts_at, ends_at);
 create index if not exists affiliate_codes_code_idx on public.affiliate_codes (code);
@@ -271,7 +275,11 @@ end;
 
 
 update public.discount_codes
-set shipping_benefit = case when shipping_benefit in ('sender_covers', 'receiver_covers') then shipping_benefit else 'none' end;
+set shipping_benefit = case when shipping_benefit in ('sender_covers', 'receiver_covers') then shipping_benefit else 'none' end,
+    can_stack_with_affiliate = coalesce(can_stack_with_affiliate, false);
+
+update public.affiliate_codes
+set can_stack_with_discount = coalesce(can_stack_with_discount, false);
 create trigger carts_set_updated_at
 before update on public.carts
 for each row

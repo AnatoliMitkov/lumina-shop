@@ -1,8 +1,10 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import PromotionTrendChart from './PromotionTrendChart';
 import { buildShippingBenefitLabel, shippingBenefitOptions } from '../utils/checkout';
-import { discountTypeOptions, formatPromotionCurrency, toPromotionDateInputValue } from '../utils/promotions';
+import { buildDiscountCodeInsights } from '../utils/promotion-insights';
+import { createCheckoutPricingPreview, discountTypeOptions, formatPromotionCurrency, toPromotionDateInputValue } from '../utils/promotions';
 
 function formatDate(value) {
     if (!value) {
@@ -16,6 +18,59 @@ function formatDate(value) {
     }).format(new Date(value));
 }
 
+function toPreviewSubtotal(value) {
+    const parsedValue = Number.parseFloat(String(value ?? 0));
+
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        return 0;
+    }
+
+    return Number(parsedValue.toFixed(2));
+}
+
+function getRetentionTone(retainedShare) {
+    if (retainedShare < 50) {
+        return {
+            shell: 'border-red-200 bg-red-50 text-red-700',
+            accent: 'text-red-700',
+            copy: 'text-red-700/80',
+        };
+    }
+
+    if (retainedShare < 75) {
+        return {
+            shell: 'border-amber-200 bg-amber-50 text-amber-800',
+            accent: 'text-amber-800',
+            copy: 'text-amber-800/80',
+        };
+    }
+
+    return {
+        shell: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        accent: 'text-emerald-700',
+        copy: 'text-emerald-700/80',
+    };
+}
+
+function createPreviewDiscountRecord(draft = {}) {
+    return {
+        id: 'preview-discount',
+        code: draft.code || 'PREVIEW',
+        label: draft.label || draft.code || 'Preview',
+        description: draft.description || '',
+        discount_type: draft.discount_type || 'percentage',
+        discount_value: Number(draft.discount_value ?? 0),
+        shipping_benefit: draft.shipping_benefit || 'none',
+        can_stack_with_affiliate: Boolean(draft.can_stack_with_affiliate),
+        minimum_subtotal: Number(draft.minimum_subtotal ?? 0),
+        usage_limit: null,
+        usage_count: 0,
+        is_active: true,
+        starts_at: null,
+        ends_at: null,
+    };
+}
+
 function createEmptyDraft() {
     return {
         code: '',
@@ -24,6 +79,7 @@ function createEmptyDraft() {
         discount_type: 'percentage',
         discount_value: '10',
         shipping_benefit: 'none',
+        can_stack_with_affiliate: false,
         minimum_subtotal: '0',
         usage_limit: '',
         is_active: true,
@@ -44,6 +100,7 @@ function createDraft(record) {
         discount_type: record.discount_type || 'percentage',
         discount_value: String(record.discount_value ?? 0),
         shipping_benefit: record.shipping_benefit || 'none',
+        can_stack_with_affiliate: Boolean(record.can_stack_with_affiliate),
         minimum_subtotal: String(record.minimum_subtotal ?? 0),
         usage_limit: record.usage_limit == null ? '' : String(record.usage_limit),
         is_active: Boolean(record.is_active),
@@ -80,7 +137,7 @@ function buildStatusLabel(record) {
     return 'Always on';
 }
 
-export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMessage = '' }) {
+export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentOrders = [], setupMessage = '' }) {
     const [discounts, setDiscounts] = useState(sortDiscountCodes(initialDiscounts));
     const [selectedDiscountId, setSelectedDiscountId] = useState(initialDiscounts[0]?.id || 'new');
     const [draft, setDraft] = useState(initialDiscounts[0] ? createDraft(initialDiscounts[0]) : createEmptyDraft());
@@ -88,6 +145,8 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
     const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isValueNoteOpen, setIsValueNoteOpen] = useState(false);
+    const [referenceSubtotal, setReferenceSubtotal] = useState('500');
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
     const isLocked = Boolean(setupMessage);
 
@@ -116,6 +175,10 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
         }
     }, [discounts, selectedDiscountId]);
 
+    useEffect(() => {
+        setIsValueNoteOpen(false);
+    }, [selectedDiscountId]);
+
     const filteredDiscounts = useMemo(() => {
         return sortDiscountCodes(discounts.filter((record) => {
             if (!deferredSearch) {
@@ -137,6 +200,22 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
     const selectedDiscountRemainingUses = selectedDiscount?.usage_limit
         ? Math.max(Number(selectedDiscount.usage_limit || 0) - Number(selectedDiscount.usage_count || 0), 0)
         : null;
+    const previewSubtotal = useMemo(() => toPreviewSubtotal(referenceSubtotal), [referenceSubtotal]);
+    const discountInsights = useMemo(
+        () => buildDiscountCodeInsights(recentOrders, selectedDiscount?.code || draft.code),
+        [draft.code, recentOrders, selectedDiscount?.code]
+    );
+    const discountPreview = useMemo(
+        () => createCheckoutPricingPreview({
+            subtotal: previewSubtotal,
+            discountCode: draft.code || 'PREVIEW',
+            discountRecord: createPreviewDiscountRecord(draft),
+        }),
+        [draft, previewSubtotal]
+    );
+    const retainedRevenue = Math.max(0, previewSubtotal - Number(discountPreview.discount.appliedAmount ?? 0));
+    const retainedShare = previewSubtotal > 0 ? Number(((retainedRevenue / previewSubtotal) * 100).toFixed(1)) : 0;
+    const retentionTone = getRetentionTone(retainedShare);
 
     const handleDraftChange = (field, value) => {
         setDraft((currentDraft) => ({
@@ -231,7 +310,7 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
             </div>
 
             <p className="text-sm leading-relaxed text-[#1C1C1C]/58">
-                Create percentage or fixed-value offers, set minimum subtotals, add optional domestic shipping overrides, and decide whether a code runs continuously or inside a time window.
+                Create percentage or fixed-value offers, set minimum subtotals, add optional domestic shipping overrides, choose whether the code can stack with affiliate shopper savings, and decide whether it runs continuously or inside a time window. If stacking is off on either side, this discount keeps the shopper savings and the affiliate only tracks attribution.
             </p>
 
             {setupMessage && (
@@ -272,6 +351,9 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                                     <p className={`mt-3 text-sm leading-relaxed ${selectedDiscountId === record.id ? 'text-[#EFECE8]/72' : 'text-[#1C1C1C]/58'}`}>
                                         {record.discount_type === 'percentage' ? `${record.discount_value}% off` : `${formatPromotionCurrency(record.discount_value)} off`}
                                     </p>
+                                    <p className={`mt-2 text-[10px] uppercase tracking-[0.2em] ${selectedDiscountId === record.id ? 'text-[#EFECE8]/52' : 'text-[#1C1C1C]/45'}`}>
+                                        {record.can_stack_with_affiliate ? 'Stacks with affiliate shopper savings' : 'Blocks affiliate shopper stacking'}
+                                    </p>
                                     {record.shipping_benefit && record.shipping_benefit !== 'none' && (
                                         <p className={`mt-2 text-[10px] uppercase tracking-[0.2em] ${selectedDiscountId === record.id ? 'text-[#EFECE8]/52' : 'text-[#1C1C1C]/45'}`}>
                                             {buildShippingBenefitLabel(record.shipping_benefit)}
@@ -297,6 +379,7 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/72 px-3 py-2">{draft.discount_type === 'percentage' ? `${draft.discount_value || '0'}%` : formatPromotionCurrency(draft.discount_value || 0)}</span>
                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/72 px-3 py-2">Min {formatPromotionCurrency(draft.minimum_subtotal || 0)}</span>
                             {draft.shipping_benefit !== 'none' && <span className="rounded-full border border-[#1C1C1C]/10 bg-white/72 px-3 py-2">{buildShippingBenefitLabel(draft.shipping_benefit)}</span>}
+                            <span className="rounded-full border border-[#1C1C1C]/10 bg-white/72 px-3 py-2">{draft.can_stack_with_affiliate ? 'Stacks with affiliate savings' : 'Standalone shopper savings'}</span>
                             <span className="rounded-full border border-[#1C1C1C]/10 bg-white/72 px-3 py-2">{draft.is_active ? 'Live' : 'Paused'}</span>
                         </div>
                     </div>
@@ -319,7 +402,46 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                             </select>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
-                            Value
+                            <span className="flex items-center justify-between gap-3">
+                                <span>Value</span>
+                                <button type="button" onClick={() => setIsValueNoteOpen((currentValue) => !currentValue)} className="rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-2 text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/62 transition-colors hover:border-[#1C1C1C]/20 hover:text-[#1C1C1C]">
+                                    {isValueNoteOpen ? 'Hide Margin Note' : 'Margin Note'}
+                                </button>
+                            </span>
+                            {isValueNoteOpen && (
+                                <div className={`rounded-sm border px-4 py-4 ${retentionTone.shell}`}>
+                                    <div className="flex flex-col gap-4">
+                                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.18em] normal-case">
+                                            Reference subtotal
+                                            <input value={referenceSubtotal} onChange={(event) => setReferenceSubtotal(event.target.value)} type="number" min="0" step="0.01" className="h-11 border border-current/15 bg-white/70 px-3 text-sm tracking-normal text-current outline-none transition-colors focus:border-current/30" />
+                                        </label>
+
+                                        {discountPreview.discount.status === 'applied' ? (
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                                <div>
+                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Shopper Saves</p>
+                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(discountPreview.discount.appliedAmount)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Revenue Left</p>
+                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(retainedRevenue)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Revenue Kept</p>
+                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{retainedShare}%</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className={`text-sm leading-relaxed ${retentionTone.copy}`}>{discountPreview.discount.message || 'This preview is waiting for a valid subtotal and value.'}</p>
+                                        )}
+
+                                        <p className={`text-xs leading-relaxed ${retentionTone.copy}`}>
+                                            This is revenue kept before product cost, shipping, VAT, and payment fees.
+                                            {draft.can_stack_with_affiliate ? ' Because stacking is enabled here, an affiliate shopper discount can reduce the retained share further when the affiliate code also allows stacking.' : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             <input value={draft.discount_value} onChange={(event) => handleDraftChange('discount_value', event.target.value)} type="number" min="0" step="0.01" disabled={isLocked} className="h-12 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
@@ -354,6 +476,11 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                     </p>
 
                     <label className="flex items-center gap-3 rounded-sm border border-[#1C1C1C]/10 bg-white/72 px-4 py-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <input type="checkbox" checked={draft.can_stack_with_affiliate} onChange={(event) => handleDraftChange('can_stack_with_affiliate', event.target.checked)} disabled={isLocked} className="h-4 w-4 border border-[#1C1C1C]/20 accent-[#1C1C1C]" />
+                        Allow this discount to stack with affiliate shopper savings when the affiliate code also opts in
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-sm border border-[#1C1C1C]/10 bg-white/72 px-4 py-4 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                         <input type="checkbox" checked={draft.is_active} onChange={(event) => handleDraftChange('is_active', event.target.checked)} disabled={isLocked} className="h-4 w-4 border border-[#1C1C1C]/20 accent-[#1C1C1C]" />
                         Allow this discount to apply at checkout
                     </label>
@@ -365,10 +492,19 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                     </label>
 
                     {selectedDiscount && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-3">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
                                 <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Redemptions</p>
                                 <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{selectedDiscount.usage_count || 0}</p>
+                            </div>
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Saved Value</p>
+                                <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{formatPromotionCurrency(discountInsights.totalSaved)}</p>
+                            </div>
+                            <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
+                                <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Avg Saved</p>
+                                <p className="font-serif text-[1.85rem] leading-none font-light text-[#1C1C1C]">{formatPromotionCurrency(discountInsights.averageSaved)}</p>
                             </div>
                             <div className="flex min-h-[7.5rem] flex-col justify-between rounded-sm border border-[#1C1C1C]/10 bg-white/72 p-4 sm:p-5">
                                 <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Remaining</p>
@@ -382,6 +518,16 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], setupMe
                                 <p className="text-[9px] uppercase tracking-[0.18em] text-[#1C1C1C]/42">Window</p>
                                 <p className="max-w-[18rem] text-sm font-medium leading-snug tracking-[0.04em] text-[#1C1C1C] sm:text-[0.95rem]">{buildStatusLabel(selectedDiscount)}</p>
                             </div>
+                            </div>
+
+                            <PromotionTrendChart
+                                title="Savings Timeline"
+                                copy="Recent saved value from this discount code across the last 14 days loaded in admin."
+                                points={discountInsights.timeline}
+                                series={[{ key: 'saved', label: 'Saved', color: '#1C1C1C' }]}
+                                theme="light"
+                                emptyMessage="No recent orders have applied this discount code yet."
+                            />
                         </div>
                     )}
 
