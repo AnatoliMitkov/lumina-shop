@@ -8,13 +8,13 @@ import AdminDiscountCodesPanel from './AdminDiscountCodesPanel';
 import AdminOrdersPanel from './AdminOrdersPanel';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 import { countAdminAttentionItems, normalizeAdminAttentionStatus } from '../utils/admin-attention';
+import { ADMIN_MEDIA_UPLOAD_BUCKETS, uploadAdminMedia } from '../utils/admin-media-upload-client';
 import {
     PRODUCT_DEFAULTS,
     PRODUCT_CATEGORY_OPTIONS,
     PRODUCT_COLLECTION_OPTIONS,
     PRODUCT_LANGUAGE_VISIBILITY_OPTIONS,
     PRODUCT_STATUS_OPTIONS,
-    PRODUCT_STORAGE_BUCKET,
     buildProductMutationInput,
     createEmptyProductDraft,
     createProductEditorState,
@@ -949,7 +949,7 @@ function BulkEditorPanel({
                     </div>
 
                     <div className="rounded-sm border border-[#1C1C1C]/10 bg-white/82 overflow-hidden">
-                        <div data-lenis-prevent-wheel className="max-h-[540px] overflow-auto overscroll-contain">
+                        <div data-lenis-prevent-wheel className="bulk-grid-scrollbars max-h-[540px] overflow-scroll overscroll-contain xl:max-h-[820px]">
                             <table className="min-w-full border-collapse">
                                 <thead className="sticky top-0 z-10 bg-[#F4EFE7]">
                                     <tr>
@@ -1162,15 +1162,20 @@ function ProductListItem({ product, active, selected, onSelect, onToggleSelected
     );
 }
 
-function ImageField({ label, value, field, onChange, onUpload, isUploading }) {
+function ImageField({ label, value, field, onChange, onUpload, isUploading, uploadDisabled = false, uploadDisabledMessage = '' }) {
+    const isUploadDisabled = isUploading || uploadDisabled;
+
     return (
         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
             {label}
             <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
                 <input value={value} onChange={(event) => onChange(field, event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
-                <label className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isUploading ? 'opacity-60' : 'hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors cursor-pointer`}>
+                <label
+                    title={uploadDisabled ? uploadDisabledMessage : undefined}
+                    className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isUploadDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors`}
+                >
                     {isUploading ? 'Uploading' : 'Upload'}
-                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => onUpload(event, field)} disabled={isUploading} />
+                    <input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(event) => onUpload(event, field)} disabled={isUploadDisabled} />
                 </label>
             </div>
         </label>
@@ -1449,6 +1454,16 @@ export default function AdminDashboard({
         setSelectedProductIds([]);
     };
 
+    const resolveProductUploadFolder = (productDraft) => {
+        const productName = String(productDraft?.name || '').trim();
+
+        if (!productName) {
+            return '';
+        }
+
+        return slugifyProductName(productDraft?.slug || productName);
+    };
+
     const handleFieldChange = (field, value) => {
         setDraft((currentDraft) => {
             const nextDraft = {
@@ -1667,8 +1682,15 @@ export default function AdminDashboard({
 
     const handleUpload = async (event, field) => {
         const file = event.target.files?.[0];
+        const productFolder = resolveProductUploadFolder(draft);
 
         if (!file) {
+            return;
+        }
+
+        if (!productFolder) {
+            event.target.value = '';
+            setUploadFeedback({ type: 'error', message: 'Type the product name first so the upload can create its folder.' });
             return;
         }
 
@@ -1676,21 +1698,16 @@ export default function AdminDashboard({
         setUploadFeedback({ type: 'idle', message: '' });
 
         try {
-            const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const fileName = `${Date.now()}-${slugifyProductName(file.name.replace(/\.[^.]+$/, ''))}.${extension}`;
-            const filePath = `products/${fileName}`;
-            const { error } = await supabase.storage.from(PRODUCT_STORAGE_BUCKET).upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false,
-                contentType: file.type || undefined,
+            const fileBaseName = slugifyProductName(file.name.replace(/\.[^.]+$/, '')) || 'image';
+            const uploadedMedia = await uploadAdminMedia({
+                file,
+                bucket: ADMIN_MEDIA_UPLOAD_BUCKETS.storefront,
+                folder: 'products',
+                subfolder: productFolder,
+                baseName: `${field.replace(/_/g, '-')}-${fileBaseName}`,
+                imageMaxEdge: 2000,
             });
-
-            if (error) {
-                throw error;
-            }
-
-            const { data } = supabase.storage.from(PRODUCT_STORAGE_BUCKET).getPublicUrl(filePath);
-            const uploadedUrl = data.publicUrl;
+            const uploadedUrl = uploadedMedia.url;
 
             setDraft((currentDraft) => {
                 if (field === 'gallery') {
@@ -1708,7 +1725,10 @@ export default function AdminDashboard({
                 };
             });
 
-            setUploadFeedback({ type: 'success', message: 'Image uploaded to Supabase Storage.' });
+            setUploadFeedback({
+                type: 'success',
+                message: uploadedMedia.optimized ? 'Image optimized and uploaded into this product folder.' : 'Media uploaded to Supabase Storage.',
+            });
         } catch (error) {
             setUploadFeedback({ type: 'error', message: error.message || 'Unable to upload this image.' });
         } finally {
@@ -1728,21 +1748,16 @@ export default function AdminDashboard({
         setStageMediaFeedback({ type: 'idle', message: '' });
 
         try {
-            const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const fileName = `${Date.now()}-${slugifyCollectionName(file.name.replace(/\.[^.]+$/, ''))}.${extension}`;
-            const filePath = `products/${fileName}`;
-            const { error } = await supabase.storage.from(PRODUCT_STORAGE_BUCKET).upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false,
-                contentType: file.type || undefined,
+            const uploadedMedia = await uploadAdminMedia({
+                file,
+                bucket: ADMIN_MEDIA_UPLOAD_BUCKETS.storefront,
+                folder: 'site-copy',
+                subfolder: slugifyCollectionName(stageCollection || 'collection-media'),
+                baseName: `${slugifyCollectionName(stageCollection || file.name.replace(/\.[^.]+$/, ''))}-${field === 'primaryMedia' ? 'primary-media' : 'secondary-media'}`,
+                imageMaxEdge: 2200,
             });
 
-            if (error) {
-                throw error;
-            }
-
-            const { data } = supabase.storage.from(PRODUCT_STORAGE_BUCKET).getPublicUrl(filePath);
-            const uploadedUrl = data?.publicUrl || '';
+            const uploadedUrl = uploadedMedia?.url || '';
 
             if (!uploadedUrl) {
                 throw new Error('Upload finished, but URL generation failed.');
@@ -1752,7 +1767,12 @@ export default function AdminDashboard({
                 ...currentDraft,
                 [field]: uploadedUrl,
             }));
-            setStageMediaFeedback({ type: 'success', message: 'Collection stage media uploaded. Save to publish it on 5th Avenue.' });
+            setStageMediaFeedback({
+                type: 'success',
+                message: uploadedMedia.optimized
+                    ? 'Collection stage image optimized and uploaded. Save to publish it on 5th Avenue.'
+                    : 'Collection stage media uploaded. Save to publish it on 5th Avenue.',
+            });
         } catch (error) {
             setStageMediaFeedback({ type: 'error', message: error.message || 'Unable to upload this media file.' });
         } finally {
@@ -1760,6 +1780,10 @@ export default function AdminDashboard({
             setIsStageMediaUploading(false);
         }
     };
+
+    const productUploadFolder = resolveProductUploadFolder(draft);
+    const canUploadProductMedia = Boolean(productUploadFolder);
+    const productUploadDisabledMessage = 'Type the product name first to enable uploads and create its folder.';
 
     const handleStageMediaSave = async () => {
         if (!stageCollection || isStageMediaSaving) {
@@ -2195,7 +2219,7 @@ export default function AdminDashboard({
                                 {isStageMediaUploading ? 'Uploading' : 'Upload'}
                                 <input
                                     type="file"
-                                    accept="image/png,image/jpeg,image/webp"
+                                    accept="image/*,.heic,.heif"
                                     className="hidden"
                                     onChange={(event) => handleStageMediaUpload(event, 'primaryMedia')}
                                     disabled={isStageMediaUploading}
@@ -2216,7 +2240,7 @@ export default function AdminDashboard({
                                 {isStageMediaUploading ? 'Uploading' : 'Upload'}
                                 <input
                                     type="file"
-                                    accept="image/png,image/jpeg,image/webp"
+                                    accept="image/*,.heic,.heif"
                                     className="hidden"
                                     onChange={(event) => handleStageMediaUpload(event, 'secondaryMedia')}
                                     disabled={isStageMediaUploading}
@@ -2544,17 +2568,39 @@ export default function AdminDashboard({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <ImageField label="Main Image URL" value={draft.image_main} field="image_main" onChange={handleFieldChange} onUpload={handleUpload} isUploading={isUploading} />
-                        <ImageField label="Detail Image URL" value={draft.image_detail} field="image_detail" onChange={handleFieldChange} onUpload={handleUpload} isUploading={isUploading} />
+                        <ImageField
+                            label="Main Image URL"
+                            value={draft.image_main}
+                            field="image_main"
+                            onChange={handleFieldChange}
+                            onUpload={handleUpload}
+                            isUploading={isUploading}
+                            uploadDisabled={!canUploadProductMedia}
+                            uploadDisabledMessage={productUploadDisabledMessage}
+                        />
+                        <ImageField
+                            label="Detail Image URL"
+                            value={draft.image_detail}
+                            field="image_detail"
+                            onChange={handleFieldChange}
+                            onUpload={handleUpload}
+                            isUploading={isUploading}
+                            uploadDisabled={!canUploadProductMedia}
+                            uploadDisabledMessage={productUploadDisabledMessage}
+                        />
                         <label className="md:col-span-2 flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             Gallery URLs
                             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px] gap-3 items-start">
                                 <textarea value={draft.gallery} onChange={(event) => handleFieldChange('gallery', event.target.value)} rows={4} placeholder="One image URL per line" className="border border-[#1C1C1C]/12 bg-white px-4 py-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C] resize-none" />
-                                <label className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isUploading ? 'opacity-60' : 'hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors cursor-pointer`}>
+                                <label
+                                    title={!canUploadProductMedia ? productUploadDisabledMessage : undefined}
+                                    className={`h-14 border border-[#1C1C1C]/12 flex items-center justify-center bg-white text-[10px] uppercase tracking-[0.22em] ${isUploading || !canUploadProductMedia ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[#1C1C1C] hover:text-[#EFECE8]'} transition-colors`}
+                                >
                                     {isUploading ? 'Uploading' : 'Upload'}
-                                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => handleUpload(event, 'gallery')} disabled={isUploading} />
+                                    <input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(event) => handleUpload(event, 'gallery')} disabled={isUploading || !canUploadProductMedia} />
                                 </label>
                             </div>
+                            {!canUploadProductMedia && <span className="text-xs normal-case tracking-normal text-[#1C1C1C]/52">Type the product name first. That name is used to create the product folder in Storage.</span>}
                         </label>
                     </div>
 

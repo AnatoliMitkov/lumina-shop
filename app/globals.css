@@ -357,6 +357,32 @@ body {
     scrollbar-width: none;
 }
 
+.bulk-grid-scrollbars {
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 28, 28, 0.38) rgba(239, 236, 232, 0.9);
+}
+
+.bulk-grid-scrollbars::-webkit-scrollbar {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.bulk-grid-scrollbars::-webkit-scrollbar-track {
+    background: rgba(239, 236, 232, 0.92);
+}
+
+.bulk-grid-scrollbars::-webkit-scrollbar-thumb {
+    border: 3px solid rgba(239, 236, 232, 0.92);
+    border-radius: 999px;
+    background: rgba(28, 28, 28, 0.34);
+}
+
+.bulk-grid-scrollbars::-webkit-scrollbar-thumb:hover {
+    background: rgba(28, 28, 28, 0.5);
+}
+
 @media (hover: hover) and (pointer: fine) {
     html.lumina-custom-cursor-ready body,
     html.lumina-custom-cursor-ready a,

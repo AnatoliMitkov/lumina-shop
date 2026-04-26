@@ -7,14 +7,17 @@ import EditableMediaAsset from './EditableMediaAsset';
 import { detectEditableMediaKind } from './media-kind';
 import { DEFAULT_LANGUAGE, isLocalizedValueMap, normalizeLanguage, resolveLocalizedValue } from '../../utils/language';
 import {
+    resolveSiteCopyImageMaxEdge,
+    resolveSiteCopyUploadBucket,
+    uploadAdminMedia,
+} from '../../utils/admin-media-upload-client';
+import {
     createDefaultMediaSettings,
     extractSiteCopyPlainText,
     resolveSiteCopyMediaEntry,
     resolveSiteCopyRichTextEntry,
     serializeSiteCopyMediaEntry,
 } from '../../utils/site-copy';
-import { PRODUCT_STORAGE_BUCKET } from '../../utils/products';
-import { createClient as createBrowserSupabaseClient, isSupabaseConfigured } from '../../utils/supabase/client';
 
 const SiteCopyContext = createContext(null);
 
@@ -956,25 +959,15 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
         setUploadFeedback({ type: 'idle', message: '' });
 
         try {
-            if (!isSupabaseConfigured()) {
-                throw new Error('Supabase browser upload is not configured in this environment yet.');
-            }
-
-            const supabase = createBrowserSupabaseClient();
-            const extension = file.name.split('.').pop()?.toLowerCase() || (file.type.startsWith('video/') ? 'mp4' : 'jpg');
-            const filePath = `site-copy/${slugifySiteCopyKey(activeEntry.key)}-${Date.now()}.${extension}`;
-            const { error } = await supabase.storage.from(PRODUCT_STORAGE_BUCKET).upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false,
-                contentType: file.type || undefined,
+            const uploadedMedia = await uploadAdminMedia({
+                file,
+                bucket: resolveSiteCopyUploadBucket(activeEntry.key),
+                folder: 'site-copy',
+                baseName: slugifySiteCopyKey(activeEntry.key),
+                imageMaxEdge: resolveSiteCopyImageMaxEdge(activeEntry.key),
             });
 
-            if (error) {
-                throw error;
-            }
-
-            const { data } = supabase.storage.from(PRODUCT_STORAGE_BUCKET).getPublicUrl(filePath);
-            const uploadedUrl = data?.publicUrl;
+            const uploadedUrl = uploadedMedia?.url;
 
             if (!uploadedUrl) {
                 throw new Error('Upload completed, but the public URL could not be resolved.');
@@ -990,7 +983,11 @@ export default function SiteCopyProvider({ children, initialEntries = {}, isAdmi
             ));
             setUploadFeedback({
                 type: 'success',
-                message: file.type.startsWith('video/') ? 'Video uploaded to Supabase Storage.' : 'Media uploaded to Supabase Storage.',
+                message: file.type.startsWith('video/')
+                    ? 'Video uploaded to Supabase Storage.'
+                    : uploadedMedia.optimized
+                        ? 'Image optimized and uploaded.'
+                        : 'Media uploaded to Supabase Storage.',
             });
         } catch (error) {
             setUploadFeedback({ type: 'error', message: error.message || 'Unable to upload this media file.' });
