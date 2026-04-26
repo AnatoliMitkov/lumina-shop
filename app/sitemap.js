@@ -3,7 +3,7 @@ import { DEFAULT_LANGUAGE } from '../utils/language';
 import { filterProductsByLanguage } from '../utils/products';
 import { buildProductHref, normalizeProductRecord } from '../utils/products';
 import { absoluteSiteUrl } from '../utils/seo';
-import { SPOTLIGHT_PATH } from '../utils/site-routes';
+import { COLLABORATION_PATH, COLLABORATION_POLICY_PATH, SPOTLIGHT_PATH } from '../utils/site-routes';
 
 export const revalidate = 3600;
 
@@ -14,6 +14,8 @@ const staticRoutes = [
     { path: '/journal', changeFrequency: 'weekly', priority: 0.6 },
     { path: SPOTLIGHT_PATH, changeFrequency: 'weekly', priority: 0.8 },
     { path: '/bespoke', changeFrequency: 'monthly', priority: 0.8 },
+    { path: COLLABORATION_PATH, changeFrequency: 'weekly', priority: 0.72 },
+    { path: COLLABORATION_POLICY_PATH, changeFrequency: 'monthly', priority: 0.36 },
     { path: '/contact', changeFrequency: 'monthly', priority: 0.7 },
     { path: '/privacy-policy', changeFrequency: 'monthly', priority: 0.4 },
     { path: '/cookie-policy', changeFrequency: 'monthly', priority: 0.4 },
