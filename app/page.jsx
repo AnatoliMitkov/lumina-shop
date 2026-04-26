@@ -9,9 +9,10 @@ import { createClient, isSupabaseConfigured, resolveSupabaseWithTimeout } from '
 export const dynamic = 'force-dynamic';
 
 async function loadFeaturedProducts(language) {
-    const fallbackProducts = filterProductsByLanguage(fallbackCatalogProducts, language)
-        .map((product) => resolveStorefrontProduct(product))
-        .slice(0, 4);
+    const fallbackCatalogSlice = sortProducts(filterProductsByLanguage(fallbackCatalogProducts, language))
+        .map((product) => resolveStorefrontProduct(product));
+    const fallbackFeaturedProducts = fallbackCatalogSlice.filter((product) => product.featured);
+    const fallbackProducts = (fallbackFeaturedProducts.length > 0 ? fallbackFeaturedProducts : fallbackCatalogSlice).slice(0, 4);
 
     if (!isSupabaseConfigured()) {
         return fallbackProducts;
@@ -32,7 +33,10 @@ async function loadFeaturedProducts(language) {
         .filter((product) => product.status === 'active')
         .map((product) => resolveStorefrontProduct(product));
 
-    return activeProducts.length > 0 ? activeProducts.slice(0, 4) : fallbackProducts;
+    const explicitlyFeaturedProducts = activeProducts.filter((product) => product.featured);
+    const homepageFeaturedProducts = explicitlyFeaturedProducts.length > 0 ? explicitlyFeaturedProducts : activeProducts;
+
+    return homepageFeaturedProducts.length > 0 ? homepageFeaturedProducts.slice(0, 4) : fallbackProducts;
 }
 
 export default async function HomePage() {

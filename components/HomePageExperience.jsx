@@ -240,6 +240,80 @@ function isValidNewsletterEmail(value) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
 
+function getFeaturedProductDiscountMetrics(product = {}) {
+    const compareAtPrice = Number(product.compare_at_price ?? 0);
+    const currentPrice = Number(product.price ?? 0);
+
+    if (!Number.isFinite(compareAtPrice) || !Number.isFinite(currentPrice) || compareAtPrice <= currentPrice || currentPrice < 0) {
+        return {
+            hasDiscount: false,
+            compareAtPrice: null,
+            discountPercent: 0,
+        };
+    }
+
+    return {
+        hasDiscount: true,
+        compareAtPrice,
+        discountPercent: Math.max(1, Math.round(((compareAtPrice - currentPrice) / compareAtPrice) * 100)),
+    };
+}
+
+function HomeFeaturedProductCard({ product, collectionLabel, translations }) {
+    const gallery = resolveStorefrontGallery(product);
+    const primaryImage = gallery[0] || product.image_main;
+    const secondaryImage = gallery[1] || primaryImage;
+    const href = buildProductHref(product);
+    const discountMetrics = getFeaturedProductDiscountMetrics(product);
+
+    return (
+        <a key={product.id || product.slug || product.name} href={href} className="group block h-full hover-target transition-link">
+            <article className="flex h-full flex-col rounded-[1.4rem] border border-[#1C1C1C]/10 bg-white/74 p-3 shadow-[0_18px_46px_rgba(28,28,28,0.05)] transition-[transform,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-1.5 group-hover:border-[#1C1C1C]/18 group-hover:shadow-[0_26px_60px_rgba(28,28,28,0.08)] md:p-4">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[1rem] bg-[#D8D1C7]">
+                    {discountMetrics.hasDiscount && (
+                        <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-[#b74638]/18 bg-[#fff6f3]/96 px-3 py-2 text-[#b74638] shadow-[0_14px_32px_rgba(183,70,56,0.12)]">
+                            <span className="text-[9px] uppercase tracking-[0.28em]">{translations.promo}</span>
+                            <span className="font-serif text-sm font-light leading-none">-{discountMetrics.discountPercent}%</span>
+                        </div>
+                    )}
+                    <img className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-[1.04] group-hover:opacity-0" src={primaryImage} alt={product.name} />
+                    <img className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-[1200ms] ease-out group-hover:scale-[1.04] group-hover:opacity-100" src={secondaryImage} alt={`${product.name} alternate view`} />
+                </div>
+
+                <div className="flex flex-1 flex-col gap-3 px-1 pb-1 pt-4 md:gap-4 md:px-2 md:pt-5">
+                    <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-[0.22em] text-[#1C1C1C]/46">
+                        {collectionLabel ? (
+                            <span className="inline-flex rounded-full border border-[#1C1C1C]/10 bg-[#EFECE8] px-3 py-1.5">{collectionLabel}</span>
+                        ) : null}
+                        <span className="inline-flex rounded-full border border-[#1C1C1C]/10 bg-white px-3 py-1.5 text-[#1C1C1C]/56">{translations.featured}</span>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <h3 className="font-serif text-[1.08rem] font-light uppercase leading-[1.04] tracking-[0.05em] text-[#1C1C1C] [overflow-wrap:anywhere] md:text-[1.28rem] md:tracking-[0.06em]">{product.name}</h3>
+                            {product.subtitle ? (
+                                <p className="mt-2 text-sm leading-relaxed text-[#1C1C1C]/56">{product.subtitle}</p>
+                            ) : null}
+                        </div>
+
+                        <div className="shrink-0 flex flex-col items-end gap-1 text-right">
+                            <p className="text-xs uppercase tracking-[0.18em] font-medium text-[#1C1C1C] md:text-sm">{formatProductCurrency(product.price)}</p>
+                            {discountMetrics.hasDiscount ? (
+                                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-[#b74638] line-through">{formatProductCurrency(discountMetrics.compareAtPrice)}</p>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between border-t border-[#1C1C1C]/10 pt-3 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/46 md:pt-4">
+                        <span>{discountMetrics.hasDiscount ? `${translations.save} ${discountMetrics.discountPercent}%` : translations.viewPiece}</span>
+                        <span className="text-[#1C1C1C]/72">{translations.inspect}</span>
+                    </div>
+                </div>
+            </article>
+        </a>
+    );
+}
+
 export default function HomePageExperience({ featuredProducts = [] }) {
     const siteCopy = useSiteCopy();
     const activeLanguage = normalizeLanguage(siteCopy?.activeLanguage) || DEFAULT_LANGUAGE;
@@ -254,6 +328,13 @@ export default function HomePageExperience({ featuredProducts = [] }) {
     const newsletterPlaceholder = resolveNewsletterText('home.newsletter.placeholder', localizedFallback('Email address', 'Имейл адрес'));
     const newsletterButtonLabel = resolveNewsletterText('home.newsletter.button', localizedFallback('Subscribe', 'Абонирай се'));
     const newsletterSubmittingLabel = resolveNewsletterText('home.newsletter.button.submitting', localizedFallback('Submitting...', 'Изпращане...'));
+    const featuredCardTranslations = {
+        promo: siteCopy ? siteCopy.resolveText('home.featured.card.promo', localizedFallback('Promo', 'Промо')) : resolveLocalizedValue(localizedFallback('Promo', 'Промо'), activeLanguage),
+        featured: siteCopy ? siteCopy.resolveText('home.featured.card.featured', localizedFallback('Featured', 'Подбрано')) : resolveLocalizedValue(localizedFallback('Featured', 'Подбрано'), activeLanguage),
+        save: siteCopy ? siteCopy.resolveText('home.featured.card.save', localizedFallback('Save', 'Спестяваш')) : resolveLocalizedValue(localizedFallback('Save', 'Спестяваш'), activeLanguage),
+        viewPiece: siteCopy ? siteCopy.resolveText('home.featured.card.view_piece', localizedFallback('View Piece', 'Виж модела')) : resolveLocalizedValue(localizedFallback('View Piece', 'Виж модела'), activeLanguage),
+        inspect: siteCopy ? siteCopy.resolveText('home.featured.card.inspect', localizedFallback('Inspect', 'Разгледай')) : resolveLocalizedValue(localizedFallback('Inspect', 'Разгледай'), activeLanguage),
+    };
     const resolveLanguageScopedText = (key, fallback) => resolveExactSiteCopyText(siteCopy, buildLocalizedSiteCopyStorageKey(key, activeLanguage), fallback, activeLanguage);
     const resolveShowcaseCollectionTitle = (collection, fallback) => resolveExactSiteCopyText(siteCopy, getTaxonomyStorageKey('collection', collection, activeLanguage), fallback, activeLanguage);
     const categoryShowcaseEyebrow = resolveLanguageScopedText('home.category_showcase.eyebrow', localizedFallback('Category Showcase', 'Подбрани колекции'));
@@ -556,34 +637,29 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 </div>
             </section>
 
-            <section className="w-full bg-[#EFECE8] pt-28 md:pt-36 pb-28 md:pb-40">
+            <section className="w-full bg-[#EFECE8] py-20 md:py-24 xl:py-28">
                 <div className="max-w-[1800px] mx-auto px-6 md:px-12">
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14 md:mb-20">
+                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 md:gap-8 mb-10 md:mb-12 xl:mb-14">
                         <div className="max-w-2xl">
                             <p className="reveal-text opacity-0 translate-y-8 text-[10px] uppercase tracking-[0.32em] text-[#1C1C1C]/40"><EditableText contentKey="home.featured.eyebrow" fallback="Featured Products" editorLabel="Home featured eyebrow" /></p>
                             <h2 className="reveal-text opacity-0 translate-y-8 mt-4 storefront-section-display font-serif font-light uppercase tracking-[0.08em] text-[#1C1C1C]"><EditableText contentKey="home.featured.title" fallback="Bestsellers Grid" editorLabel="Home featured title" /></h2>
                         </div>
-                        <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey="home.featured.copy" fallback="Lead pieces now pull directly from the active catalog, so the home page always mirrors the real archive instead of placeholder cards." editorLabel="Home featured copy" /></p>
+                        <p className="reveal-text opacity-0 translate-y-8 max-w-xl text-sm md:text-base leading-relaxed text-[#1C1C1C]/58"><EditableText contentKey="home.featured.copy" fallback="Pieces marked as featured in admin now land here first, so the homepage reflects your current lead selection instead of a generic active-product list." editorLabel="Home featured copy" /></p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 md:gap-12 xl:gap-14">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:gap-6 xl:grid-cols-4 xl:gap-7">
                         {featuredProducts.map((product) => {
-                            const gallery = resolveStorefrontGallery(product);
-                            const primaryImage = gallery[0] || product.image_main;
-                            const secondaryImage = gallery[1] || primaryImage;
-                            const href = buildProductHref(product);
+                            const collectionLabel = product.collection
+                                ? resolveExactSiteCopyText(siteCopy, getTaxonomyStorageKey('collection', product.collection, activeLanguage), product.collection, activeLanguage)
+                                : '';
 
                             return (
-                                <a key={product.id || product.slug || product.name} href={href} className="group flex flex-col gap-5 hover-target transition-link">
-                                    <div className="relative aspect-[3/4] overflow-hidden bg-[#D8D1C7]">
-                                        <img className="absolute inset-0 h-full w-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-0" src={primaryImage} alt={product.name} />
-                                        <img className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-[1200ms] ease-out group-hover:scale-[1.03] group-hover:opacity-100" src={secondaryImage} alt={`${product.name} alternate view`} />
-                                    </div>
-                                    <div className="border-t border-[#1C1C1C]/12 pt-4 flex items-center justify-between gap-4 text-[#1C1C1C]">
-                                        <span className="text-sm uppercase tracking-[0.24em] font-medium">{product.name}</span>
-                                        <span className="text-sm uppercase tracking-[0.18em] text-[#1C1C1C]/58">{formatProductCurrency(product.price)}</span>
-                                    </div>
-                                </a>
+                                <HomeFeaturedProductCard
+                                    key={product.id || product.slug || product.name}
+                                    product={product}
+                                    collectionLabel={collectionLabel}
+                                    translations={featuredCardTranslations}
+                                />
                             );
                         })}
                     </div>
