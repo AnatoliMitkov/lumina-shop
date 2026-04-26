@@ -1211,6 +1211,7 @@ export default function AdminDashboard({
     );
     const [searchValue, setSearchValue] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [languageVisibilityFilter, setLanguageVisibilityFilter] = useState('all');
     const deferredSearch = useDeferredValue(searchValue.trim().toLowerCase());
     const [feedback, setFeedback] = useState({ type: 'idle', message: '' });
     const [uploadFeedback, setUploadFeedback] = useState({ type: 'idle', message: '' });
@@ -1296,6 +1297,8 @@ export default function AdminDashboard({
     const previewImages = resolveProductGallery(previewProduct);
     const visibleProducts = sortProducts(products).filter((product) => {
         const matchesStatus = statusFilter === 'all' || product.status === statusFilter;
+        const matchesLanguageVisibility = languageVisibilityFilter === 'all'
+            || String(product.language_visibility ?? PRODUCT_DEFAULTS.language_visibility) === languageVisibilityFilter;
         const matchesSearch = !deferredSearch
             || [product.name, product.collection, product.category, ...(product.tags || [])]
                 .filter(Boolean)
@@ -1303,7 +1306,7 @@ export default function AdminDashboard({
                 .toLowerCase()
                 .includes(deferredSearch);
 
-        return matchesStatus && matchesSearch;
+        return matchesStatus && matchesLanguageVisibility && matchesSearch;
     });
     const selectedProductIdSet = new Set(selectedProductIds);
     const visibleProductIds = visibleProducts.map((product) => product.id);
@@ -2290,6 +2293,20 @@ export default function AdminDashboard({
                             <FilterButton key={option.value} label={option.label} active={statusFilter === option.value} onClick={() => setStatusFilter(option.value)} />
                         ))}
                     </div>
+
+                    <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/45">
+                        Language Visibility
+                        <select
+                            value={languageVisibilityFilter}
+                            onChange={(event) => setLanguageVisibilityFilter(event.target.value)}
+                            className="h-14 border border-[#1C1C1C]/12 bg-white/75 px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]"
+                        >
+                            <option value="all">All Languages</option>
+                            {PRODUCT_LANGUAGE_VISIBILITY_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </label>
 
                     <div className="rounded-sm border border-[#1C1C1C]/10 bg-white/80 p-4 flex flex-col gap-3">
                         <div className="flex items-start justify-between gap-4">
