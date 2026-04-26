@@ -40,22 +40,28 @@ const storyBackdropMediaDefaults = {
 
 const storyPanelLabelFallback = 'My Story / Моята история';
 
-// Story surface tuning:
-// - `mobileImageOverlay` / `desktopImageOverlay` control the base darkening over the image.
-// - `desktopGlassPanel` is the desktop-only frosted glass slab behind the copy.
-// - `copyPanel` keeps the mobile glass treatment and becomes layout-only on desktop.
+// Change this single value to tune the overall darkness of the My Story backdrop.
+const STORY_BACKDROP_DARKNESS = 0.15;
+
 const storySurfaceClassNames = {
-    mobileImageOverlay: 'bg-[linear-gradient(180deg,rgba(10,10,10,0.14)_0%,rgba(10,10,10,0.12)_24%,rgba(10,10,10,0.44)_58%,rgba(10,10,10,0.88)_100%)]',
-    desktopImageOverlay: 'bg-[linear-gradient(90deg,rgba(12,12,12,0.24)_0%,rgba(12,12,12,0.18)_28%,rgba(12,12,12,0.12)_46%,rgba(12,12,12,0.06)_70%,rgba(12,12,12,0)_100%)]',
-    ambientGlow: 'bg-[radial-gradient(circle_at_top_left,rgba(239,236,232,0.14)_0%,rgba(239,236,232,0)_36%)]',
-    overallShade: 'bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.14)_36%,rgba(0,0,0,0.3)_100%)]',
-    desktopGlassPanel: 'pointer-events-none absolute inset-y-0 left-0 hidden md:block md:w-[44rem] md:max-w-[58vw] xl:w-[46rem] xl:max-w-[54vw] md:bg-[linear-gradient(90deg,rgba(12,14,16,0.82)_0%,rgba(12,14,16,0.76)_42%,rgba(12,14,16,0.52)_68%,rgba(12,14,16,0.2)_88%,rgba(12,14,16,0)_100%)] md:backdrop-blur-[18px] md:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:[-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_76%,rgba(0,0,0,0)_100%)] md:[mask-image:linear-gradient(90deg,rgba(0,0,0,1)_0%,rgba(0,0,0,1)_76%,rgba(0,0,0,0)_100%)]',
-    copyPanel: 'h-full w-full border-t border-white/10 bg-[linear-gradient(180deg,rgba(8,8,8,0.78)_0%,rgba(8,8,8,0.72)_100%)] shadow-[0_-20px_60px_rgba(0,0,0,0.24)] backdrop-blur-[14px] md:border-0 md:bg-transparent md:shadow-none md:backdrop-blur-none',
+    shell: 'relative isolate min-h-[42rem] overflow-hidden rounded-[1.75rem] bg-[#050505] text-white shadow-[0_40px_120px_rgba(0,0,0,0.42)] md:min-h-[46rem] xl:min-h-[50rem]',
+    glassGlow: 'bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0)_38%)]',
 };
 
-const storyContentViewportStyle = {
-    paddingTop: 'clamp(4.5rem, calc(var(--shell-page-pad-top-tight) - 2rem), 7rem)',
-    paddingBottom: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.75rem))',
+const storySurfaceVariableStyle = {
+    '--story-backdrop-darkness': String(STORY_BACKDROP_DARKNESS),
+};
+
+const storySurfaceLayerStyles = {
+    layeredTone: {
+        background: 'radial-gradient(circle at 18% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 30%), radial-gradient(circle at 78% 76%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 28%), linear-gradient(115deg, rgb(2 2 2 / calc(var(--story-backdrop-darkness) * 1.08)) 0%, rgb(2 2 2 / calc(var(--story-backdrop-darkness) * 0.44)) 42%, rgb(2 2 2 / calc(var(--story-backdrop-darkness) * 0.92)) 100%)',
+    },
+    vignette: {
+        background: 'linear-gradient(180deg, rgb(0 0 0 / calc(var(--story-backdrop-darkness) * 0.14)) 0%, rgb(0 0 0 / calc(var(--story-backdrop-darkness) * 0.28)) 38%, rgb(0 0 0 / calc(var(--story-backdrop-darkness) * 0.76)) 100%)',
+    },
+    leftShade: {
+        background: 'linear-gradient(90deg, rgb(0 0 0 / calc(var(--story-backdrop-darkness) * 0.72)) 0%, rgb(0 0 0 / calc(var(--story-backdrop-darkness) * 0.34)) 42%, rgb(0 0 0 / 0) 78%)',
+    },
 };
 
 const storyCopyFallback = createSiteCopyRichTextDocument([
@@ -74,6 +80,24 @@ const storyCopySizeClassNames = {
     xl: 'text-[17px] min-[380px]:text-lg md:text-2xl',
     display: 'text-[20px] min-[380px]:text-2xl md:text-4xl',
 };
+
+const storyActionLinks = [
+    {
+        key: 'about',
+        href: '/about',
+        label: localizedFallback('About', 'За ателието'),
+    },
+    {
+        key: 'journal',
+        href: '/journal',
+        label: localizedFallback('Blog / Vlog', 'Блог / Влог'),
+    },
+    {
+        key: 'contact',
+        href: '/contact',
+        label: localizedFallback('Contact', 'Контакт'),
+    },
+];
 
 // Keep the home hero headlines in code so they are easy to edit locally.
 const homeHeroTitleCopyByLanguage = {
@@ -566,52 +590,70 @@ export default function HomePageExperience({ featuredProducts = [] }) {
                 </div>
             </section>
 
-            <section className="w-full overflow-hidden bg-[#EFECE8]">
-                <div className="relative h-[100dvh] min-h-[100svh] w-full overflow-hidden bg-[#121211] text-[#EFECE8] md:h-[60vh] md:min-h-[28rem]">
+            <section className="w-full overflow-hidden bg-[#050505] px-3 pb-3 md:px-6 md:pb-6 xl:px-8 xl:pb-8">
+                <div className={storySurfaceClassNames.shell} style={storySurfaceVariableStyle}>
                     <EditableMedia
                         contentKey="home.brand.image"
                         fallback="https://images.pexels.com/photos/3317434/pexels-photo-3317434.jpeg?auto=compress&cs=tinysrgb&w=2000"
                         editorLabel="Home brand background media"
                         alt="Styling by VA atelier detail"
                         wrapperClassName="absolute inset-0"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover scale-[1.06] md:scale-[1.03]"
                         defaultMediaSettings={storyBackdropMediaDefaults}
                         onError={(event) => {
                             event.target.style.display = 'none';
                         }}
                     />
 
-                    <div className={`absolute inset-0 md:hidden ${storySurfaceClassNames.mobileImageOverlay}`}></div>
-                    <div className={`absolute inset-0 hidden md:block ${storySurfaceClassNames.desktopImageOverlay}`}></div>
-                    <div className={`absolute inset-0 mix-blend-screen ${storySurfaceClassNames.ambientGlow}`}></div>
-                    <div className={`absolute inset-0 ${storySurfaceClassNames.overallShade}`}></div>
-                    <div className={storySurfaceClassNames.desktopGlassPanel}></div>
+                    <div className="absolute inset-0" style={storySurfaceLayerStyles.layeredTone}></div>
+                    <div className="absolute inset-0" style={storySurfaceLayerStyles.vignette}></div>
+                    <div className="absolute inset-y-0 left-0 w-full lg:w-[68%]" style={storySurfaceLayerStyles.leftShade}></div>
 
-                    <div className="relative z-[1] flex h-full items-stretch">
-                        <div className="w-full">
-                            <div className={storySurfaceClassNames.copyPanel}>
-                                <div className="mx-auto flex h-full w-full max-w-[25rem] flex-col justify-start gap-6 px-5 min-[380px]:max-w-[26rem] min-[380px]:px-6 md:max-w-none md:px-10 xl:px-14" style={storyContentViewportStyle}>
-                                    <p className="reveal-text opacity-0 translate-y-8 font-serif text-[0.98rem] leading-none tracking-[0.08em] text-white/72 min-[380px]:text-[1.08rem] md:text-[1.15rem] md:tracking-[0.07em]"><EditableText contentKey="home.brand.story.label" fallback={storyPanelLabelFallback} editorLabel="Home brand story panel label" /></p>
-                                    <EditableRichText
-                                        contentKey="home.brand.copy"
-                                        fallback={storyCopyFallback}
-                                        editorLabel="Home brand ethos copy"
-                                        className="reveal-text opacity-0 translate-y-8 [&_span[style*='font-size']]:!text-[1.08rem] min-[380px]:[&_span[style*='font-size']]:!text-[1.16rem] md:[&_span[style*='font-size']]:!text-[1.22rem] [&_strong]:font-semibold"
-                                        blockBaseClassName="text-white/82"
-                                        blockClassNames={{
-                                            heading1: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
-                                            heading2: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
-                                            heading3: 'font-serif !font-semibold !normal-case !tracking-[0.028em] !leading-[1.58] text-white/82 md:max-w-[36rem] md:!leading-[1.52] md:text-white/74',
-                                            paragraph: 'font-serif !normal-case !not-italic max-w-none !text-[0.98rem] min-[380px]:!text-[1.04rem] leading-[1.68] tracking-[0.035em] text-white/82 md:max-w-[36rem] md:!text-[1.12rem] md:leading-[1.58] md:tracking-[0.03em] md:text-white/74',
-                                            quote: 'border-l border-white/20 pl-5 italic text-white/82',
-                                            'bullet-list': 'text-white/74 list-disc pl-5 space-y-2',
-                                            'numbered-list': 'text-white/74 list-decimal pl-5 space-y-2',
-                                        }}
-                                        sizeClassNames={storyCopySizeClassNames}
-                                    />
+                    <div className="relative z-[1] flex min-h-[42rem] items-stretch p-4 sm:p-5 md:min-h-[46rem] md:p-6 xl:min-h-[50rem] xl:p-8">
+                        <article className="lumina-liquid-glass-strong relative flex min-h-[20rem] w-full max-w-[46rem] flex-col justify-center rounded-[1.85rem] px-6 py-8 sm:px-8 sm:py-9 md:max-w-[48rem] md:px-10 md:py-10 xl:max-w-[50rem] xl:px-12 xl:py-12">
+                            <div className={`pointer-events-none absolute inset-0 ${storySurfaceClassNames.glassGlow}`}></div>
+
+                            <div className="relative flex h-full flex-col justify-center">
+                                <div className="max-w-[39rem]">
+                                    <div className="flex flex-col gap-3 md:gap-4">
+                                        <p className="reveal-text opacity-0 translate-y-8 max-w-[18rem] font-sans text-[12px] uppercase tracking-[0.34em] leading-[1.3] text-white/66 min-[380px]:text-[13px] md:max-w-none md:text-[14px]"><EditableText contentKey="home.brand.story.label" fallback={storyPanelLabelFallback} editorLabel="Home brand story panel label" /></p>
+                                        <div className="reveal-text opacity-0 translate-y-8 h-px w-full max-w-[10.5rem] bg-[linear-gradient(90deg,rgba(255,255,255,0.78)_0%,rgba(255,255,255,0.18)_68%,rgba(255,255,255,0)_100%)]"></div>
+                                    </div>
+
+                                    <div className="mt-6 md:mt-7">
+                                        <EditableRichText
+                                            contentKey="home.brand.copy"
+                                            fallback={storyCopyFallback}
+                                            editorLabel="Home brand ethos copy"
+                                            className="reveal-text opacity-0 translate-y-8 [&_span[style*='font-size']]:!text-[1.08rem] min-[380px]:[&_span[style*='font-size']]:!text-[1.16rem] md:[&_span[style*='font-size']]:!text-[1.24rem] [&_strong]:font-medium"
+                                            blockBaseClassName="text-white/84"
+                                            blockClassNames={{
+                                                heading1: 'font-serif !font-medium !normal-case !tracking-[0.018em] !leading-[1.08] text-white/94 md:max-w-[34rem]',
+                                                heading2: 'font-serif !font-medium !normal-case !tracking-[0.018em] !leading-[1.08] text-white/94 md:max-w-[34rem]',
+                                                heading3: 'font-serif !font-medium !normal-case !tracking-[0.018em] !leading-[1.08] text-white/94 md:max-w-[34rem]',
+                                                paragraph: 'font-serif !normal-case !not-italic max-w-none !text-[1.02rem] min-[380px]:!text-[1.08rem] leading-[1.76] tracking-[0.02em] text-white/80 md:max-w-[36rem] md:!text-[1.16rem] md:leading-[1.68] md:text-white/76',
+                                                quote: 'border-l border-white/20 pl-5 italic text-white/82',
+                                                'bullet-list': 'text-white/74 list-disc pl-5 space-y-2',
+                                                'numbered-list': 'text-white/74 list-decimal pl-5 space-y-2',
+                                            }}
+                                            sizeClassNames={storyCopySizeClassNames}
+                                        />
+                                    </div>
+
+                                    <div className="mt-8 flex flex-wrap gap-3 md:mt-10">
+                                        {storyActionLinks.map((action) => (
+                                            <a
+                                                key={action.key}
+                                                href={action.href}
+                                                className="hover-target transition-link lumina-liquid-glass inline-flex min-h-11 items-center justify-center rounded-full px-5 py-3 text-[10px] uppercase tracking-[0.24em] text-white/78 transition-transform duration-300 hover:scale-[1.03]"
+                                            >
+                                                <EditableText contentKey={`home.brand.link.${action.key}`} fallback={action.label} editorLabel={`Home brand ${action.key} link label`} />
+                                            </a>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </article>
                     </div>
                 </div>
             </section>

@@ -9,7 +9,9 @@ export const revalidate = 3600;
 
 const staticRoutes = [
     { path: '/', changeFrequency: 'weekly', priority: 1 },
+    { path: '/about', changeFrequency: 'monthly', priority: 0.65 },
     { path: '/collections', changeFrequency: 'daily', priority: 0.9 },
+    { path: '/journal', changeFrequency: 'weekly', priority: 0.6 },
     { path: SPOTLIGHT_PATH, changeFrequency: 'weekly', priority: 0.8 },
     { path: '/bespoke', changeFrequency: 'monthly', priority: 0.8 },
     { path: '/contact', changeFrequency: 'monthly', priority: 0.7 },

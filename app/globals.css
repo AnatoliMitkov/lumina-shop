@@ -21,12 +21,52 @@
         --shell-page-pad-top: 7.75rem;
         --shell-page-pad-top-tight: 7rem;
         --shell-page-pad-bottom: 6rem;
+        --radius: 1rem;
 }
 
 .shell-page-pad {
     padding-inline: var(--shell-page-pad-inline);
     padding-top: var(--shell-page-pad-top);
     padding-bottom: var(--shell-page-pad-bottom);
+}
+
+@layer components {
+    .lumina-liquid-glass,
+    .lumina-liquid-glass-strong {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.01);
+        background-blend-mode: luminosity;
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .lumina-liquid-glass::before,
+    .lumina-liquid-glass-strong::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        padding: 1.4px;
+        border-radius: inherit;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 20%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.15) 80%, rgba(255, 255, 255, 0.45) 100%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+        pointer-events: none;
+    }
+
+    .lumina-liquid-glass-strong {
+        -webkit-backdrop-filter: blur(50px);
+        backdrop-filter: blur(50px);
+        box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .lumina-liquid-glass-strong::before {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 20%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.2) 80%, rgba(255, 255, 255, 0.5) 100%);
+    }
 }
 
 .shell-page-pad-tight {
