@@ -26,6 +26,7 @@
     "gsap": "^3.12.5",
     "heic-convert": "^2.1.0",
     "i18next": "^26.0.6",
+    "jspdf": "^4.2.1",
     "lenis": "^1.1.5",
     "libphonenumber-js": "^1.12.41",
     "next": "latest",

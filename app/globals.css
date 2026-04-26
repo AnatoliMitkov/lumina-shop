@@ -333,6 +333,13 @@ html[data-archive-filter-panel='open'] #nav {
     pointer-events: none !important;
 }
 
+html[data-collaboration-form='open'] #nav {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 html[data-page-motion='off'] .hero-title {
     transform: translateY(0) !important;
 }

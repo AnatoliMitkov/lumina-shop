@@ -102,8 +102,8 @@ const storyActionLinks = [
 // Keep the home hero headlines in code so they are easy to edit locally.
 const homeHeroTitleCopyByLanguage = {
     en: {
-        primary: ['Women'],
-        secondary: ['Elegance'],
+        primary: ['MINIMAL'],
+        secondary: ['SCULPTURAL PIECES',],
     },
     bg: {
         primary: ['Ексклузивност',],
@@ -113,10 +113,10 @@ const homeHeroTitleCopyByLanguage = {
 
 const homeHeroSubtextCopyByLanguage = {
     en: [
-        'Elevating traditional craftsmanship into avant-garde fashion. A true handmade fashion. Zero machine work. Hand-knotted by Victoria.',
+        'Sculpted forms. Subversive silhouettes. Handmade for confident women.',
     ],
     bg: [
-        'Дизайн за уверената жена. Истинска ръчна изработка. Без механична намеса. Ръчно изработени от Виктория.',
+        'Изящни форми. Провокативни силуети. Създадено за увереност.',
     ],
 };
 
