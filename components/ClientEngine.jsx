@@ -1338,23 +1338,7 @@ export default function ClientEngine({ children, initialLanguage }) {
                 onClosePreferences={closeCookiePreferences}
             />
 
-            <div className={`fixed inset-x-0 top-0 z-[55] border-b border-white/10 bg-[rgba(12,12,14,0.82)] text-[#EFECE8] backdrop-blur-xl ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
-                <div className="mx-auto flex min-h-[2.75rem] max-w-[1800px] items-center justify-center px-6 py-2 md:min-h-10 md:px-12">
-                    <p className="text-center text-[11px] leading-[1.35] tracking-[0.015em] text-white/82 min-[380px]:text-[11.5px] md:text-[13px] lg:text-sm">
-                        <EditableText
-                            contentKey="shell.build_notice"
-                            fallback={localizedFallback(
-                                'Website still in active build. Payments and contact work. Some details may still look unfinished.',
-                                'Сайтът все още се доизгражда. Плащанията и контактът работят. Някои детайли може още да не са завършени.'
-                            )}
-                            editorLabel="Global build notice"
-                            multiline
-                        />
-                    </p>
-                </div>
-            </div>
-
-            <nav id="nav" className={`fixed top-[2.75rem] md:top-10 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white ${shouldAnimateCurrentRoute ? 'opacity-0' : 'opacity-100'} ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
+            <nav id="nav" className={`fixed top-0 w-full flex justify-between items-center px-6 md:px-12 py-4 md:py-8 ${isMobileOverlayOpen ? 'z-[130] mix-blend-normal' : 'z-50 mix-blend-difference'} text-white ${shouldAnimateCurrentRoute ? 'opacity-0' : 'opacity-100'} ${isPromoPopupOpen ? 'pointer-events-none' : ''}`}>
                 <a href="/" className="hover-target transition-link font-serif text-xl sm:text-2xl md:text-3xl leading-none font-medium tracking-[0.16em] md:tracking-widest uppercase whitespace-nowrap"><EditableText contentKey="shell.brand.name" fallback="The VA Store" editorLabel="Shell brand name" /></a>
                 <div className="relative z-[131] flex md:hidden items-center gap-3">
                     <div ref={mobileLanguageMenuRef} className="relative">
