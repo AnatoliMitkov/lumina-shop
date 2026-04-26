@@ -106,6 +106,64 @@ function PricingValidationCard({ label, labelKey, message, status }) {
     );
 }
 
+function hasTypedValue(value) {
+    return typeof value === 'string' ? value.trim().length > 0 : Boolean(value);
+}
+
+function getMissingCheckoutFieldKeys({
+    fullName = '',
+    email = '',
+    phoneNumber = '',
+    shippingCountry = '',
+    shippingCity = '',
+    shippingRegion = '',
+    shippingPostalCode = '',
+    shippingAddressLine1 = '',
+    shippingOfficeLabel = '',
+    needsCustomAddress = false,
+    requiresOfficeDetails = false,
+} = {}) {
+    const missingFieldKeys = [];
+
+    if (!hasTypedValue(fullName)) {
+        missingFieldKeys.push('fullName');
+    }
+
+    if (!hasTypedValue(email)) {
+        missingFieldKeys.push('email');
+    }
+
+    if (!hasTypedValue(phoneNumber)) {
+        missingFieldKeys.push('phoneNumber');
+    }
+
+    if (!hasTypedValue(shippingCountry)) {
+        missingFieldKeys.push('shippingCountry');
+    }
+
+    if (!hasTypedValue(shippingCity)) {
+        missingFieldKeys.push('shippingCity');
+    }
+
+    if (!hasTypedValue(shippingRegion)) {
+        missingFieldKeys.push('shippingRegion');
+    }
+
+    if (!hasTypedValue(shippingPostalCode)) {
+        missingFieldKeys.push('shippingPostalCode');
+    }
+
+    if (needsCustomAddress && !hasTypedValue(shippingAddressLine1)) {
+        missingFieldKeys.push('shippingAddressLine1');
+    }
+
+    if (requiresOfficeDetails && !hasTypedValue(shippingOfficeLabel)) {
+        missingFieldKeys.push('shippingOfficeLabel');
+    }
+
+    return missingFieldKeys;
+}
+
 export default function CheckoutExperience({ initialProfile, isSignedIn = false, schemaMessage = '', stripeReady = false }) {
     const siteCopy = useSiteCopy();
     const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
@@ -147,6 +205,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const [affiliateCode, setAffiliateCode] = useState('');
     const [checkoutMode, setCheckoutMode] = useState(stripeReady ? 'stripe_checkout' : 'manual_review');
     const [submittedOrder, setSubmittedOrder] = useState(null);
+    const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
     const [pricingPreview, setPricingPreview] = useState(() => createBaseCheckoutPricing({
         subtotal: Number(cartTotal || 0),
         shippingInput: {
@@ -257,6 +316,23 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const hasPricingBlocker = (Boolean(discountCode) && pricingPreview.discount.status === 'invalid')
         || (Boolean(affiliateCode) && pricingPreview.affiliate.status === 'invalid')
         || ((discountCode || affiliateCode) && pricingPreview.pricingReady === false);
+    const missingRequiredFieldKeys = hasAttemptedSubmit
+        ? getMissingCheckoutFieldKeys({
+            fullName,
+            email,
+            phoneNumber,
+            shippingCountry,
+            shippingCity,
+            shippingRegion,
+            shippingPostalCode,
+            shippingAddressLine1,
+            shippingOfficeLabel,
+            needsCustomAddress,
+            requiresOfficeDetails,
+        })
+        : [];
+    const missingRequiredFieldSet = new Set(missingRequiredFieldKeys);
+    const hasMissingRequiredFields = missingRequiredFieldKeys.length > 0;
     const domesticManualLaneEnabled = shippingScope === 'domestic_bg';
     const hasInvalidPaymentItems = cartItems.some((item) => Number(item.price ?? 0) <= 0);
     const hasPayableOrderTotal = Number(orderTotal ?? 0) > 0;
@@ -272,6 +348,33 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
     const mapsPlaceholder = siteCopy ? siteCopy.resolveText('checkout.delivery.maps_placeholder', 'https://maps.app.goo.gl/...') : 'https://maps.app.goo.gl/...';
     const discountPlaceholder = siteCopy ? siteCopy.resolveText('checkout.codes.discount_placeholder', 'PROMO') : 'PROMO';
     const affiliatePlaceholder = siteCopy ? siteCopy.resolveText('checkout.codes.affiliate_placeholder', 'PARTNER') : 'PARTNER';
+    const missingRequiredFieldsMessage = getText(
+        'checkout.validation.missing_required',
+        localizedFallback(
+            'Go back and complete the highlighted client and delivery fields before payment. The atelier needs these details to deliver the order correctly.',
+            'Върнете се и попълнете маркираните в червено клиентски и доставни полета преди плащането. Ателието има нужда от тези данни, за да достави поръчката коректно.'
+        )
+    );
+    const requiredFieldHint = getText(
+        'checkout.validation.required_field',
+        localizedFallback(
+            'Required before payment can continue.',
+            'Задължително преди плащането да продължи.'
+        )
+    );
+    const getFieldLabelClassName = (fieldKey, extraClassName = '') => `${extraClassName} flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] ${missingRequiredFieldSet.has(fieldKey) ? 'text-red-700' : 'text-[#1C1C1C]/55'}`.trim();
+    const getFieldSurfaceClassName = (fieldKey, backgroundClassName = 'bg-white') => (
+        missingRequiredFieldSet.has(fieldKey)
+            ? 'border-red-300 bg-red-50 text-red-900 placeholder:text-red-400 focus:border-red-500'
+            : `border-[#1C1C1C]/12 ${backgroundClassName} text-[#1C1C1C] focus:border-[#1C1C1C]`
+    );
+    const renderRequiredFieldHint = (fieldKey) => missingRequiredFieldSet.has(fieldKey)
+        ? <span className="text-xs leading-relaxed normal-case tracking-normal text-red-600">{requiredFieldHint}</span>
+        : null;
+    const submitDisabled = checkoutStatus === 'submitting'
+        || pricingStatus === 'loading'
+        || hasPricingBlocker
+        || (checkoutMode === 'stripe_checkout' ? !canSubmitStripe : !canSubmitPayOnDelivery);
 
     useEffect(() => {
         if (!domesticManualLaneEnabled) {
@@ -357,6 +460,38 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+
+        const nextMissingRequiredFieldKeys = getMissingCheckoutFieldKeys({
+            fullName,
+            email,
+            phoneNumber,
+            shippingCountry,
+            shippingCity,
+            shippingRegion,
+            shippingPostalCode,
+            shippingAddressLine1,
+            shippingOfficeLabel,
+            needsCustomAddress,
+            requiresOfficeDetails,
+        });
+
+        setHasAttemptedSubmit(true);
+
+        if (nextMissingRequiredFieldKeys.length > 0) {
+            const firstMissingField = event.currentTarget.querySelector(`[data-checkout-input="${nextMissingRequiredFieldKeys[0]}"]`);
+
+            if (typeof firstMissingField?.scrollIntoView === 'function') {
+                firstMissingField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            if (typeof firstMissingField?.focus === 'function') {
+                window.setTimeout(() => {
+                    firstMissingField.focus();
+                }, 150);
+            }
+
+            return;
+        }
 
         const result = await checkoutCart({
             fullName,
@@ -454,7 +589,7 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
     return (
         <div className="grid grid-cols-1 xl:grid-cols-[1.04fr_0.96fr] gap-10 md:gap-12 items-start">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+            <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-8">
                 <section className="border border-[#1C1C1C]/10 bg-white/58 rounded-sm p-6 md:p-8 flex flex-col gap-6">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3"><EditableText contentKey="checkout.form.client_details" fallback={localizedFallback('Client Details', 'Данни за клиента')} editorLabel="Checkout client details eyebrow" /></p>
@@ -483,15 +618,17 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('fullName')}>
                             <EditableText contentKey="checkout.form.full_name" fallback={localizedFallback('Full Name', 'Име и фамилия')} editorLabel="Checkout full name label" />
-                            <input value={fullName} onChange={(event) => setFullName(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input data-checkout-input="fullName" aria-invalid={missingRequiredFieldSet.has('fullName')} value={fullName} onChange={(event) => setFullName(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('fullName')}`} />
+                            {renderRequiredFieldHint('fullName')}
                         </label>
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('email')}>
                             <EditableText contentKey="checkout.form.email" fallback={localizedFallback('Email', 'Имейл')} editorLabel="Checkout email label" />
-                            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input data-checkout-input="email" aria-invalid={missingRequiredFieldSet.has('email')} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('email')}`} />
+                            {renderRequiredFieldHint('email')}
                         </label>
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('phoneNumber')}>
                             <EditableText contentKey="checkout.form.phone" fallback={localizedFallback('Phone', 'Телефон')} editorLabel="Checkout phone label" />
                             <div className="grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] gap-3">
                                 <select value={selectedCountry} onChange={(event) => setSelectedCountry(event.target.value)} aria-label={getText('checkout.form.phone_country_code', localizedFallback('Country calling code', 'Код на държавата'))} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
@@ -499,8 +636,9 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                                         <option key={option.country} value={option.country}>{`${option.label} (${option.dialCode})`}</option>
                                     ))}
                                 </select>
-                                <input value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required autoComplete="tel-national" className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <input data-checkout-input="phoneNumber" aria-invalid={missingRequiredFieldSet.has('phoneNumber')} value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} required autoComplete="tel-national" className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('phoneNumber')}`} />
                             </div>
+                            {renderRequiredFieldHint('phoneNumber')}
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             <EditableText contentKey="checkout.form.location" fallback={localizedFallback('Location', 'Локация')} editorLabel="Checkout location label" />
@@ -551,50 +689,56 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                             <span className="text-xs leading-relaxed text-[#1C1C1C]/55 normal-case tracking-normal">{deliveryMethodOptions.find((option) => option.value === deliveryMethod)?.copy}</span>
                         </label>
 
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('shippingCountry')}>
                             <EditableText contentKey="checkout.delivery.country" fallback={localizedFallback('Country', 'Държава')} editorLabel="Checkout delivery country label" />
                             {shippingScope === 'domestic_bg' ? (
-                                <input value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required readOnly className="h-14 border border-[#1C1C1C]/12 bg-[#EFECE8] px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <input data-checkout-input="shippingCountry" aria-invalid={missingRequiredFieldSet.has('shippingCountry')} value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required readOnly className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingCountry', 'bg-[#EFECE8]')}`} />
                             ) : (
-                                <select value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]">
+                                <select data-checkout-input="shippingCountry" aria-invalid={missingRequiredFieldSet.has('shippingCountry')} value={shippingCountry} onChange={(event) => setShippingCountry(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingCountry')}`}>
                                     <option value="">{selectCountryLabel}</option>
                                     {countryPhoneOptions.map((option) => (
                                         <option key={option.country} value={option.label}>{option.label}</option>
                                     ))}
                                 </select>
                             )}
+                            {renderRequiredFieldHint('shippingCountry')}
                         </label>
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('shippingCity')}>
                             <EditableText contentKey="checkout.delivery.city" fallback={localizedFallback('City', 'Град')} editorLabel="Checkout delivery city label" />
                             <>
-                                <input value={shippingCity} onChange={(event) => setShippingCity(event.target.value)} list={shippingCityListId} autoComplete="address-level2" required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <input data-checkout-input="shippingCity" aria-invalid={missingRequiredFieldSet.has('shippingCity')} value={shippingCity} onChange={(event) => setShippingCity(event.target.value)} list={shippingCityListId} autoComplete="address-level2" required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingCity')}`} />
                                 <datalist id={shippingCityListId}>
                                     {shippingCitySuggestions.map((option) => (
                                         <option key={option} value={option} />
                                     ))}
                                 </datalist>
                             </>
+                            {renderRequiredFieldHint('shippingCity')}
                         </label>
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('shippingRegion')}>
                             <EditableText contentKey="checkout.delivery.region" fallback={localizedFallback('State / Province / Region', 'Област / щат / регион')} editorLabel="Checkout delivery region label" />
-                            <input value={shippingRegion} onChange={(event) => setShippingRegion(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input data-checkout-input="shippingRegion" aria-invalid={missingRequiredFieldSet.has('shippingRegion')} value={shippingRegion} onChange={(event) => setShippingRegion(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingRegion')}`} />
+                            {renderRequiredFieldHint('shippingRegion')}
                         </label>
-                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
+                        <label className={getFieldLabelClassName('shippingPostalCode')}>
                             <EditableText contentKey="checkout.delivery.postal_code" fallback={localizedFallback('Postal Code', 'Пощенски код')} editorLabel="Checkout delivery postal code label" />
-                            <input value={shippingPostalCode} onChange={(event) => setShippingPostalCode(event.target.value)} className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                            <input data-checkout-input="shippingPostalCode" aria-invalid={missingRequiredFieldSet.has('shippingPostalCode')} value={shippingPostalCode} onChange={(event) => setShippingPostalCode(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingPostalCode')}`} />
+                            {renderRequiredFieldHint('shippingPostalCode')}
                         </label>
 
                         {needsCustomAddress && (
-                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
+                            <label className={getFieldLabelClassName('shippingAddressLine1', 'md:col-span-2')}>
                                 {shippingScope === 'worldwide' ? <EditableText contentKey="checkout.delivery.custom_address" fallback={localizedFallback('Delivery Address', 'Адрес за доставка')} editorLabel="Checkout custom address label" /> : <EditableText contentKey="checkout.delivery.address_line_one" fallback={localizedFallback('Address Line 1', 'Адрес, ред 1')} editorLabel="Checkout address line one label" />}
-                                <input value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <input data-checkout-input="shippingAddressLine1" aria-invalid={missingRequiredFieldSet.has('shippingAddressLine1')} value={shippingAddressLine1} onChange={(event) => setShippingAddressLine1(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingAddressLine1')}`} />
+                                {renderRequiredFieldHint('shippingAddressLine1')}
                             </label>
                         )}
 
                         {requiresOfficeDetails && (
-                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55 md:col-span-2">
+                            <label className={getFieldLabelClassName('shippingOfficeLabel', 'md:col-span-2')}>
                                 <EditableText contentKey="checkout.delivery.office_label" fallback={localizedFallback('Pickup Office', 'Офис за получаване')} editorLabel="Checkout office label" />
-                                <input value={shippingOfficeLabel} onChange={(event) => setShippingOfficeLabel(event.target.value)} required className="h-14 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
+                                <input data-checkout-input="shippingOfficeLabel" aria-invalid={missingRequiredFieldSet.has('shippingOfficeLabel')} value={shippingOfficeLabel} onChange={(event) => setShippingOfficeLabel(event.target.value)} required className={`h-14 border px-4 text-sm tracking-normal outline-none transition-colors ${getFieldSurfaceClassName('shippingOfficeLabel')}`} />
+                                {renderRequiredFieldHint('shippingOfficeLabel')}
                             </label>
                         )}
 
@@ -721,6 +865,12 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
                     </div>
                 </section>
 
+                {hasMissingRequiredFields && (
+                    <div role="alert" className="border border-red-200 bg-red-50 rounded-sm px-4 py-4 text-sm leading-relaxed text-red-700">
+                        {missingRequiredFieldsMessage}
+                    </div>
+                )}
+
                 {(cartMessage || checkoutStatus === 'error') && (
                     <div className={`border rounded-sm px-4 py-4 text-sm leading-relaxed ${checkoutStatus === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-[#1C1C1C]/10 bg-white/70 text-[#1C1C1C]/75'}`}>
                         {cartMessage}
@@ -729,13 +879,15 @@ export default function CheckoutExperience({ initialProfile, isSignedIn = false,
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     {structuredCheckoutReady ? (
-                        <button disabled={checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker || (checkoutMode === 'stripe_checkout' ? !canSubmitStripe : !canSubmitPayOnDelivery)} className={`hover-target inline-flex items-center justify-center px-8 py-5 bg-[#1C1C1C] text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${checkoutStatus === 'submitting' || pricingStatus === 'loading' || hasPricingBlocker || (checkoutMode === 'stripe_checkout' ? !canSubmitStripe : !canSubmitPayOnDelivery) ? 'opacity-60' : 'hover:bg-black'}`}>
+                        <button disabled={submitDisabled} className={`hover-target inline-flex items-center justify-center px-8 py-5 text-[#EFECE8] uppercase tracking-[0.2em] text-xs font-medium transition-colors ${submitDisabled ? 'bg-[#1C1C1C] opacity-60' : hasMissingRequiredFields ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1C1C1C] hover:bg-black'}`}>
                             {checkoutStatus === 'submitting'
                                 ? <EditableText contentKey="checkout.submit.submitting" fallback={localizedFallback('Submitting Order...', 'Изпращане на поръчката...')} editorLabel="Checkout submitting" />
                                 : checkoutStatus === 'redirecting'
                                     ? <EditableText contentKey="checkout.submit.redirecting" fallback={localizedFallback('Opening Secure Payment...', 'Отваряме сигурното плащане...')} editorLabel="Checkout redirecting" />
                                     : pricingStatus === 'loading'
                                         ? <EditableText contentKey="checkout.submit.validating" fallback={localizedFallback('Validating Codes...', 'Проверяваме кодовете...')} editorLabel="Checkout validating codes" />
+                                        : hasMissingRequiredFields
+                                            ? <EditableText contentKey="checkout.submit.complete_missing" fallback={localizedFallback('Complete Highlighted Fields First', 'Попълнете маркираните полета първо')} editorLabel="Checkout complete highlighted fields" />
                                         : checkoutMode === 'stripe_checkout'
                                             ? <EditableText contentKey="checkout.submit.secure_payment" fallback={localizedFallback('Continue To Secure Payment', 'Продължи към сигурно плащане')} editorLabel="Checkout continue to secure payment" />
                                             : domesticManualLaneEnabled

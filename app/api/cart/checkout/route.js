@@ -76,23 +76,115 @@ function buildOrderResponse(order, { fallbackStatus = 'pending', fallbackPayment
   };
 }
 
-function buildStripeLineItems(snapshot = {}) {
-  return (Array.isArray(snapshot.items) ? snapshot.items : []).map((item) => {
-    const descriptionParts = [item?.selected_size ? `Size ${item.selected_size}` : '', item?.selected_tone ? `Tone ${item.selected_tone}` : ''].filter(Boolean);
+function buildStripeItemProductData(item = {}) {
+  const descriptionParts = [item?.selected_size ? `Size ${item.selected_size}` : '', item?.selected_tone ? `Tone ${item.selected_tone}` : ''].filter(Boolean);
+
+  return {
+    name: item?.name || 'Atelier Piece',
+    ...(descriptionParts.length > 0 ? { description: descriptionParts.join(' / ') } : {}),
+    ...(item?.image_main ? { images: [item.image_main] } : {}),
+  };
+}
+
+function buildFallbackStripeLineItems({ snapshot = {}, pricing = {}, orderReference = '' } = {}) {
+  const itemNames = (Array.isArray(snapshot.items) ? snapshot.items : [])
+    .map((item) => (typeof item?.name === 'string' ? item.name.trim() : ''))
+    .filter(Boolean);
+  const previewNames = itemNames.slice(0, 3).join(' / ');
+  const extraItemCount = Math.max(0, itemNames.length - 3);
+  const descriptionParts = [];
+
+  if (previewNames) {
+    descriptionParts.push(extraItemCount > 0 ? `${previewNames} +${extraItemCount} more` : previewNames);
+  }
+
+  if (Number(pricing?.discountAmount ?? 0) > 0) {
+    descriptionParts.push(`${formatPromotionCurrency(pricing.discountAmount)} savings applied`);
+  }
+
+  return [{
+    quantity: 1,
+    price_data: {
+      currency: String(snapshot.currency || 'EUR').toLowerCase(),
+      unit_amount: toStripeAmount(pricing?.total ?? snapshot?.total ?? 0),
+      product_data: {
+        name: orderReference ? `Atelier Order ${orderReference}` : 'Atelier Order',
+        ...(descriptionParts.length > 0 ? { description: descriptionParts.join(' | ').slice(0, 500) } : {}),
+      },
+    },
+  }];
+}
+
+function buildStripeLineItems({ snapshot = {}, pricing = {}, orderReference = '' } = {}) {
+  const items = Array.isArray(snapshot.items) ? snapshot.items : [];
+  const currency = String(snapshot.currency || 'EUR').toLowerCase();
+  const shippingAmount = Math.max(0, toStripeAmount(pricing?.shippingAmount ?? 0));
+  const totalAmount = Math.max(0, toStripeAmount(pricing?.total ?? snapshot?.total ?? 0));
+  const merchandiseAmount = Math.max(0, totalAmount - shippingAmount);
+
+  if (items.length === 0 || merchandiseAmount <= 0) {
+    return buildFallbackStripeLineItems({ snapshot, pricing, orderReference });
+  }
+
+  const merchandiseBreakdown = items.map((item, index) => {
+    const baseAmount = Math.max(0, toStripeAmount(item?.price));
+    const proportionalAmount = baseAmount > 0
+      ? (baseAmount * merchandiseAmount) / Math.max(1, toStripeAmount(snapshot.total))
+      : 0;
 
     return {
-      quantity: 1,
-      price_data: {
-        currency: String(snapshot.currency || 'EUR').toLowerCase(),
-        unit_amount: toStripeAmount(item?.price),
-        product_data: {
-          name: item?.name || 'Atelier Piece',
-          ...(descriptionParts.length > 0 ? { description: descriptionParts.join(' / ') } : {}),
-          ...(item?.image_main ? { images: [item.image_main] } : {}),
-        },
-      },
+      item,
+      index,
+      baseAmount,
+      allocatedAmount: Math.floor(proportionalAmount),
+      remainder: proportionalAmount - Math.floor(proportionalAmount),
     };
   });
+  const allocatedSubtotal = merchandiseBreakdown.reduce((sum, entry) => sum + entry.allocatedAmount, 0);
+  const centsToDistribute = merchandiseAmount - allocatedSubtotal;
+
+  merchandiseBreakdown
+    .slice()
+    .sort((left, right) => {
+      if (right.remainder !== left.remainder) {
+        return right.remainder - left.remainder;
+      }
+
+      return left.index - right.index;
+    })
+    .slice(0, centsToDistribute)
+    .forEach((entry) => {
+      entry.allocatedAmount += 1;
+    });
+
+  if (merchandiseBreakdown.some((entry) => entry.allocatedAmount <= 0)) {
+    return buildFallbackStripeLineItems({ snapshot, pricing, orderReference });
+  }
+
+  const lineItems = merchandiseBreakdown.map((entry) => ({
+    quantity: 1,
+    price_data: {
+      currency,
+      unit_amount: entry.allocatedAmount,
+      product_data: buildStripeItemProductData(entry.item),
+    },
+  }));
+
+  if (shippingAmount > 0) {
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency,
+        unit_amount: shippingAmount,
+        product_data: {
+          name: 'Shipping',
+          ...(pricing?.shipping?.label ? { description: String(pricing.shipping.label).slice(0, 500) } : {}),
+        },
+      },
+    });
+  }
+
+  return lineItems;
 }
 
 function formatCheckoutError(error) {
@@ -462,7 +554,7 @@ export async function POST(request) {
         payment_method_types: ['card'],
         customer_email: checkout.customer.email || user?.email || undefined,
         client_reference_id: order.id,
-        line_items: buildStripeLineItems(snapshot),
+        line_items: buildStripeLineItems({ snapshot, pricing, orderReference }),
         success_url: buildAbsoluteUrl(request, '/checkout/success', {
           order: order.id,
           orderCode: orderReference,
@@ -478,6 +570,9 @@ export async function POST(request) {
           shipping_scope: checkout.delivery.shippingScope,
           delivery_method: checkout.delivery.deliveryMethod,
           customer_email: checkout.customer.email || user?.email || '',
+          discount_amount: pricing.discountAmount.toFixed(2),
+          shipping_amount: pricing.shippingAmount.toFixed(2),
+          order_total: orderTotal.toFixed(2),
         },
       });
 
