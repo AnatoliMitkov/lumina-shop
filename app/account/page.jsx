@@ -235,10 +235,11 @@ export default async function AccountPage({ searchParams }) {
         );
     }
 
-    const [profileResult, ordersResult, inquiriesResult] = await Promise.all([
-        supabase.from('profiles').select('full_name, phone, location, notes, is_admin').eq('id', user.id).maybeSingle(),
+    const [profileResult, ordersResult, inquiriesResult, creatorApplicationResult] = await Promise.all([
+        supabase.from('profiles').select('full_name, phone, location, notes, is_admin, creator_status, creator_affiliate_code, creator_application_id, creator_approved_at').eq('id', user.id).maybeSingle(),
         supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
         supabase.from('contact_inquiries').select('id, query_type, message, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('creator_applications').select('id, status, affiliate_code, admin_note, reviewed_at, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const profile = {
@@ -248,6 +249,25 @@ export default async function AccountPage({ searchParams }) {
         notes: profileResult.data?.notes || user?.user_metadata?.notes || '',
     };
     const isAdmin = Boolean(profileResult.data?.is_admin);
+    const creatorApplication = creatorApplicationResult.data
+        ? {
+            id: creatorApplicationResult.data.id,
+            status: creatorApplicationResult.data.status,
+            affiliate_code: creatorApplicationResult.data.affiliate_code,
+            admin_note: creatorApplicationResult.data.admin_note,
+            reviewed_at: creatorApplicationResult.data.reviewed_at,
+            created_at: creatorApplicationResult.data.created_at,
+        }
+        : profileResult.data?.creator_status
+            ? {
+                id: profileResult.data.creator_application_id || '',
+                status: profileResult.data.creator_status,
+                affiliate_code: profileResult.data.creator_affiliate_code || '',
+                admin_note: '',
+                reviewed_at: profileResult.data.creator_approved_at || null,
+                created_at: null,
+            }
+            : null;
     const profileStorageMode = isProfilesTableMissing(profileResult.error) ? 'metadata' : 'table';
     const schemaMessage = readErrorMessage(profileResult.error, currentLanguage) || readErrorMessage(ordersResult.error, currentLanguage) || readErrorMessage(inquiriesResult.error, currentLanguage);
     const dashboardMetrics = [
@@ -308,7 +328,7 @@ export default async function AccountPage({ searchParams }) {
                 </section>
             </div>
 
-            <AccountDashboard user={user} profile={profile} orders={ordersResult.data ?? []} inquiries={inquiriesResult.data ?? []} schemaMessage={schemaMessage} profileStorageMode={profileStorageMode} isAdmin={isAdmin} language={currentLanguage} />
+            <AccountDashboard user={user} profile={profile} creatorApplication={creatorApplication} orders={ordersResult.data ?? []} inquiries={inquiriesResult.data ?? []} schemaMessage={schemaMessage} profileStorageMode={profileStorageMode} isAdmin={isAdmin} language={currentLanguage} />
         </div>
     );
 }

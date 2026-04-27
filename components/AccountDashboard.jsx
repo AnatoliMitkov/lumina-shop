@@ -150,7 +150,7 @@ function OrderPreview({ order }) {
     );
 }
 
-export default function AccountDashboard({ user, profile, orders, inquiries, schemaMessage, profileStorageMode, isAdmin = false, language }) {
+export default function AccountDashboard({ user, profile, creatorApplication = null, orders, inquiries, schemaMessage, profileStorageMode, isAdmin = false, language }) {
     const supabase = isSupabaseConfigured() ? createClient() : null;
     const router = useRouter();
     const siteCopy = useSiteCopy();
@@ -173,6 +173,7 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     const [saveState, setSaveState] = useState({ type: 'idle', message: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
+    const [copyFeedback, setCopyFeedback] = useState('');
     const [desktopOrdersPanelHeight, setDesktopOrdersPanelHeight] = useState(null);
     const savedAccountSectionRef = useRef(null);
     const requestThreadSectionRef = useRef(null);
@@ -219,6 +220,24 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
     const profileStorageLabel = profileStorageMode === 'metadata'
         ? getText('account.dashboard.storage.metadata_active', localizedFallback('Metadata fallback active', 'Активен профил от метаданни'))
         : getText('account.dashboard.storage.table_active', localizedFallback('Profile table active', 'Активна профилна таблица'));
+    const normalizedCreatorStatus = String(creatorApplication?.status || '').trim().toLowerCase();
+    const hasCreatorAccess = Boolean(creatorApplication?.id || normalizedCreatorStatus);
+    const creatorStatusLabel = normalizedCreatorStatus === 'approved'
+        ? getText('account.dashboard.creator.status.approved', localizedFallback('Approved', 'Одобрен'))
+        : normalizedCreatorStatus === 'declined'
+            ? getText('account.dashboard.creator.status.declined', localizedFallback('Declined', 'Отказан'))
+            : normalizedCreatorStatus === 'reviewing'
+                ? getText('account.dashboard.creator.status.reviewing', localizedFallback('Reviewing', 'В преглед'))
+                : normalizedCreatorStatus === 'archived'
+                    ? getText('account.dashboard.creator.status.archived', localizedFallback('Archived', 'Архивиран'))
+                    : getText('account.dashboard.creator.status.pending', localizedFallback('Pending Review', 'Очаква преглед'));
+    const creatorStatusTone = normalizedCreatorStatus === 'approved'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : normalizedCreatorStatus === 'declined'
+            ? 'border-red-200 bg-red-50 text-red-700'
+            : normalizedCreatorStatus === 'reviewing'
+                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                : 'border-[#D9C08A] bg-[#FFF8E8] text-[#8A6A2F]';
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -325,6 +344,22 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
         router.refresh();
     };
 
+    const handleCopyCreatorCode = async () => {
+        if (!creatorApplication?.affiliate_code || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(creatorApplication.affiliate_code);
+            setCopyFeedback(getText('account.dashboard.creator.copy.success', localizedFallback('Code copied.', 'Кодът е копиран.')));
+            window.setTimeout(() => {
+                setCopyFeedback('');
+            }, 1800);
+        } catch {
+            setCopyFeedback(getText('account.dashboard.creator.copy.error', localizedFallback('Unable to copy right now.', 'Не успяхме да копираме кода в момента.')));
+        }
+    };
+
     const getInquiryTypeLabel = (queryType) => {
         const optionFallbacks = {
             'Bespoke Commission': localizedFallback('Bespoke Commission', 'Индивидуална поръчка'),
@@ -373,6 +408,45 @@ export default function AccountDashboard({ user, profile, orders, inquiries, sch
                             <p className="text-xs leading-relaxed text-[#1C1C1C]/56">{getText('account.dashboard.metrics.threads.copy_prefix', localizedFallback('Most recent note', 'Последна бележка'))} {latestInquiryDate}.</p>
                         </div>
                     </div>
+
+                    {hasCreatorAccess ? (
+                        <section className="mb-8 border border-[#1C1C1C]/10 bg-white/75 rounded-sm p-4 md:p-5 flex flex-col gap-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/42">{getText('account.dashboard.creator.eyebrow', localizedFallback('Creator Program Menu', 'Creator меню'))}</p>
+                                    <h3 className="mt-2 font-serif text-2xl md:text-3xl font-light uppercase tracking-[0.12em] text-[#1C1C1C]">{getText('account.dashboard.creator.title', localizedFallback('Creator Access', 'Creator достъп'))}</h3>
+                                    <p className="mt-2 text-sm leading-relaxed text-[#1C1C1C]/62">
+                                        {normalizedCreatorStatus === 'approved'
+                                            ? getText('account.dashboard.creator.copy.approved', localizedFallback('Your profile is approved. Use your assigned affiliate code below.', 'Профилът ви е одобрен. Използвайте назначения affiliate код по-долу.'))
+                                            : getText('account.dashboard.creator.copy.pending', localizedFallback('Your application is linked to this account and remains visible here while the team reviews it.', 'Кандидатурата ви е свързана с този профил и стои тук, докато екипът я преглежда.'))}
+                                    </p>
+                                </div>
+                                <span className={`self-start px-3 py-2 rounded-full border text-[10px] uppercase tracking-[0.2em] ${creatorStatusTone}`}>{creatorStatusLabel}</span>
+                            </div>
+
+                            {creatorApplication?.affiliate_code ? (
+                                <div className="border border-[#1C1C1C]/10 bg-[#EFECE8] rounded-sm p-4 md:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{getText('account.dashboard.creator.code.label', localizedFallback('Assigned Affiliate Code', 'Назначен affiliate код'))}</p>
+                                        <p className="mt-2 font-serif text-2xl md:text-3xl font-light tracking-[0.08em] text-[#1C1C1C]">{creatorApplication.affiliate_code}</p>
+                                    </div>
+                                    <div className="flex flex-col items-start sm:items-end gap-2">
+                                        <button type="button" onClick={handleCopyCreatorCode} className="h-11 px-5 rounded-full border border-[#1C1C1C]/12 bg-white text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/72 transition-colors hover:text-[#1C1C1C] hover:border-[#1C1C1C]/28">
+                                            {getText('account.dashboard.creator.code.copy', localizedFallback('Copy Code', 'Копирай кода'))}
+                                        </button>
+                                        {copyFeedback ? <p className="text-xs text-[#1C1C1C]/58">{copyFeedback}</p> : null}
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            {creatorApplication?.admin_note ? (
+                                <div className="border border-[#1C1C1C]/10 bg-white rounded-sm p-4">
+                                    <p className="text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/42">{getText('account.dashboard.creator.note', localizedFallback('Review Note', 'Бележка от прегледа'))}</p>
+                                    <p className="mt-2 text-sm leading-relaxed text-[#1C1C1C]/62">{creatorApplication.admin_note}</p>
+                                </div>
+                            ) : null}
+                        </section>
+                    ) : null}
 
                     <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">

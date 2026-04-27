@@ -212,10 +212,13 @@ export function isValidEmail(email) {
 export function isValidCreatorProfileUrl(url) {
     try {
         const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+            return false;
+        }
         const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, '');
-        const pathname = parsedUrl.pathname.replace(/\/+$/, '');
-
-        return (hostname === 'instagram.com' || hostname === 'tiktok.com') && pathname.length > 1;
+        // Accept any public profile URL: Instagram, TikTok, YouTube, X, Reddit, ArtStation,
+        // personal sites, etc. The team reviews each link manually before opening it.
+        return hostname.includes('.') && hostname.length > 3;
     } catch {
         return false;
     }
@@ -261,7 +264,7 @@ export function validateCreatorApplicationPayload(payload, { language = DEFAULT_
             }
 
             if (!isValidCreatorProfileUrl(socialLink)) {
-                return getCreatorProgramText(language, 'Use a valid Instagram or TikTok profile URL.', 'Използвайте валиден URL към Instagram или TikTok профил.');
+                return getCreatorProgramText(language, 'Please paste a full link starting with https://', 'Моля, поставете пълен линк, започващ с https://');
             }
 
             return '';

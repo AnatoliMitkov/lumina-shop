@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useState } from 'react';
 import { createClient } from '../utils/supabase/client';
 import AdminAffiliateCodesPanel from './AdminAffiliateCodesPanel';
+import AdminCreatorApplicationsPanel from './AdminCreatorApplicationsPanel';
 import AdminInquiriesPanel from './AdminInquiriesPanel';
 import AdminDiscountCodesPanel from './AdminDiscountCodesPanel';
 import AdminOrdersPanel from './AdminOrdersPanel';
@@ -1190,8 +1191,10 @@ export default function AdminDashboard({
     recentInquiries,
     discountCodes,
     affiliateCodes,
+    creatorApplications = [],
     maintenanceMessage,
     promotionMessage,
+    creatorReviewMessage,
     initialCollectionStageMediaEntries = {},
 }) {
     const sortedInitialProducts = sortProducts(initialProducts ?? []);
@@ -2671,6 +2674,12 @@ export default function AdminDashboard({
                 <AdminDiscountCodesPanel initialDiscounts={discountCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
                 <AdminAffiliateCodesPanel initialAffiliates={affiliateCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
             </section>
+
+            <AdminCreatorApplicationsPanel
+                initialApplications={creatorApplications}
+                affiliateCodes={affiliateCodes}
+                setupMessage={creatorReviewMessage}
+            />
 
             <ConfirmDialog
                 open={isDeleteDialogOpen}

@@ -188,3 +188,120 @@ export async function downloadCreatorApplicationAgreement({ application, languag
 
     doc.save(`the-va-store-collaboration-${sanitizeFileValue(application?.fullName)}.pdf`);
 }
+
+export async function buildCreatorApplicationAgreementPdfBuffer({ application, language = DEFAULT_LANGUAGE }) {
+    const { jsPDF } = await import('jspdf');
+    const resolvedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const writer = createPdfWriter(doc);
+    const agreementDate = formatAgreementDate(application?.createdAt || Date.now(), resolvedLanguage);
+    const benefitsText = CREATOR_PROGRAM_BENEFITS
+        .map((benefit) => `[+] ${getCreatorProgramText(resolvedLanguage, benefit.title.en, benefit.title.bg)}: ${getCreatorProgramText(resolvedLanguage, benefit.copy.en, benefit.copy.bg)}`)
+        .join('\n');
+    const obligationsText = CREATOR_PROGRAM_OBLIGATIONS
+        .map((obligation) => `[x] ${getCreatorProgramText(resolvedLanguage, obligation.title.en, obligation.title.bg)}: ${getCreatorProgramText(resolvedLanguage, obligation.copy.en, obligation.copy.bg)}`)
+        .join('\n');
+
+    writer.writeText(
+        getCreatorProgramText(resolvedLanguage, `${CREATOR_PROGRAM_BRAND_NAME} Creator Partnership Agreement`, `Споразумение за creator partnership с ${CREATOR_PROGRAM_BRAND_NAME}`),
+        { fontSize: 23, lineHeight: 28, gapAfter: 10 }
+    );
+    writer.writeText(
+        getCreatorProgramText(
+            resolvedLanguage,
+            `Application date: ${agreementDate}`,
+            `Дата на кандидатстване: ${agreementDate}`
+        ),
+        { fontSize: 11, gapAfter: 18 }
+    );
+
+    writer.writeRule();
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Applicant details', 'Данни за кандидата'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(
+        [
+            `${getCreatorProgramText(resolvedLanguage, 'Full name', 'Име и фамилия')}: ${application?.fullName || ''}`,
+            `${getCreatorProgramText(resolvedLanguage, 'Email', 'Имейл')}: ${application?.email || ''}`,
+            `${getCreatorProgramText(resolvedLanguage, 'Phone', 'Телефон')}: ${application?.phone || '-'}`,
+            `${getCreatorProgramText(resolvedLanguage, 'Social profile links', 'Линкове към социални профили')}: ${Array.isArray(application?.socialLinks) && application.socialLinks.length > 0 ? application.socialLinks.join(', ') : (application?.profileUrl || '')}`,
+            `${getCreatorProgramText(resolvedLanguage, 'Application status', 'Статус на кандидатурата')}: ${application?.status || 'pending'}`,
+        ].join('\n'),
+        { gapAfter: 18 }
+    );
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Offer', 'Оферта'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(getCreatorProgramText(resolvedLanguage, CREATOR_PROGRAM_OFFER.en, CREATOR_PROGRAM_OFFER.bg), {
+        gapAfter: 18,
+    });
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Benefits', 'Ползи'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(benefitsText, { gapAfter: 18 });
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Obligations', 'Ангажименти'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(obligationsText, { gapAfter: 18 });
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Deadline', 'Срок'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(getCreatorProgramText(resolvedLanguage, CREATOR_PROGRAM_DEADLINE.en, CREATOR_PROGRAM_DEADLINE.bg), {
+        gapAfter: 18,
+    });
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Rights & consent', 'Права и съгласие'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(
+        getCreatorProgramText(
+            resolvedLanguage,
+            CREATOR_PROGRAM_RIGHTS_STATEMENT.en,
+            CREATOR_PROGRAM_RIGHTS_STATEMENT.bg
+        ),
+        { gapAfter: 18 }
+    );
+
+    writer.writeText(getCreatorProgramText(resolvedLanguage, 'Motivation', 'Мотивация'), {
+        fontSize: 13,
+        fontStyle: 'bold',
+        gapAfter: 10,
+    });
+    writer.writeText(application?.motivation || '', { gapAfter: 24 });
+
+    writer.writeRule();
+    writer.writeText(
+        getCreatorProgramText(
+            resolvedLanguage,
+            `Digital confirmation: ${application?.fullName || ''}`,
+            `Дигитално потвърждение: ${application?.fullName || ''}`
+        ),
+        { gapAfter: 6 }
+    );
+    writer.writeText(
+        getCreatorProgramText(
+            resolvedLanguage,
+            `This PDF confirms the submitted application details and the accepted ${CREATOR_PROGRAM_BRAND_NAME} collaboration terms.`,
+            `Този PDF потвърждава подадените данни по кандидатурата и приетите условия за сътрудничество с ${CREATOR_PROGRAM_BRAND_NAME}.`
+        ),
+        { gapAfter: 0 }
+    );
+
+    return Buffer.from(doc.output('arraybuffer'));
+}

@@ -296,7 +296,7 @@ export default function CreatorProgramForm({ initialValues, initialLanguage = DE
                                     value={socialLink}
                                     onChange={(event) => updateSocialLink(index, event.target.value)}
                                     required
-                                    placeholder={index === 0 ? 'https://instagram.com/your-profile' : 'https://tiktok.com/@your-profile'}
+                                    placeholder={index === 0 ? 'https://instagram.com/your-profile' : 'https://your-platform.com/your-profile'}
                                     className="min-h-14 flex-1 rounded-[1.1rem] border border-[#181410]/12 bg-white/90 px-4 text-sm normal-case tracking-normal text-[#181410] outline-none transition-colors focus:border-[#181410]"
                                 />
 

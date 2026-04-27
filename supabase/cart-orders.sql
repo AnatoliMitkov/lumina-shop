@@ -325,6 +325,10 @@ alter table public.affiliate_codes enable row level security;
 alter table public.payments enable row level security;
 
 alter table public.profiles add column if not exists is_admin boolean not null default false;
+alter table public.profiles add column if not exists creator_status text check (creator_status in ('none', 'pending', 'reviewing', 'approved', 'declined'));
+alter table public.profiles add column if not exists creator_affiliate_code text;
+alter table public.profiles add column if not exists creator_application_id uuid references public.creator_applications(id) on delete set null;
+alter table public.profiles add column if not exists creator_approved_at timestamptz;
 
 drop policy if exists "Users can view own profile" on public.profiles;
 drop policy if exists "Users can insert own profile" on public.profiles;

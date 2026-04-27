@@ -35,6 +35,18 @@ function isMissingCreatorApplicationExtendedColumnsError(error) {
         || message.includes('column "social_links"');
 }
 
+function isMissingCreatorProfileColumnsError(error) {
+    const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+
+    return error?.code === 'PGRST204'
+        || message.includes("'creator_status' column")
+        || message.includes('column "creator_status"')
+        || message.includes("'creator_application_id' column")
+        || message.includes('column "creator_application_id"')
+        || message.includes("'creator_affiliate_code' column")
+        || message.includes('column "creator_affiliate_code"');
+}
+
 function resolveRequestLanguage(cookieStore, headerStore) {
     return normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value)
         || detectPreferredLanguageFromHeader(headerStore.get('accept-language'))
@@ -59,6 +71,19 @@ export async function POST(request) {
     const language = resolveRequestLanguage(cookieStore, headerStore);
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return NextResponse.json(
+            {
+                error: getCreatorProgramText(
+                    language,
+                    'Sign in or create an account before submitting a creator application.',
+                    'Влезте или създайте профил, преди да изпратите кандидатура за creator програмата.'
+                ),
+            },
+            { status: 401 }
+        );
+    }
 
     try {
         if (!isAdminConfigured()) {
@@ -85,7 +110,7 @@ export async function POST(request) {
         }
 
         const admin = createAdminClient();
-        const record = buildCreatorApplicationInsert(validation.normalized, { userId: user?.id ?? null });
+        const record = buildCreatorApplicationInsert(validation.normalized, { userId: user.id });
         const legacyCompatibleRecord = { ...record };
         delete legacyCompatibleRecord.phone;
         delete legacyCompatibleRecord.social_links;
@@ -123,17 +148,46 @@ export async function POST(request) {
             createdAt: applicationRecord.created_at,
         };
 
+        const creatorProfileInput = {
+            id: user.id,
+            email: user.email ?? responseApplication.email,
+            full_name: responseApplication.fullName,
+            creator_status: 'pending',
+            creator_application_id: responseApplication.id,
+            creator_affiliate_code: null,
+            creator_approved_at: null,
+        };
+        let profileError = null;
+
+        ({ error: profileError } = await admin
+            .from('profiles')
+            .upsert(creatorProfileInput));
+
+        if (profileError && isMissingCreatorProfileColumnsError(profileError)) {
+            ({ error: profileError } = await admin
+                .from('profiles')
+                .upsert({
+                    id: user.id,
+                    email: user.email ?? responseApplication.email,
+                    full_name: responseApplication.fullName,
+                }));
+        }
+
+        if (profileError) {
+            console.error('Creator profile status update failed.', profileError);
+        }
+
         try {
-            await notifyCreatorProgramAdmin(responseApplication);
+            await notifyCreatorProgramAdmin(responseApplication, { language });
         } catch (notificationError) {
-            console.error('Creator Program admin notification placeholder failed.', notificationError);
+            console.error('Creator Program email confirmation failed.', notificationError);
         }
 
         return NextResponse.json({
             message: getCreatorProgramText(
                 language,
-                'Your THE VA STORE creator partnership application is in review. Keep the downloaded PDF as confirmation of the agreed terms.',
-                'Кандидатурата ви за партньорство с THE VA STORE е получена. Запазете изтегления PDF като потвърждение за приетите условия.'
+                'Your THE VA STORE creator partnership application is in review. A confirmation email with your contract PDF has been sent automatically.',
+                'Кандидатурата ви за партньорство с THE VA STORE е получена. Автоматично изпратихме потвърждение по имейл с вашия договор в PDF.'
             ),
             application: responseApplication,
         });

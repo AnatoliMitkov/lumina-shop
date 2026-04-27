@@ -87,6 +87,7 @@ export default async function CollaborationPage() {
     return (
         <CollaborationStageExperience
             initialLanguage={currentLanguage}
+            isAuthenticated={Boolean(user)}
             initialValues={{
                 fullName: profile?.full_name || user?.user_metadata?.full_name || '',
                 email: user?.email || '',

@@ -127,8 +127,8 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 message: getText(
                     'auth.messages.account_created',
                     localizedFallback(
-                        'Your account is created. Check your email if Supabase confirmation is enabled, then sign in to access your account.',
-                        'Профилът е създаден. Ако потвърждението по имейл е включено в Supabase, проверете пощата си и после влезте.'
+                        `Welcome! We just sent a confirmation link to ${email}. Open the email and tap "Confirm your email" to activate your account, then come back here to sign in.`,
+                        `Добре дошли! Изпратихме линк за потвърждение на ${email}. Отворете имейла и натиснете „Потвърди имейла“, за да активирате профила си, после се върнете тук, за да влезете.`
                     )
                 ),
             });

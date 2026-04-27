@@ -477,6 +477,7 @@ export default function CollaborationStageExperience({
     initialLanguage = DEFAULT_LANGUAGE,
     policyHref,
     stageMedia = [],
+    isAuthenticated = false,
 }) {
     const { i18n } = useTranslation();
     const viewportRef = useRef(null);
@@ -497,6 +498,7 @@ export default function CollaborationStageExperience({
     const localize = (englishValue, bulgarianValue) => getCreatorProgramText(currentLanguage, englishValue, bulgarianValue);
     const [activeSceneIndex, setActiveSceneIndex] = useState(0);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
     const sceneMedia = useMemo(() => {
         const validMedia = Array.isArray(stageMedia) ? stageMedia.filter((item) => item?.src) : [];
@@ -803,6 +805,11 @@ export default function CollaborationStageExperience({
         }
 
         if (action.kind === 'modal') {
+            if (!isAuthenticated) {
+                setIsAuthPromptOpen(true);
+                return;
+            }
+
             setIsFormOpen(true);
         }
     };
@@ -914,6 +921,35 @@ export default function CollaborationStageExperience({
 
                         <div className="max-h-[calc(95dvh-7.25rem)] overflow-y-auto overscroll-contain p-4 md:max-h-[calc(95dvh-8rem)] md:p-6">
                             <CreatorProgramForm initialValues={initialValues} initialLanguage={currentLanguage} compact />
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {isAuthPromptOpen ? (
+                <div className="fixed inset-0 z-[170] flex items-center justify-center overflow-y-auto bg-[rgba(10,10,10,0.62)] px-4 py-4 backdrop-blur-md md:py-6" onClick={() => setIsAuthPromptOpen(false)}>
+                    <div className="w-full max-w-[34rem] rounded-[1.9rem] border border-white/12 bg-[linear-gradient(180deg,rgba(247,243,238,0.97)_0%,rgba(238,231,222,0.98)_100%)] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.3)] md:p-7" onClick={(event) => event.stopPropagation()}>
+                        <p className="text-[10px] uppercase tracking-[0.32em] text-black/46">{CREATOR_PROGRAM_BRAND_NAME}</p>
+                        <h3 className="mt-4 font-serif text-[2rem] font-light uppercase tracking-[0.08em] leading-tight text-black/82 md:text-[2.4rem]">
+                            {localize('Create Account To Apply', 'Създай профил, за да кандидатстваш')}
+                        </h3>
+                        <p className="mt-4 text-sm leading-relaxed text-black/66">
+                            {localize(
+                                'Applications are linked to a verified website account. Register or sign in first, then return here to submit your collaboration details.',
+                                'Кандидатурите се свързват с потвърден профил в сайта. Първо влезте или се регистрирайте, след това се върнете тук, за да изпратите детайлите си.'
+                            )}
+                        </p>
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <Link href="/account" className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-black px-5 text-[10px] uppercase tracking-[0.24em] text-[#F7F1EA] transition-opacity hover:opacity-90">
+                                {localize('Register Or Sign In', 'Регистрация или вход')}
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => setIsAuthPromptOpen(false)}
+                                className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-black/14 bg-white/72 px-5 text-[10px] uppercase tracking-[0.24em] text-black/66 transition-colors hover:border-black/24 hover:text-black/86"
+                            >
+                                {localize('Stay On This Page', 'Остани на тази страница')}
+                            </button>
                         </div>
                     </div>
                 </div>
