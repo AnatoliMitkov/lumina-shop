@@ -83,9 +83,9 @@ export default function PromotionTrendChart({
                         ))}
                     </div>
                 </div>
-            ) : (
+            ) : emptyMessage ? (
                 <p className={`mt-5 text-sm leading-relaxed ${palette.empty}`}>{emptyMessage}</p>
-            )}
+            ) : null}
         </div>
     );
 }

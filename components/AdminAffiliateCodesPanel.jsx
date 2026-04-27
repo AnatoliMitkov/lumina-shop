@@ -335,7 +335,7 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
     };
 
     return (
-        <div className="border border-[#1C1C1C]/10 bg-[#1C1C1C] text-[#EFECE8] rounded-sm p-6 md:p-8 flex flex-col gap-6">
+        <div className="flex h-full min-h-0 flex-col gap-6 rounded-sm border border-[#1C1C1C]/10 bg-[#1C1C1C] p-6 text-[#EFECE8] md:p-8">
             <div className="flex items-end justify-between gap-4">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 mb-3">Partner Attribution</p>
@@ -354,8 +354,8 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-5 items-start">
-                <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-5 items-start xl:min-h-0 xl:flex-1 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-stretch">
+                <div className="flex flex-col gap-4 xl:h-full xl:min-h-0">
                     <button type="button" onClick={() => setSelectedAffiliateId('new')} disabled={isLocked} className={`hover-target h-12 rounded-full border border-white/12 bg-white/8 text-white text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${isLocked ? 'opacity-60' : 'hover:bg-white/12'}`}>
                         New Affiliate Code
                     </button>
@@ -365,7 +365,7 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
                         <input value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="Code or partner" className="h-12 border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/20" />
                     </label>
 
-                    <div className="max-h-[38rem] overflow-auto pr-1 flex flex-col gap-3">
+                    <div data-lenis-prevent-wheel className="flex max-h-[38rem] flex-col gap-3 overflow-auto overscroll-contain pr-1 xl:min-h-0 xl:max-h-none xl:flex-1">
                         {filteredAffiliateCodes.length === 0 ? (
                             <p className="text-sm text-white/60">No affiliate codes match the current search.</p>
                         ) : (
@@ -399,7 +399,7 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="border border-white/10 bg-white/[0.05] rounded-sm p-5 md:p-6 flex flex-col gap-5">
+                <form onSubmit={handleSave} className="flex h-full flex-col gap-5 rounded-sm border border-white/10 bg-white/[0.05] p-5 md:p-6">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-white/42">Affiliate Editor</p>
@@ -525,21 +525,20 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
 
                             <PromotionTrendChart
                                 title="Earnings & Savings Timeline"
-                                copy="Recent affiliate payout and shopper savings across the last 14 days loaded in admin."
                                 points={affiliateInsights.timeline}
                                 series={[
                                     { key: 'earned', label: 'Earned', color: '#EFECE8' },
                                     { key: 'saved', label: 'Saved', color: '#C7A76A' },
                                 ]}
                                 theme="dark"
-                                emptyMessage="No recent orders have used this affiliate code yet."
+                                emptyMessage=""
                             />
                         </div>
                     )}
 
                     {feedback.message && <p className={`text-sm ${feedback.type === 'error' ? 'text-red-200' : 'text-white/70'}`}>{feedback.message}</p>}
 
-                    <div className="flex flex-wrap justify-end gap-3">
+                    <div className="mt-auto flex flex-wrap justify-end gap-3 pt-2">
                         {selectedAffiliate && (
                             <button type="button" onClick={handleDelete} disabled={isLocked || isSaving || isDeleting} className={`hover-target h-12 px-5 border border-red-200/40 bg-red-400/10 text-[10px] uppercase tracking-[0.22em] text-red-100 transition-colors ${isLocked || isSaving || isDeleting ? 'opacity-60' : 'hover:bg-red-400/20'}`}>
                                 {isDeleting ? 'Deleting' : 'Delete Affiliate'}

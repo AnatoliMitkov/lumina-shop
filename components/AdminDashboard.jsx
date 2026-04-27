@@ -2670,7 +2670,7 @@ export default function AdminDashboard({
                 <AdminInquiriesPanel recentInquiries={adminInquiries} onInquiriesChange={setAdminInquiries} panelId="admin-inquiries-panel" />
             </section>
 
-            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 items-start">
+            <section className="grid grid-cols-1 gap-6 items-start md:gap-8 xl:grid-cols-2 xl:items-stretch">
                 <AdminDiscountCodesPanel initialDiscounts={discountCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
                 <AdminAffiliateCodesPanel initialAffiliates={affiliateCodes} recentOrders={adminOrders} setupMessage={promotionMessage} />
             </section>

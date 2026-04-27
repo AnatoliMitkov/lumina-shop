@@ -300,7 +300,7 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
     };
 
     return (
-        <div className="border border-[#1C1C1C]/10 bg-white/45 rounded-sm p-6 md:p-8 flex flex-col gap-6">
+        <div className="flex h-full min-h-0 flex-col gap-6 rounded-sm border border-[#1C1C1C]/10 bg-white/45 p-6 md:p-8">
             <div className="flex items-end justify-between gap-4">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.28em] text-[#1C1C1C]/45 mb-3">Promotion Pricing</p>
@@ -319,8 +319,8 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-5 items-start">
-                <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-5 items-start xl:min-h-0 xl:flex-1 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-stretch">
+                <div className="flex flex-col gap-4 xl:h-full xl:min-h-0">
                     <button type="button" onClick={() => setSelectedDiscountId('new')} disabled={isLocked} className={`hover-target h-12 rounded-full bg-[#1C1C1C] text-[#EFECE8] text-[10px] uppercase tracking-[0.24em] font-medium transition-colors ${isLocked ? 'opacity-60' : 'hover:bg-black'}`}>
                         New Discount Code
                     </button>
@@ -330,7 +330,7 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
                         <input value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="Code or label" className="h-12 border border-[#1C1C1C]/12 bg-white px-4 text-sm tracking-normal text-[#1C1C1C] outline-none transition-colors focus:border-[#1C1C1C]" />
                     </label>
 
-                    <div className="max-h-[38rem] overflow-auto pr-1 flex flex-col gap-3">
+                    <div data-lenis-prevent-wheel className="flex max-h-[38rem] flex-col gap-3 overflow-auto overscroll-contain pr-1 xl:min-h-0 xl:max-h-none xl:flex-1">
                         {filteredDiscounts.length === 0 ? (
                             <p className="text-sm text-[#1C1C1C]/58">No discount codes match the current search.</p>
                         ) : (
@@ -369,7 +369,7 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="border border-[#1C1C1C]/10 bg-[#EFECE8]/65 rounded-sm p-5 md:p-6 flex flex-col gap-5">
+                <form onSubmit={handleSave} className="flex h-full flex-col gap-5 rounded-sm border border-[#1C1C1C]/10 bg-[#EFECE8]/65 p-5 md:p-6">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.24em] text-[#1C1C1C]/45">Discount Editor</p>
@@ -451,7 +451,6 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
                                     <option key={option.value} value={option.value}>{option.label}</option>
                                 ))}
                             </select>
-                            <span className="text-xs leading-relaxed text-[#1C1C1C]/55 normal-case tracking-normal">Useful for collaborations or exceptions where domestic shipping should be marked as covered by the sender or by the receiver.</span>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-[#1C1C1C]/55">
                             Minimum Subtotal
@@ -522,18 +521,17 @@ export default function AdminDiscountCodesPanel({ initialDiscounts = [], recentO
 
                             <PromotionTrendChart
                                 title="Savings Timeline"
-                                copy="Recent saved value from this discount code across the last 14 days loaded in admin."
                                 points={discountInsights.timeline}
                                 series={[{ key: 'saved', label: 'Saved', color: '#1C1C1C' }]}
                                 theme="light"
-                                emptyMessage="No recent orders have applied this discount code yet."
+                                emptyMessage=""
                             />
                         </div>
                     )}
 
                     {feedback.message && <p className={`text-sm ${feedback.type === 'error' ? 'text-red-600' : 'text-[#1C1C1C]/68'}`}>{feedback.message}</p>}
 
-                    <div className="flex flex-wrap justify-end gap-3">
+                    <div className="mt-auto flex flex-wrap justify-end gap-3 pt-2">
                         {selectedDiscount && (
                             <button type="button" onClick={handleDelete} disabled={isLocked || isSaving || isDeleting} className={`hover-target h-12 px-5 border border-red-200 bg-red-50 text-[10px] uppercase tracking-[0.22em] text-red-700 transition-colors ${isLocked || isSaving || isDeleting ? 'opacity-60' : 'hover:bg-red-100'}`}>
                                 {isDeleting ? 'Deleting' : 'Delete Discount'}
