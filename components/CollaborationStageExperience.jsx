@@ -20,7 +20,7 @@ import {
 const ORBIT_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 const METRIC_LAYOUT = {
-    stripTopMobile: '2.4rem',
+    stripTopMobile: '3.7rem',
     stripTopDesktop: '5rem',
     stripInsetMobile: '1.5rem',
     stripInsetDesktop: '3.5rem',
@@ -28,6 +28,7 @@ const METRIC_LAYOUT = {
     leadingGhostTopDesktop: 'clamp(1.5rem,4.1vw,3.3rem)',
     trailingGhostTopMobile: 'clamp(3.2rem,7.6vw,5.5rem)',
     trailingGhostTopDesktop: 'clamp(2.8rem,6.1vw,4.8rem)',
+    numberSize: 'clamp(4rem,10.6vw,10rem)',
 };
 
 function usePageMotionState() {
@@ -205,7 +206,7 @@ function resolveMinimalSceneStats(scene) {
     ];
 }
 
-function AnimatedMetricValue({ value, delayMs = 0, isPageMotionEnabled, className }) {
+function AnimatedMetricValue({ value, delayMs = 0, isPageMotionEnabled, className, style }) {
     const parsedMetric = useMemo(() => parseMetricValue(value), [value]);
     const [displayValue, setDisplayValue] = useState(() => (parsedMetric.hasNumericValue ? 0 : parsedMetric.rawValue));
 
@@ -302,14 +303,14 @@ function AnimatedMetricValue({ value, delayMs = 0, isPageMotionEnabled, classNam
     }, [parsedMetric, delayMs, isPageMotionEnabled]);
 
     if (!parsedMetric.hasNumericValue) {
-        return <span className={className}>{parsedMetric.rawValue}</span>;
+        return <span className={className} style={style}>{parsedMetric.rawValue}</span>;
     }
 
     const prefix = parsedMetric.prefix ? `${parsedMetric.prefix} ` : '';
     const suffix = parsedMetric.suffix ? ` ${parsedMetric.suffix}` : '';
 
     return (
-        <span className={className}>{`${prefix}${formatAnimatedMetricNumber(displayValue, parsedMetric)}${suffix}`}</span>
+        <span className={className} style={style}>{`${prefix}${formatAnimatedMetricNumber(displayValue, parsedMetric)}${suffix}`}</span>
     );
 }
 
@@ -371,7 +372,8 @@ function MinimalSceneMetricStrip({ scene, isPageMotionEnabled }) {
                                 value={metric.value}
                                 delayMs={index * 110}
                                 isPageMotionEnabled={isPageMotionEnabled}
-                                className="block font-serif text-[clamp(6.6rem,10.6vw,10rem)] font-medium italic leading-[0.72] tracking-[-0.07em] text-[rgba(45,32,22,0.68)] [font-variant-numeric:tabular-nums] [text-shadow:0_12px_30px_rgba(255,255,255,0.42)] [transform:skewX(-4deg)]"
+                                className="block font-serif font-medium italic leading-[0.72] tracking-[-0.07em] text-[rgba(45,32,22,0.68)] [font-variant-numeric:tabular-nums] [text-shadow:0_12px_30px_rgba(255,255,255,0.42)] [transform:skewX(-4deg)]"
+                                style={{ fontSize: METRIC_LAYOUT.numberSize }}
                             />
                             <span className={`mt-2 text-[11px] uppercase tracking-[0.22em] text-black/52 ${isLeadingMetric ? 'translate-x-2 md:translate-x-3' : '-translate-x-2 md:-translate-x-3'}`}>
                                 {metric.label}
