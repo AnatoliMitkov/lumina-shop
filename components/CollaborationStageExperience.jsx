@@ -19,6 +19,17 @@ import {
 
 const ORBIT_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
+const METRIC_LAYOUT = {
+    stripTopMobile: '2.4rem',
+    stripTopDesktop: '5rem',
+    stripInsetMobile: '1.5rem',
+    stripInsetDesktop: '3.5rem',
+    leadingGhostTopMobile: 'clamp(1.2rem,4.2vw,3.1rem)',
+    leadingGhostTopDesktop: 'clamp(1.5rem,4.1vw,3.3rem)',
+    trailingGhostTopMobile: 'clamp(3.2rem,7.6vw,5.5rem)',
+    trailingGhostTopDesktop: 'clamp(2.8rem,6.1vw,4.8rem)',
+};
+
 function usePageMotionState() {
     const [isPageMotionEnabled, setIsPageMotionEnabled] = useState(true);
 
@@ -309,8 +320,22 @@ function MinimalSceneMetricStrip({ scene, isPageMotionEnabled }) {
         return null;
     }
 
+    const metricStripStyle = {
+        '--metric-strip-top-mobile': METRIC_LAYOUT.stripTopMobile,
+        '--metric-strip-top-desktop': METRIC_LAYOUT.stripTopDesktop,
+        '--metric-strip-inset-mobile': METRIC_LAYOUT.stripInsetMobile,
+        '--metric-strip-inset-desktop': METRIC_LAYOUT.stripInsetDesktop,
+        '--metric-ghost-leading-top-mobile': METRIC_LAYOUT.leadingGhostTopMobile,
+        '--metric-ghost-leading-top-desktop': METRIC_LAYOUT.leadingGhostTopDesktop,
+        '--metric-ghost-trailing-top-mobile': METRIC_LAYOUT.trailingGhostTopMobile,
+        '--metric-ghost-trailing-top-desktop': METRIC_LAYOUT.trailingGhostTopDesktop,
+    };
+
     return (
-        <div className={`pointer-events-none absolute inset-x-6 top-[5.7rem] z-[55] flex items-start gap-6 md:inset-x-14 md:top-[5rem] ${stats.length > 1 ? 'justify-between' : 'justify-start'}`}>
+        <div
+            className={`pointer-events-none absolute inset-x-[var(--metric-strip-inset-mobile)] top-[var(--metric-strip-top-mobile)] z-[55] flex items-start gap-6 md:inset-x-[var(--metric-strip-inset-desktop)] md:top-[var(--metric-strip-top-desktop)] ${stats.length > 1 ? 'justify-between' : 'justify-start'}`}
+            style={metricStripStyle}
+        >
             {stats.map((metric, index) => {
                 const isLeadingMetric = index === 0 || stats.length === 1;
                 const alignClassName = isLeadingMetric ? 'items-start text-left' : 'items-end text-right';
@@ -327,7 +352,7 @@ function MinimalSceneMetricStrip({ scene, isPageMotionEnabled }) {
                         className={`relative flex items-start min-h-[13.5rem] min-w-0 w-[clamp(10.5rem,18vw,16rem)] md:w-[clamp(12rem,19vw,20rem)] [@container] ${isLeadingMetric ? 'justify-start' : 'justify-end'}`}
                     >
                         <div
-                            className={`pointer-events-none absolute z-0 flex w-full flex-col -space-y-2 ${isLeadingMetric ? 'left-0 top-[clamp(1.2rem,4.2vw,3.1rem)] items-start text-left md:top-[clamp(1.5rem,4.1vw,3.3rem)]' : 'right-0 top-[clamp(3.2rem,7.6vw,5.5rem)] items-end text-right md:top-[clamp(2.8rem,6.1vw,4.8rem)]'}`}
+                            className={`pointer-events-none absolute z-0 flex w-full flex-col -space-y-2 ${isLeadingMetric ? 'left-0 top-[var(--metric-ghost-leading-top-mobile)] items-start text-left md:top-[var(--metric-ghost-leading-top-desktop)]' : 'right-0 top-[var(--metric-ghost-trailing-top-mobile)] items-end text-right md:top-[var(--metric-ghost-trailing-top-desktop)]'}`}
                             aria-hidden="true"
                         >
                             {ghostLines.map((line, lineIndex) => (
@@ -421,7 +446,7 @@ function OrbitalCard({ scene, isActive, isIntro, offset, onSelect, onAction, isP
             tabIndex={isActive ? undefined : 0}
             onClick={isActive ? undefined : () => onSelect(scene.index)}
             onKeyDown={isActive ? undefined : handleCardKeyDown}
-            className={`absolute left-1/2 top-1/2 w-[min(42rem,82vw)] max-w-[42rem] -translate-x-1/2 -translate-y-1/2 text-left [transform-style:preserve-3d] ${isActive ? '' : 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/30'}`}
+            className={`absolute left-1/2 top-[60%] w-[min(42rem,82vw)] max-w-[42rem] -translate-x-1/2 -translate-y-1/2 text-left [transform-style:preserve-3d] md:top-1/2 ${isActive ? '' : 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black/30'}`}
             style={motionStyle}
             aria-pressed={isActive ? undefined : isActive}
         >
@@ -844,10 +869,9 @@ export default function CollaborationStageExperience({
                     <div className="relative h-[72vmin] w-[72vmin] max-h-[48rem] max-w-[48rem] rounded-full border border-black/10"></div>
                     <div className="absolute h-[54vmin] w-[54vmin] max-h-[36rem] max-w-[36rem] rounded-full border border-black/6"></div>
                     <div className="absolute h-5 w-5 rounded-full border border-black/18 bg-white/70 shadow-[0_0_28px_rgba(255,255,255,0.8)]"></div>
-                    <div className="absolute mt-10 rounded-full border border-black/10 bg-white/60 px-4 py-2 text-[10px] uppercase tracking-[0.28em] text-black/50 backdrop-blur-xl">{localize('You are here', 'Тук си')}</div>
                 </div>
 
-                <div className="absolute left-1/2 top-[61%] h-[76vh] w-full max-w-[1480px] -translate-x-1/2 -translate-y-1/2 [perspective:2200px] [transform-style:preserve-3d] md:top-1/2 md:h-[80vh]">
+                <div className="absolute top-[60%] left-1/2 [perspective:4400px] [transform-style:preserve-3d]">
                     {scenes.map((scene, index) => {
                         const offset = resolveOffset(index, activeSceneIndex, sceneCount);
                         const isActive = offset === 0;
