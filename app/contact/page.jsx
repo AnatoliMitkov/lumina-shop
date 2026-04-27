@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createClient } from '../../utils/supabase/server';
+import { createClient, getUserSafely } from '../../utils/supabase/server';
 import ContactForm from '../../components/ContactForm';
 import EditableText from '../../components/site-copy/EditableText';
 import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY, normalizeLanguage } from '../../utils/language';
@@ -18,7 +18,7 @@ export default async function ContactPage({ searchParams }) {
     const cookieStore = await cookies();
     const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
     const supabase = createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafely(supabase);
     let profile = null;
 
     if (user) {

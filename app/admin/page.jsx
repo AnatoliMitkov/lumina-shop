@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import AdminDashboard from '../../components/AdminDashboard';
 import { isPromotionSetupError } from '../../utils/promotions';
 import { isSiteCopySetupError } from '../../utils/site-copy';
-import { createClient } from '../../utils/supabase/server';
+import { createClient, getUserSafely } from '../../utils/supabase/server';
 import { getCollectionMediaKeyPrefix, toCollectionMediaMap } from '../../utils/fifth-avenue-stage-media';
 import { sortProducts } from '../../utils/products';
 
@@ -50,7 +50,7 @@ function SetupCard({ title, copy, sql }) {
 export default async function AdminPage() {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafely(supabase);
 
     if (!user) {
         redirect('/account');

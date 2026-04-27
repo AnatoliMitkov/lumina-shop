@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import ResetPasswordPanel from '../../../components/ResetPasswordPanel';
 import EditableText from '../../../components/site-copy/EditableText';
-import { createClient, isSupabaseConfigured } from '../../../utils/supabase/server';
+import { createClient, getUserSafely, isSupabaseConfigured } from '../../../utils/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +44,7 @@ export default async function ResetPasswordPage({ searchParams = {} }) {
 
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafely(supabase);
 
     if (!user) {
         return (

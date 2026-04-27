@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
+import { createClient, getUserSafely, isSupabaseConfigured } from '../../utils/supabase/server';
 import AuthPanel from '../../components/AuthPanel';
 import AccountDashboard from '../../components/AccountDashboard';
 import EditableText from '../../components/site-copy/EditableText';
@@ -179,7 +179,7 @@ export default async function AccountPage({ searchParams }) {
     }
 
     const supabase = createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafely(supabase);
 
     if (!user) {
         const authBenefits = [

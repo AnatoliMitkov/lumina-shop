@@ -4,7 +4,7 @@ import { FALLBACK_PRODUCTS, normalizeStageProduct } from '../../_archive/fifth-a
 import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_KEY, normalizeLanguage } from '../../utils/language';
 import { filterProductsByLanguage } from '../../utils/products';
 import { COLLABORATION_PATH, COLLABORATION_POLICY_PATH } from '../../utils/site-routes';
-import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
+import { createClient, getUserSafely, isSupabaseConfigured } from '../../utils/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +69,7 @@ export default async function CollaborationPage() {
     const currentLanguage = normalizeLanguage(cookieStore.get(LANGUAGE_COOKIE_KEY)?.value) || DEFAULT_LANGUAGE;
     const supabase = createClient(cookieStore);
     const [{ data: { user } }, stageMedia] = await Promise.all([
-        supabase.auth.getUser(),
+        getUserSafely(supabase),
         loadStageMedia(supabase, currentLanguage),
     ]);
     let profile = null;

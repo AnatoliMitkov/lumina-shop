@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createClient, isSupabaseConfigured } from '../../utils/supabase/server';
+import { createClient, getUserSafely, isSupabaseConfigured } from '../../utils/supabase/server';
 import CheckoutExperience from '../../components/CheckoutExperience';
 import EditableText from '../../components/site-copy/EditableText';
 import { isStripeConfigured } from '../../utils/stripe/server';
@@ -42,7 +42,7 @@ export default async function CheckoutPage() {
     if (isSupabaseConfigured()) {
         const cookieStore = await cookies();
         const supabase = createClient(cookieStore);
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getUserSafely(supabase);
 
         isSignedIn = Boolean(user);
 

@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 @theme {
     --font-sans: 'Syne', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
