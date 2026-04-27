@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient, isSupabaseConfigured } from '../utils/supabase/client';
 import { createLocalizedValue as localizedFallback, DEFAULT_LANGUAGE, resolveLocalizedValue } from '../utils/language';
+import { absoluteSiteUrl } from '../utils/seo';
 import EditableText from './site-copy/EditableText';
 import { useSiteCopy } from './site-copy/SiteCopyProvider';
 
@@ -18,14 +19,6 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [status, setStatus] = useState({ type: 'idle', message: '' });
     const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
-
-    const buildRedirectUrl = (path) => {
-        if (typeof window === 'undefined') {
-            return undefined;
-        }
-
-        return `${window.location.origin}${path}`;
-    };
 
     const persistProfile = async () => {
         const response = await fetch('/api/account/profile', {
@@ -65,7 +58,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
             }
 
             if (mode === 'recovery') {
-                const redirectTo = buildRedirectUrl('/account/reset-password');
+                const redirectTo = absoluteSiteUrl('/account/reset-password', { allowLocal: false });
                 const { error } = await supabase.auth.resetPasswordForEmail(
                     email,
                     redirectTo ? { redirectTo } : undefined
@@ -104,7 +97,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
                 email,
                 password,
                 options: {
-                    emailRedirectTo: buildRedirectUrl('/account'),
+                    emailRedirectTo: absoluteSiteUrl('/account', { allowLocal: false }),
                     data: {
                         full_name: fullName,
                     },
