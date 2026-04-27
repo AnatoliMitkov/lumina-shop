@@ -250,9 +250,7 @@ function normalizeTransitionPath(pathname) {
 }
 
 function shouldAnimateRouteTransition(pathname) {
-    const normalizedPathname = normalizeTransitionPath(pathname);
-
-    return normalizedPathname === '/' || normalizedPathname === '/collections' || isSpotlightPath(normalizedPathname);
+    return false;
 }
 
 export default function ClientEngine({ children, initialLanguage }) {
@@ -312,6 +310,17 @@ export default function ClientEngine({ children, initialLanguage }) {
 
     useEffect(() => {
         applyPreferredLanguage();
+    }, []);
+
+    // Safety fallback: ensure .route-reveal content is never permanently hidden by the
+    // CSS pre-reveal rule, even if the GSAP page-load pipeline never marks it ready.
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined;
+        const reveal = () => {
+            document.documentElement.setAttribute('data-route-reveal-ready', '');
+        };
+        const timeoutId = window.setTimeout(reveal, 1500);
+        return () => window.clearTimeout(timeoutId);
     }, []);
 
     useEffect(() => {
@@ -989,6 +998,11 @@ export default function ClientEngine({ children, initialLanguage }) {
     // --- 3. Page Load & Scroll Animations (Triggers on Route Change) ---
     useGSAP(() => {
         if (isPageMotionEnabled && shouldAnimateCurrentRoute) {
+            // After the first load the reveal pipeline has already run; on subsequent
+            // route changes the .route-reveal blocks should be visible immediately.
+            if (typeof document !== 'undefined' && hasPlayedInitialLoadRef.current) {
+                document.documentElement.setAttribute('data-route-reveal-ready', '');
+            }
             const isInitialLoad = !hasPlayedInitialLoadRef.current;
             const transitionTimings = isInitialLoad
                 ? {
@@ -1019,6 +1033,19 @@ export default function ClientEngine({ children, initialLanguage }) {
                     heroSubDuration: 0.7,
                     navDuration: 0.68,
                 };
+
+            // Seed the pre-animation state so the timeline always has visible distance
+            // to travel — without this, navigating from a non-animated route (which left
+            // hero/preloader/loader-text in their "complete" state) would make the new
+            // timeline animate from complete to complete (i.e. nothing visible).
+            gsap.set(preloaderRef.current, { yPercent: 0 });
+            gsap.set('.loader-text', { y: '100%', opacity: 0 });
+            gsap.set('.hero-img', { opacity: 0, scale: 1.03 });
+            gsap.set('.hero-title', { y: '100%' });
+            gsap.set('.hero-sub', { opacity: 0, y: 14 });
+            if (!isImmersiveRoute) {
+                gsap.set('#nav', { opacity: 0 });
+            }
 
             const tl = gsap.timeline();
             tl.to('.loader-text', {
@@ -1072,6 +1099,11 @@ export default function ClientEngine({ children, initialLanguage }) {
                 gsap.set(lightEntranceTargets, { opacity: 0, y: 22 });
             }
 
+            // GSAP now owns the initial state via inline styles, so it's safe to drop
+            // the CSS pre-reveal guard. Inline styles win during the timeline; clearProps
+            // at the end leaves the element visible because this attribute is set.
+            document.documentElement.setAttribute('data-route-reveal-ready', '');
+
             const tl = gsap.timeline({
                 onComplete: () => {
                     dispatchPageRevealComplete(pathname);
@@ -1102,6 +1134,7 @@ export default function ClientEngine({ children, initialLanguage }) {
             gsap.set('.hero-sub', { opacity: 1 });
             gsap.set('.route-reveal', { opacity: 1, y: 0 });
             gsap.set('#nav', { opacity: 1 });
+            document.documentElement.setAttribute('data-route-reveal-ready', '');
 
             dispatchPageRevealComplete(pathname);
         }
@@ -1218,9 +1251,13 @@ export default function ClientEngine({ children, initialLanguage }) {
                 return;
             }
 
-            const link = event.target.closest('.transition-link');
+            const link = event.target.closest('a[href]');
 
             if (!(link instanceof HTMLAnchorElement)) {
+                return;
+            }
+
+            if (link.hasAttribute('data-no-transition')) {
                 return;
             }
 
@@ -1251,23 +1288,27 @@ export default function ClientEngine({ children, initialLanguage }) {
 
             const shouldAnimateNextRoute = shouldAnimateRouteTransition(nextUrl.pathname);
 
-            event.preventDefault();
-
             if (!isPageMotionEnabled || !shouldAnimateNextRoute) {
-                router.push(nextHref);
                 return;
             }
 
+            event.preventDefault();
+
+            gsap.set(preloaderRef.current, { yPercent: 0 });
             gsap.set('.loader-text', { opacity: 0 });
             gsap.to(preloaderRef.current, {
                 yPercent: 0,
                 duration: 0.78,
                 ease: "power4.inOut",
+                overwrite: 'auto',
                 onComplete: () => router.push(nextHref),
             });
         };
-        document.addEventListener('click', handleLinkClick);
-        return () => document.removeEventListener('click', handleLinkClick);
+
+        // Capture phase ensures we can intercept internal navigations consistently,
+        // even when child components attach their own click handlers.
+        document.addEventListener('click', handleLinkClick, true);
+        return () => document.removeEventListener('click', handleLinkClick, true);
     }, [isPageMotionEnabled, router]);
 
     // --- 5. Cart Toggle Animation ---

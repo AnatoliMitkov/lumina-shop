@@ -17,7 +17,13 @@ create table if not exists public.creator_applications (
 
 alter table public.creator_applications
     add column if not exists phone text,
-    add column if not exists social_links jsonb not null default '[]'::jsonb;
+    add column if not exists social_links jsonb not null default '[]'::jsonb,
+    add column if not exists affiliate_code_id uuid references public.affiliate_codes(id) on delete set null,
+    add column if not exists affiliate_code text,
+    add column if not exists reviewed_at timestamptz,
+    add column if not exists reviewed_by uuid references auth.users(id) on delete set null,
+    add column if not exists admin_note text,
+    add column if not exists approval_email_sent_at timestamptz;
 
 create index if not exists creator_applications_created_at_idx
     on public.creator_applications (created_at desc);
@@ -27,6 +33,9 @@ create index if not exists creator_applications_status_idx
 
 create index if not exists creator_applications_user_id_idx
     on public.creator_applications (user_id);
+
+create index if not exists creator_applications_affiliate_code_id_idx
+    on public.creator_applications (affiliate_code_id);
 
 create or replace function public.set_creator_applications_updated_at()
 returns trigger

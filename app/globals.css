@@ -353,6 +353,18 @@ html[data-page-motion='off'] .hero-img {
     transform: none !important;
 }
 
+/* Prevent FOUC of route-reveal blocks before the GSAP page-load timeline takes over.
+   ClientEngine sets data-route-reveal-ready on <html> once the reveal pipeline is in
+   control (or after a safety timeout) so content can never get permanently stuck. */
+html:not([data-route-reveal-ready]) .route-reveal {
+    opacity: 0;
+    transform: translateY(22px);
+}
+html[data-page-motion='off'] .route-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 .editable-media-asset-responsive {
     object-fit: var(--editable-media-fit-desktop, cover);
     object-position: var(--editable-media-position-desktop-x, 50%) var(--editable-media-position-desktop-y, 50%);

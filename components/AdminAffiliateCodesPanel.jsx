@@ -429,48 +429,14 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
                                     <option key={option.value} value={option.value} style={DARK_SELECT_OPTION_STYLE}>{option.label}</option>
                                 ))}
                             </select>
+                            <div className="flex flex-col gap-2 pt-1">
+                                <button type="button" onClick={() => setIsMathNoteOpen(true)} className="self-start rounded-full border border-white/10 bg-white/[0.08] px-3 py-2 text-[9px] uppercase tracking-[0.18em] text-white/68 transition-colors hover:border-white/20 hover:text-white">
+                                    Open Margin Note
+                                </button>
+                            </div>
                         </label>
                         <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.22em] text-white/52">
-                            <span className="flex items-center justify-between gap-3">
-                                <span>Customer Discount Value</span>
-                                <button type="button" onClick={() => setIsMathNoteOpen((currentValue) => !currentValue)} className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-2 text-[9px] uppercase tracking-[0.18em] text-white/68 transition-colors hover:border-white/20 hover:text-white">
-                                    {isMathNoteOpen ? 'Hide Margin Note' : 'Margin Note'}
-                                </button>
-                            </span>
-                            {isMathNoteOpen && (
-                                <div className={`rounded-sm border px-4 py-4 ${retentionTone.shell}`}>
-                                    <div className="flex flex-col gap-4">
-                                        <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.18em] normal-case">
-                                            Reference subtotal
-                                            <input value={referenceSubtotal} onChange={(event) => setReferenceSubtotal(event.target.value)} type="number" min="0" step="0.01" className="h-11 border border-current/15 bg-black/10 px-3 text-sm tracking-normal text-current outline-none transition-colors focus:border-current/30" />
-                                        </label>
-
-                                        {affiliatePreview.affiliate.status !== 'invalid' ? (
-                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                                <div>
-                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Shopper Saves</p>
-                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(affiliatePreview.affiliate.customerDiscountAmount)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Affiliate Earns</p>
-                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(affiliatePreview.affiliate.commissionAmount)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Revenue Kept</p>
-                                                    <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{retainedShare}%</p>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p className={`text-sm leading-relaxed ${retentionTone.copy}`}>{affiliatePreview.affiliate.message || 'This preview is waiting for a valid subtotal and value.'}</p>
-                                        )}
-
-                                        <p className={`text-xs leading-relaxed ${retentionTone.copy}`}>
-                                            This is revenue kept after shopper savings and partner payout, before product cost, shipping, VAT, and payment fees.
-                                            {draft.can_stack_with_discount ? ' Because stacking is enabled here, an allowed discount code can reduce the retained share even further before checkout closes.' : ''}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
+                            Customer Discount
                             <input value={draft.customer_discount_value} onChange={(event) => handleDraftChange('customer_discount_value', event.target.value)} type="number" min="0" step="0.01" disabled={isLocked} className="h-12 border border-white/10 bg-white/[0.04] px-4 text-sm tracking-normal text-white outline-none transition-colors focus:border-white/20" />
                             <span className="text-xs leading-relaxed text-white/56 normal-case tracking-normal">
                                 {draft.customer_discount_type === 'none'
@@ -588,6 +554,54 @@ export default function AdminAffiliateCodesPanel({ initialAffiliates = [], recen
                     </div>
                 </form>
             </div>
+
+            {isMathNoteOpen && (
+                <div className="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(12,12,12,0.62)] px-4 py-6 backdrop-blur-sm" onClick={() => setIsMathNoteOpen(false)}>
+                    <div className={`w-full max-w-[42rem] rounded-sm border px-5 py-5 shadow-[0_32px_90px_rgba(0,0,0,0.35)] md:px-6 md:py-6 ${retentionTone.shell}`} onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-4 border-b border-current/12 pb-4">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.22em] opacity-60">Margin Note</p>
+                                <h4 className="mt-2 font-serif text-3xl font-light uppercase tracking-[0.08em]">Affiliate Math Preview</h4>
+                            </div>
+                            <button type="button" onClick={() => setIsMathNoteOpen(false)} className="rounded-full border border-current/12 px-4 py-2 text-[10px] uppercase tracking-[0.18em] transition-colors hover:border-current/24">
+                                Close
+                            </button>
+                        </div>
+
+                        <div className="mt-5 flex flex-col gap-4">
+                            <label className="flex flex-col gap-2 text-[10px] uppercase tracking-[0.18em] normal-case">
+                                Reference subtotal
+                                <input value={referenceSubtotal} onChange={(event) => setReferenceSubtotal(event.target.value)} type="number" min="0" step="0.01" className="h-11 border border-current/15 bg-black/10 px-3 text-sm tracking-normal text-current outline-none transition-colors focus:border-current/30" />
+                            </label>
+
+                            {affiliatePreview.affiliate.status !== 'invalid' ? (
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div>
+                                        <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Shopper Saves</p>
+                                        <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(affiliatePreview.affiliate.customerDiscountAmount)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Affiliate Earns</p>
+                                        <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{formatPromotionCurrency(affiliatePreview.affiliate.commissionAmount)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] uppercase tracking-[0.18em] opacity-70">Revenue Kept</p>
+                                        <p className={`mt-2 font-serif text-2xl font-light ${retentionTone.accent}`}>{retainedShare}%</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className={`text-sm leading-relaxed ${retentionTone.copy}`}>{affiliatePreview.affiliate.message || 'This preview is waiting for a valid subtotal and value.'}</p>
+                            )}
+
+                            <p className={`text-xs leading-relaxed ${retentionTone.copy}`}>
+                                Affiliate payout is based on subtotal after any promo-code savings, but before this affiliate code's own shopper discount is applied.
+                                Revenue kept is what remains after shopper savings and partner payout, before product cost, shipping, VAT, and payment fees.
+                                {draft.can_stack_with_discount ? ' Because stacking is enabled here, an allowed discount code can reduce the commission base and retained share before checkout closes.' : ''}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

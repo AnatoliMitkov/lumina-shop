@@ -526,7 +526,9 @@ export function evaluateAffiliateRecord({
     const customerDiscountAmount = !shopperDiscountEnabled || record.customer_discount_type === 'none'
         ? 0
         : calculateAdjustment(normalizedShopperSubtotal, record.customer_discount_type, record.customer_discount_value);
-    const commissionBase = Math.max(0, normalizedCommissionSubtotal - customerDiscountAmount);
+    // Policy: affiliate commission is based on merchandise subtotal after any promo-code
+    // shopper savings, but before this affiliate code's own shopper discount is applied.
+    const commissionBase = Math.max(0, normalizedCommissionSubtotal);
     const commissionAmount = calculateCommission(commissionBase, record.commission_type, record.commission_value);
     const status = customerDiscountAmount > 0 ? 'applied' : 'tracked';
 

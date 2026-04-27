@@ -13,6 +13,7 @@ const ADMIN_ORDER_SELECT = '*';
 const ADMIN_INQUIRY_SELECT = '*';
 const ADMIN_DISCOUNT_SELECT = 'id, code, label, description, discount_type, discount_value, shipping_benefit, can_stack_with_affiliate, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
 const ADMIN_AFFILIATE_SELECT = 'id, code, partner_name, notes, customer_discount_type, customer_discount_value, commission_type, commission_value, can_stack_with_discount, minimum_subtotal, usage_limit, usage_count, is_active, starts_at, ends_at, created_at, updated_at';
+const ADMIN_CREATOR_APPLICATION_SELECT = 'id, user_id, full_name, email, phone, profile_url, social_links, motivation, status, affiliate_code_id, affiliate_code, admin_note, reviewed_at, reviewed_by, created_at, updated_at';
 const ADMIN_ACTIVITY_LIMIT = 500;
 
 function isCatalogSetupError(error) {
@@ -81,12 +82,13 @@ export default async function AdminPage() {
         );
     }
 
-    const [productsResult, ordersResult, inquiriesResult, discountsResult, affiliatesResult, stageMediaResult] = await Promise.all([
+    const [productsResult, ordersResult, inquiriesResult, discountsResult, affiliatesResult, creatorApplicationsResult, stageMediaResult] = await Promise.all([
         supabase.from('products').select('*').order('featured', { ascending: false }).order('sort_order', { ascending: true }).order('updated_at', { ascending: false }),
         supabase.from('orders').select(ADMIN_ORDER_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
         supabase.from('contact_inquiries').select(ADMIN_INQUIRY_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
         supabase.from('discount_codes').select(ADMIN_DISCOUNT_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
         supabase.from('affiliate_codes').select(ADMIN_AFFILIATE_SELECT).order('is_active', { ascending: false }).order('updated_at', { ascending: false }),
+        supabase.from('creator_applications').select(ADMIN_CREATOR_APPLICATION_SELECT).order('created_at', { ascending: false }).limit(ADMIN_ACTIVITY_LIMIT),
         supabase.from('site_copy_entries').select('key, value').ilike('key', `${getCollectionMediaKeyPrefix()}%`),
     ]);
 
@@ -111,6 +113,9 @@ export default async function AdminPage() {
         : discountsResult.error || affiliatesResult.error
             ? 'Discount or affiliate codes could not be loaded right now.'
             : '';
+    const creatorReviewMessage = creatorApplicationsResult.error
+        ? 'Creator applications could not be loaded. Run supabase/creator-applications.sql and refresh this page.'
+        : '';
 
     return (
         <div className="shell-page-pad max-w-[1800px] mx-auto">
@@ -145,8 +150,10 @@ export default async function AdminPage() {
                 recentInquiries={inquiriesResult.data ?? []}
                 discountCodes={discountsResult.data ?? []}
                 affiliateCodes={affiliatesResult.data ?? []}
+                creatorApplications={creatorApplicationsResult.data ?? []}
                 maintenanceMessage={maintenanceMessage}
                 promotionMessage={promotionMessage}
+                creatorReviewMessage={creatorReviewMessage}
                 initialCollectionStageMediaEntries={initialCollectionStageMediaEntries}
             />
         </div>
