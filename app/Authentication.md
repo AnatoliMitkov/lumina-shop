@@ -4,8 +4,10 @@ Use the `Source` tab in Supabase when pasting the HTML bodies below.
 
 Important:
 - Set Supabase `Site URL` to your real HTTPS production domain.
+- Add the same production domain to Supabase `Redirect URLs` or `emailRedirectTo` will be ignored and auth emails can fall back to `Site URL`.
 - The logo in these templates uses `{{ .SiteURL }}/apple-touch-icon.png`.
 - If the logo does not appear in preview, the most common cause is that `Site URL` is not set correctly yet.
+- If a new email button still opens `http://localhost:3000`, the remaining fix is in Supabase Auth dashboard settings, not in the app code.
 - Keep auth emails clean and transactional. Do not add sales copy.
 
 ## Authentication
@@ -41,7 +43,7 @@ Body:
 		</tr>
 		<tr>
 			<td style="padding:28px 28px 0;text-align:center;">
-				<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email{{ if .RedirectTo }}&amp;next={{ .RedirectTo }}{{ end }}" style="display:inline-block;padding:14px 28px;background-color:#1c1c1c;color:#f8f4ee;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;">
+				<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email&amp;next=/account" style="display:inline-block;padding:14px 28px;background-color:#1c1c1c;color:#f8f4ee;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:0.18em;text-transform:uppercase;">
 					Confirm email
 				</a>
 			</td>
