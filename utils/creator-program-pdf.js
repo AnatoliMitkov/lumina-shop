@@ -113,12 +113,12 @@ function createPdfWriter(doc) {
         const gapAfter = options.gapAfter ?? 12;
         const fontName = options.fontName || 'NotoSans';
         const fontStyle = options.fontStyle || 'normal';
+        doc.setFont(fontName, fontStyle);
+        doc.setFontSize(fontSize);
         const lines = doc.splitTextToSize(stripEmojis(String(text || '')), options.maxWidth || contentWidth);
         const estimatedHeight = Math.max(lines.length, 1) * lineHeight + gapAfter;
 
         ensureSpace(estimatedHeight);
-        doc.setFont(fontName, fontStyle);
-        doc.setFontSize(fontSize);
         doc.text(lines, marginX, cursorY);
         cursorY += Math.max(lines.length, 1) * lineHeight + gapAfter;
     };
