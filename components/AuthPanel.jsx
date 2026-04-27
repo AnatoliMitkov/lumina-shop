@@ -20,6 +20,54 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
     const [status, setStatus] = useState({ type: 'idle', message: '' });
     const getText = (key, fallback) => siteCopy ? siteCopy.resolveText(key, fallback) : resolveLocalizedValue(fallback, DEFAULT_LANGUAGE);
 
+    const resolveAuthErrorMessage = (error) => {
+        const errorCode = typeof error?.code === 'string' ? error.code : '';
+        const errorMessage = typeof error?.message === 'string' ? error.message : '';
+
+        if (
+            error?.status === 429
+            || errorCode === 'over_email_send_rate_limit'
+            || errorCode === 'over_request_rate_limit'
+            || /after 30 seconds|after 60 seconds|too many/i.test(errorMessage)
+        ) {
+            if (mode === 'recovery') {
+                return getText(
+                    'auth.messages.reset_rate_limited',
+                    localizedFallback(
+                        'A reset email was requested recently. Check your inbox and spam first, then wait about a minute before trying again.',
+                        'Преди малко вече беше поискан имейл за смяна на паролата. Първо проверете входящата поща и спам папката, после изчакайте около минута преди нов опит.'
+                    )
+                );
+            }
+
+            if (mode === 'sign-up') {
+                return getText(
+                    'auth.messages.confirmation_rate_limited',
+                    localizedFallback(
+                        `Confirmation email was already requested for ${email}. Check your inbox and spam, then wait about a minute before trying again.`,
+                        `Имейл за потвърждение вече беше поискан за ${email}. Проверете входящата поща и спам папката, после изчакайте около минута преди нов опит.`
+                    )
+                );
+            }
+
+            return getText(
+                'auth.messages.rate_limited',
+                localizedFallback(
+                    'Too many auth requests were sent recently. Wait about a minute and try again.',
+                    'Изпратени са твърде много заявки за вход за кратко време. Изчакайте около минута и опитайте отново.'
+                )
+            );
+        }
+
+        return errorMessage || getText(
+            'auth.messages.generic_error',
+            localizedFallback(
+                'Unable to continue with authentication.',
+                'Не успяхме да продължим с удостоверяването.'
+            )
+        );
+    };
+
     const persistProfile = async () => {
         const response = await fetch('/api/account/profile', {
             method: 'PUT',
@@ -129,13 +177,7 @@ export default function AuthPanel({ initialMode = 'sign-in' }) {
         } catch (error) {
             setStatus({
                 type: 'error',
-                message: error.message || getText(
-                    'auth.messages.generic_error',
-                    localizedFallback(
-                        'Unable to continue with authentication.',
-                        'Не успяхме да продължим с удостоверяването.'
-                    )
-                ),
+                message: resolveAuthErrorMessage(error),
             });
         } finally {
             setIsSubmitting(false);

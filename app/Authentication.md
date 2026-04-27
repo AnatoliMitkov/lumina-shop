@@ -8,6 +8,8 @@ Important:
 - The logo in these templates uses `{{ .SiteURL }}/apple-touch-icon.png`.
 - If the logo does not appear in preview, the most common cause is that `Site URL` is not set correctly yet.
 - If a new email button still opens `http://localhost:3000`, the remaining fix is in Supabase Auth dashboard settings, not in the app code.
+- Supabase rate-limits confirmation and recovery emails. If the dashboard says you can only request another email after 30-60 seconds, wait and retry instead of changing the template.
+- With Supabase's built-in email provider, auth email sends are also capped very tightly project-wide. For repeated testing, use a custom SMTP provider.
 - Keep auth emails clean and transactional. Do not add sales copy.
 
 ## Authentication
