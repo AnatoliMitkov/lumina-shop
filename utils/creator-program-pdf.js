@@ -28,6 +28,67 @@ function sanitizeFileValue(value) {
         .slice(0, 50) || 'application';
 }
 
+function stripEmojis(text) {
+    return String(text ?? '').replace(/\p{Extended_Pictographic}/gu, '');
+}
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 8192;
+    let result = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        result += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+
+    return btoa(result);
+}
+
+async function registerPdfFontsClient(doc) {
+    try {
+        const [regularResponse, boldResponse] = await Promise.all([
+            fetch('/fonts/NotoSans-Regular.ttf'),
+            fetch('/fonts/NotoSans-Bold.ttf'),
+        ]);
+
+        if (!regularResponse.ok || !boldResponse.ok) {
+            return;
+        }
+
+        const [regularBuffer, boldBuffer] = await Promise.all([
+            regularResponse.arrayBuffer(),
+            boldResponse.arrayBuffer(),
+        ]);
+
+        doc.addFileToVFS('NotoSans-Regular.ttf', arrayBufferToBase64(regularBuffer));
+        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+        doc.addFileToVFS('NotoSans-Bold.ttf', arrayBufferToBase64(boldBuffer));
+        doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+    } catch {
+        // Falls back to built-in font if fonts unavailable
+    }
+}
+
+async function registerPdfFontsServer(doc) {
+    try {
+        const [{ default: fs }, { default: path }] = await Promise.all([
+            import('fs'),
+            import('path'),
+        ]);
+
+        const fontsDir = path.join(process.cwd(), 'public/fonts');
+        const regularBuffer = fs.readFileSync(path.join(fontsDir, 'NotoSans-Regular.ttf'));
+        const boldBuffer = fs.readFileSync(path.join(fontsDir, 'NotoSans-Bold.ttf'));
+
+        doc.addFileToVFS('NotoSans-Regular.ttf', regularBuffer.toString('base64'));
+        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+        doc.addFileToVFS('NotoSans-Bold.ttf', boldBuffer.toString('base64'));
+        doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+    } catch {
+        // Falls back to built-in font if fonts unavailable
+    }
+}
+
 function createPdfWriter(doc) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -50,9 +111,9 @@ function createPdfWriter(doc) {
         const fontSize = options.fontSize || 11;
         const lineHeight = options.lineHeight || fontSize * 1.45;
         const gapAfter = options.gapAfter ?? 12;
-        const fontName = options.fontName || 'times';
+        const fontName = options.fontName || 'NotoSans';
         const fontStyle = options.fontStyle || 'normal';
-        const lines = doc.splitTextToSize(String(text || ''), options.maxWidth || contentWidth);
+        const lines = doc.splitTextToSize(stripEmojis(String(text || '')), options.maxWidth || contentWidth);
         const estimatedHeight = Math.max(lines.length, 1) * lineHeight + gapAfter;
 
         ensureSpace(estimatedHeight);
@@ -76,6 +137,7 @@ export async function downloadCreatorApplicationAgreement({ application, languag
     const { jsPDF } = await import('jspdf');
     const resolvedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    await registerPdfFontsClient(doc);
     const writer = createPdfWriter(doc);
     const agreementDate = formatAgreementDate(application?.createdAt || Date.now(), resolvedLanguage);
     const benefitsText = CREATOR_PROGRAM_BENEFITS
@@ -193,6 +255,7 @@ export async function buildCreatorApplicationAgreementPdfBuffer({ application, l
     const { jsPDF } = await import('jspdf');
     const resolvedLanguage = normalizeLanguage(language) || DEFAULT_LANGUAGE;
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    await registerPdfFontsServer(doc);
     const writer = createPdfWriter(doc);
     const agreementDate = formatAgreementDate(application?.createdAt || Date.now(), resolvedLanguage);
     const benefitsText = CREATOR_PROGRAM_BENEFITS
